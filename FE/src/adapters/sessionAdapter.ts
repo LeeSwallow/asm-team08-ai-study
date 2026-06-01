@@ -1,0 +1,531 @@
+import type {
+  CaseRecord,
+  CaseSummary,
+  CluePath,
+  CurrentObjective,
+  DialogueLogItem,
+  DialogueRuntimeDiagnostics,
+  Evidence,
+  GameSessionView,
+  NoteEntry,
+  Opening,
+  Phase,
+  Question,
+  RelationMap,
+  Relationship,
+  Statement,
+  StoryAct,
+  Storyline,
+  Suspect,
+  SuspectStatus,
+  TimelineEvent,
+  Verdict,
+  VisualState,
+} from "../types";
+import { sanitizePublicDiagnosticValue, sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
+
+const emptyOpening: Opening = {
+  hook: "BE 사건 파일 미수신",
+  objective: "서버 공개 사건 파일을 불러와야 합니다.",
+  rules: [],
+  victoryCondition: "BE 공개 세션 응답 필요",
+};
+
+const emptyStoryline: Storyline = {
+  publicPremise: "BE storyline 미수신",
+  acts: [],
+  timeline: [],
+  cluePaths: [],
+};
+
+export type BackendCase = {
+  caseId: string;
+  sceneId?: string;
+  title: string;
+  summary: string;
+  victimName: string;
+  incidentTime: string;
+  incidentLocation: string;
+  questionLimit: number;
+};
+
+export type BackendSession = {
+  sessionId: string;
+  caseId: string;
+  phase?: "investigation" | "accusation" | "solved" | "failed" | Phase;
+  remainingQuestions: number;
+  selectedSuspectId?: string | null;
+  suspects?: Array<{
+    characterId: string;
+    name: string;
+    role: string;
+    publicProfile: string;
+    motiveCandidate?: boolean;
+    emotion?: string;
+    expression?: string;
+  }>;
+  dialogueLog?: Array<{
+    id: string;
+    speaker: string;
+    text: string;
+    suspectId?: string;
+    questionId?: string;
+    createdAt?: string;
+  }>;
+  evidence?: Array<{
+    evidenceId: string;
+    name: string;
+    type: string;
+    description: string;
+    foundAt: string;
+    timeWindow?: string | null;
+    reliability: number;
+    sourceRefs?: Record<string, string[]>;
+    relatedStatementIds?: string[];
+    relatedContradictionIds?: string[];
+    timelineIds?: string[];
+  }>;
+  notes?: Array<{
+    id: string;
+    text: string;
+    tags?: string[];
+    linkedStatementIds?: string[];
+    linkedEvidenceIds?: string[];
+    linkedRecordIds?: string[];
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
+  records?: Array<{
+    recordId: string;
+    name: string;
+    description: string;
+    timeWindow?: string | null;
+  }>;
+  relations?: Array<{
+    relationshipId: string;
+    characterId: string;
+    description: string;
+    conflict: string;
+  }>;
+  relationMap?: RelationMap;
+  statements?: Array<{
+    statementId: string;
+    characterId: string;
+    text: string;
+    timeWindow?: string | null;
+    location?: string | null;
+  }>;
+  questions?: Array<{
+    questionId: string;
+    characterId: string;
+    text: string;
+    answer: string;
+    unlocksEvidenceIds?: string[];
+    unlocksStatementIds?: string[];
+  }>;
+  unlockedQuestionIds?: string[];
+  newlyUnlockedIds?: string[];
+  discoveredContradictionIds?: string[];
+  foundContradictionIds?: string[];
+  pressureBySuspect?: Record<string, number>;
+  emotionBySuspect?: Record<string, string>;
+  expressionBySuspect?: Record<string, string>;
+  visualState?: VisualState;
+  dialogueResult?: {
+    dialogueMode?: string;
+    intent?: string;
+    matchedQuestionId?: string | null;
+    matchedEvidenceIds?: string[];
+    matchedStatementIds?: string[];
+    matchedRecordIds?: string[];
+    matchedRefs?: string[];
+    sourceRefs?: string[];
+    fallbackUsed?: boolean;
+    degraded?: boolean;
+    provider?: string;
+    model?: string;
+    blockedReason?: string | null;
+    safety?: string | { status?: string; decision?: string; blocked?: boolean; repaired?: boolean };
+    proposedEvents?: unknown[];
+    appliedEvents?: unknown[];
+    proposedEventsCount?: number;
+    appliedEventsCount?: number;
+    previousRemainingQuestions?: number;
+    remainingQuestions?: number;
+    remainingQuestionsDelta?: number;
+    emotionalState?: string;
+    tensionLevel?: string;
+    lastEventId?: string;
+  };
+  lastEventId?: string;
+  opening?: Opening;
+  storyline?: Partial<Storyline> & {
+    acts?: StoryAct[];
+    timeline?: TimelineEvent[];
+    cluePaths?: CluePath[];
+  };
+  currentObjective?: string | Partial<CurrentObjective>;
+  currentActId?: string;
+  visibleTimeline?: TimelineEvent[];
+  contradictionResult?: {
+    verdict: Verdict;
+    contradictionId?: string | null;
+    message: string;
+  };
+  accusationResult?: {
+    verdict: Verdict;
+    message: string;
+    missingEvidenceIds?: string[];
+    missingContradictionIds?: string[];
+    missingStatementIds?: string[];
+  };
+};
+
+export function normalizeCase(item: BackendCase | CaseSummary): CaseSummary {
+  if ("caseId" in item) {
+    return {
+      id: item.caseId,
+      sceneId: item.sceneId,
+      title: item.title,
+      summary: item.summary,
+      victim: item.victimName,
+      incidentTime: item.incidentTime,
+      location: item.incidentLocation,
+      questionLimit: item.questionLimit,
+    };
+  }
+  return item;
+}
+
+function normalizePhase(phase: BackendSession["phase"]): Phase {
+  if (phase === "solved" || phase === "failed") return "result";
+  if (phase === "accusation") return "accusation";
+  return "investigation";
+}
+
+function formatSafety(value?: string | { status?: string; decision?: string; blocked?: boolean; repaired?: boolean }): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") return sanitizePublicDiagnosticValue(value);
+  const flags = [value.status, value.decision, value.blocked ? "blocked" : undefined, value.repaired ? "repaired" : undefined].filter(Boolean);
+  return sanitizePublicDiagnosticValue(flags.join("/"));
+}
+
+function countEvents(value?: unknown[], explicit?: number): number | undefined {
+  if (typeof explicit === "number") return explicit;
+  return value?.length;
+}
+
+function runtimeDiagnostics(session: BackendSession, source: "api" | "local"): DialogueRuntimeDiagnostics {
+  const result = session.dialogueResult;
+  return {
+    source,
+    dialogueMode: sanitizePublicDiagnosticValue(result?.dialogueMode),
+    intent: sanitizePublicDiagnosticValue(result?.intent ?? result?.dialogueMode),
+    matchedQuestionId: sanitizePublicDiagnosticValue(result?.matchedQuestionId) ?? null,
+    matchedEvidenceIds: sanitizePublicIds(result?.matchedEvidenceIds),
+    matchedStatementIds: sanitizePublicIds(result?.matchedStatementIds),
+    matchedRecordIds: sanitizePublicIds(result?.matchedRecordIds),
+    matchedRefs: sanitizePublicIds([...(result?.matchedRefs ?? []), ...(result?.sourceRefs ?? [])]),
+    provider: sanitizePublicDiagnosticValue(result?.provider),
+    model: sanitizePublicDiagnosticValue(result?.model),
+    fallbackUsed: result?.fallbackUsed,
+    degraded: result?.degraded,
+    blockedReason: sanitizePublicDiagnosticValue(result?.blockedReason),
+    safety: formatSafety(result?.safety),
+    lastEventId: sanitizePublicDiagnosticValue(result?.lastEventId ?? session.lastEventId),
+    proposedEventsCount: countEvents(result?.proposedEvents, result?.proposedEventsCount),
+    appliedEventsCount: countEvents(result?.appliedEvents, result?.appliedEventsCount),
+    previousRemainingQuestions: result?.previousRemainingQuestions,
+    remainingQuestions: result?.remainingQuestions ?? session.remainingQuestions,
+    remainingQuestionsDelta: result?.remainingQuestionsDelta,
+    emotionalState: sanitizePublicDiagnosticValue(result?.emotionalState),
+    tensionLevel: sanitizePublicDiagnosticValue(result?.tensionLevel),
+  };
+}
+
+function normalizeRelationMap(value?: RelationMap): RelationMap | undefined {
+  if (!value) return undefined;
+  return {
+    centerCharacterId: sanitizePublicDiagnosticValue(value.centerCharacterId) ?? value.centerCharacterId,
+    nodes: value.nodes.map((node) => ({
+      ...node,
+      characterId: sanitizePublicDiagnosticValue(node.characterId) ?? node.characterId,
+    })),
+    edges: value.edges.map((edge) => ({
+      ...edge,
+      relationshipId: sanitizePublicDiagnosticValue(edge.relationshipId) ?? edge.relationshipId,
+      sourceCharacterId: sanitizePublicDiagnosticValue(edge.sourceCharacterId) ?? edge.sourceCharacterId,
+      targetCharacterId: sanitizePublicDiagnosticValue(edge.targetCharacterId) ?? edge.targetCharacterId,
+      evidenceRefs: sanitizePublicIds(edge.evidenceRefs),
+      statementRefs: sanitizePublicIds(edge.statementRefs),
+      recordRefs: sanitizePublicIds(edge.recordRefs),
+    })),
+  };
+}
+
+function statusFromPressure(pressure: number): SuspectStatus {
+  if (pressure >= 70) return "broken";
+  if (pressure > 0) return "pressed";
+  return "normal";
+}
+
+function normalizeCurrentObjective(value: BackendSession["currentObjective"], actId: string, storyline: Storyline): CurrentObjective {
+  const act = storyline.acts.find((item) => item.actId === actId) ?? storyline.acts[0];
+  if (typeof value === "string") {
+    return {
+      actId: act?.actId ?? actId,
+      title: act?.title ?? "현재 목표",
+      objective: value,
+      playerHint: act?.playerHint ?? "BE 공개 목표 미수신",
+    };
+  }
+  if (value?.objective) {
+    return {
+      actId: value.actId ?? act?.actId ?? actId,
+      title: value.title ?? act?.title ?? "현재 목표",
+      objective: value.objective,
+      playerHint: value.playerHint ?? act?.playerHint ?? "BE 공개 목표 미수신",
+    };
+  }
+  return {
+    actId: act?.actId ?? actId,
+    title: act?.title ?? "BE 목표 미수신",
+    objective: act?.objective ?? "BE currentObjective 미수신",
+    playerHint: act?.playerHint ?? "서버 공개 세션 응답을 확인하세요.",
+  };
+}
+
+function normalizeStoryline(value: BackendSession["storyline"]): Storyline {
+  return {
+    publicPremise: value?.publicPremise ?? emptyStoryline.publicPremise,
+    acts: value?.acts ?? [],
+    timeline: value?.timeline ?? [],
+    cluePaths: (value?.cluePaths ?? []).map((path) => ({
+      pathId: path.pathId,
+      title: path.title,
+      objective: path.objective,
+      steps: path.steps.map((step) => ({
+        order: step.order,
+        type: step.type,
+        id: step.id,
+        prompt: step.prompt,
+      })),
+      resolvesContradictionId: path.resolvesContradictionId,
+      unlocks: path.unlocks,
+    })),
+  };
+}
+
+function visibleTimelineFallback(storyline: Storyline, evidence: Evidence[], records: CaseRecord[], statements: Statement[]): TimelineEvent[] {
+  const visibleIds = new Set([
+    ...evidence.filter((item) => item.unlocked).map((item) => item.id),
+    ...records.filter((item) => item.unlocked).map((item) => item.id),
+    ...statements.filter((item) => item.unlocked).map((item) => item.id),
+  ]);
+  return storyline.timeline.filter((item) => visibleIds.has(item.sourceId) || !item.unlockCondition);
+}
+
+function enrichSessionView(session: GameSessionView): GameSessionView {
+  const storyline = session.storyline ?? emptyStoryline;
+  const currentActId = session.currentActId ?? storyline.acts[0]?.actId ?? "intro";
+  return {
+    ...session,
+    suspects: session.suspects.map((suspect) => ({
+      id: suspect.id,
+      name: suspect.name,
+      role: suspect.role,
+      profile: suspect.profile,
+      motiveHint: suspect.motiveHint,
+      color: suspect.color,
+      pressure: suspect.pressure,
+      status: suspect.status,
+      emotion: suspect.emotion,
+      expression: suspect.expression,
+    })),
+    opening: session.opening ?? emptyOpening,
+    storyline,
+    currentActId,
+    currentObjective: session.currentObjective ?? normalizeCurrentObjective(undefined, currentActId, storyline),
+    visibleTimeline:
+      session.visibleTimeline ?? visibleTimelineFallback(storyline, session.evidence, session.records, session.statements),
+  };
+}
+
+export function normalizeSession(payload: BackendSession | GameSessionView): GameSessionView {
+  if ("source" in payload || ("suspects" in payload && payload.suspects?.some((item) => "id" in item))) {
+    return enrichSessionView(payload as GameSessionView);
+  }
+
+  const session = payload as BackendSession;
+  const pressureBySuspect = session.pressureBySuspect ?? {};
+  const emotionBySuspect = session.emotionBySuspect ?? {};
+  const expressionBySuspect = session.expressionBySuspect ?? {};
+  const suspects: Suspect[] = (session.suspects ?? []).map((item, index) => {
+    const pressure = pressureBySuspect[item.characterId] ?? 0;
+    return {
+      id: item.characterId,
+      name: item.name,
+      role: item.role,
+      profile: item.publicProfile,
+      motiveHint: item.motiveCandidate ? "동기 후보" : "알리바이 검증 필요",
+      color: ["#8f2f2a", "#566170", "#4d6672", "#78613e"][index] ?? "#6f5a3a",
+      pressure,
+      status: statusFromPressure(pressure),
+      emotion: item.emotion ?? emotionBySuspect[item.characterId] ?? session.visualState?.emotionalState,
+      expression: item.expression ?? expressionBySuspect[item.characterId] ?? session.visualState?.expression ?? "neutral",
+    };
+  });
+  const suspectName = (id: string) => suspects.find((item) => item.id === id)?.name ?? id;
+  const questionSuspectById = new Map((session.questions ?? []).map((item) => [item.questionId, item.characterId]));
+
+  const evidence: Evidence[] = [
+    ...(session.evidence ?? []).map((item) => ({
+      id: item.evidenceId,
+      title: item.name,
+      type: item.type as Evidence["type"],
+      description: item.description,
+      source: item.foundAt,
+      time: item.timeWindow ?? "불명",
+      reliability: item.reliability,
+      unlocked: true,
+      viewed: false,
+      relatedStatementIds: item.relatedStatementIds ?? [],
+      sourceRefs: sanitizeSourceRefs(item.sourceRefs),
+      relatedContradictionIds: item.relatedContradictionIds,
+      timelineIds: item.timelineIds,
+    })),
+  ];
+  const notes: NoteEntry[] = (session.notes ?? []).map((item) => ({
+    id: item.id,
+    text: item.text,
+    tags: item.tags ?? [],
+    linkedStatementIds: item.linkedStatementIds ?? [],
+    linkedEvidenceIds: item.linkedEvidenceIds ?? [],
+    linkedRecordIds: item.linkedRecordIds ?? [],
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }));
+  const records: CaseRecord[] = [
+    ...(session.records ?? []).map((item) => ({
+      id: item.recordId,
+      title: item.name,
+      description: item.description,
+      time: item.timeWindow ?? "불명",
+      unlocked: true,
+    })),
+  ];
+  const relations: Relationship[] = [
+    ...(session.relations ?? []).map((item) => ({
+      id: item.relationshipId,
+      suspectId: item.characterId,
+      suspectName: suspectName(item.characterId),
+      description: item.description,
+      conflict: item.conflict,
+      unlocked: true,
+    })),
+  ];
+  const statements: Statement[] = [
+    ...(session.statements ?? []).map((item) => ({
+      id: item.statementId,
+      suspectId: item.characterId,
+      speaker: suspectName(item.characterId),
+      text: item.text,
+      time: item.timeWindow ?? "불명",
+      place: item.location ?? "불명",
+      unlocked: true,
+      bookmarked: false,
+    })),
+  ];
+  const questions: Question[] = [
+    ...(session.questions ?? []).map((item) => ({
+      id: item.questionId,
+      suspectId: item.characterId,
+      label: item.text,
+      response: item.answer,
+      statementId: item.unlocksStatementIds?.[0],
+      unlockEvidenceIds: item.unlocksEvidenceIds,
+      used: session.dialogueLog?.some((log) => log.questionId === item.questionId && log.speaker === "player") ?? false,
+    })),
+  ];
+  const dialogueLog: DialogueLogItem[] = (session.dialogueLog ?? []).map((item) => ({
+    id: item.id,
+    speaker: item.speaker,
+    text: item.text,
+    suspectId: item.suspectId ?? (item.questionId ? questionSuspectById.get(item.questionId) : undefined),
+    questionId: item.questionId,
+    tag: item.speaker === "player" ? "질문" : item.speaker === "rule_engine" ? "룰 판정" : "답변",
+    createdAt: item.createdAt,
+    important: item.speaker !== "player",
+  }));
+  const contradictionResult = session.contradictionResult;
+  const accusationResult = session.accusationResult;
+  const foundContradictionIds = session.discoveredContradictionIds ?? session.foundContradictionIds ?? [];
+  const storyline = normalizeStoryline(session.storyline);
+  const currentActId = session.currentActId ?? storyline.acts[0]?.actId ?? "intro";
+  const selectedSuspectId = session.selectedSuspectId ?? null;
+  const selectedSuspect = selectedSuspectId ? suspects.find((item) => item.id === selectedSuspectId) : undefined;
+  const visualState: VisualState = {
+    ...(session.visualState ?? {}),
+    suspectId: session.visualState?.suspectId ?? selectedSuspectId ?? undefined,
+    expression: session.visualState?.expression ?? selectedSuspect?.expression ?? "neutral",
+    emotionalState: session.visualState?.emotionalState ?? session.dialogueResult?.emotionalState ?? selectedSuspect?.emotion,
+    tensionLevel: session.visualState?.tensionLevel ?? session.dialogueResult?.tensionLevel,
+  };
+  const visibleTimeline = session.visibleTimeline?.length
+    ? session.visibleTimeline
+    : visibleTimelineFallback(storyline, evidence, records, statements);
+
+  return {
+    sessionId: session.sessionId,
+    caseId: session.caseId,
+    phase: accusationResult ? "result" : normalizePhase(session.phase),
+    remainingQuestions: session.remainingQuestions,
+    selectedSuspectId,
+    suspects,
+    questions,
+    dialogueLog,
+    evidence,
+    notes,
+    records,
+    relations,
+    relationMap: normalizeRelationMap(session.relationMap),
+    statements,
+    unlockedQuestionIds: session.unlockedQuestionIds ?? questions.map((item) => item.id),
+    newlyUnlockedIds: session.newlyUnlockedIds ?? [],
+    foundContradictionIds,
+    opening: session.opening ?? emptyOpening,
+    storyline,
+    currentObjective: normalizeCurrentObjective(session.currentObjective, currentActId, storyline),
+    currentActId,
+    visibleTimeline,
+    source: "api",
+    visualState,
+    runtimeDiagnostics: runtimeDiagnostics(session, "api"),
+    lastVerdict: contradictionResult
+      ? {
+          verdict: contradictionResult.verdict,
+          message: contradictionResult.message,
+          contradictionId: contradictionResult.contradictionId ?? undefined,
+        }
+      : undefined,
+    result: accusationResult
+      ? {
+          verdict: accusationResult.verdict,
+          title:
+            accusationResult.verdict === "correct"
+              ? "정답: 사건이 해결되었습니다"
+              : accusationResult.verdict === "partial"
+                ? "범인은 맞았지만 근거가 부족합니다"
+                : "오답: 결정적 모순을 놓쳤습니다",
+          message: accusationResult.message,
+          usedQuestions: Math.max(0, (session.dialogueLog ?? []).filter((item) => item.speaker === "player").length),
+          foundContradictions: foundContradictionIds,
+          missedClues: [
+            ...(accusationResult.missingEvidenceIds ?? []),
+            ...(accusationResult.missingContradictionIds ?? []),
+            ...(accusationResult.missingStatementIds ?? []),
+          ],
+        }
+      : undefined,
+  };
+}
