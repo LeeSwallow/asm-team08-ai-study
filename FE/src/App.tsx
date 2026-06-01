@@ -2,6 +2,7 @@ import { AppHeader } from "./components/AppHeader";
 import { EvidencePanel } from "./components/EvidencePanel";
 import { InterrogationStage } from "./components/InterrogationStage";
 import { InvestigationDrawer } from "./components/InvestigationDrawer";
+import { ScenarioSelectScreen } from "./components/ScenarioSelectScreen";
 import { SettingsDrawer } from "./components/SettingsDrawer";
 import { SuspectPanel } from "./components/SuspectPanel";
 import { SystemFlowStrip } from "./components/SystemFlowStrip";
@@ -12,14 +13,14 @@ export default function App() {
 
   if (!desk.session) {
     return (
-      <main className="loading-desk" aria-live="polite">
-        <section className="loading-card">
-          <span className="brand-icon">⚖</span>
-          <h1>알리바이 교차검증형 추리 게임</h1>
-          <p>{desk.currentCase?.summary ?? "폭풍우 치던 밤의 저택 사건 파일을 여는 중입니다."}</p>
-          <strong>{desk.statusMessage}</strong>
-        </section>
-      </main>
+      <ScenarioSelectScreen
+        cases={desk.cases}
+        statusMessage={desk.statusMessage}
+        busy={desk.busy}
+        resumableSessionId={desk.resumableSessionId}
+        onStartCase={desk.startCase}
+        onResumeSession={desk.resumeStoredSession}
+      />
     );
   }
 
@@ -29,6 +30,7 @@ export default function App() {
         onOpenCaseFile={() => desk.setActiveDrawer("case")}
         onOpenEvidence={() => desk.setActiveDrawer("evidence")}
         onOpenNotes={() => desk.setActiveDrawer("notes")}
+        onOpenRelations={() => desk.setActiveDrawer("relations")}
         onOpenAccusation={() => desk.setActiveDrawer("accusation")}
         onOpenSettings={() => desk.setActiveDrawer("settings")}
       />
@@ -54,15 +56,13 @@ export default function App() {
           runtimeDiagnostics={desk.session.runtimeDiagnostics}
           onDraftQuestionChange={desk.setDraftQuestion}
           onSubmitQuestion={desk.submitQuestion}
-          onPresentEvidence={() => desk.setActiveDrawer("contradiction")}
+          onPresentEvidence={() => desk.setActiveDrawer("evidence")}
         />
         <EvidencePanel
           session={desk.session}
           evidenceTiles={desk.evidenceTiles}
-          contradictionCandidates={desk.contradictionCandidates}
           selectedEvidenceIds={desk.selectedEvidenceIds}
           onToggleEvidence={desk.toggleEvidence}
-          onSelectContradiction={desk.selectContradiction}
         />
       </section>
 
@@ -81,7 +81,6 @@ export default function App() {
           onOpenMode={(mode) => desk.setActiveDrawer(mode)}
           onInspectEvidence={desk.setInspectedEvidenceId}
           onToggleEvidence={desk.toggleEvidence}
-          onSelectStatement={desk.selectStatement}
           onDraftNoteChange={desk.setDraftNote}
           onEditingNoteTextChange={desk.setEditingNoteText}
           onAddNote={desk.addNote}
@@ -89,7 +88,6 @@ export default function App() {
           onCancelEditNote={desk.cancelEditNote}
           onSaveEditedNote={desk.saveEditedNote}
           onRemoveNote={desk.removeNote}
-          onSubmitContradiction={desk.submitSelectedContradiction}
           accusationSuspectId={desk.accusationSuspectId}
           accusationMotive={desk.accusationMotive}
           accusationMethod={desk.accusationMethod}

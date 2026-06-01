@@ -273,7 +273,11 @@ export type AccusationReadiness = {
   missingRequiredEvidenceCount: number;
   missingRequiredStatementCount: number;
   discoveredRequiredContradictionCount: number;
+  discoveredRequiredEvidenceCount: number;
+  discoveredRequiredStatementCount: number;
   requiredContradictionCount: number;
+  requiredEvidenceCount?: number;
+  requiredStatementCount?: number;
 };
 
 export type GameSessionView = {
