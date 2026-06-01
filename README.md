@@ -164,6 +164,12 @@ flowchart TB
 
 문서는 제품 요구사항, 시나리오 데이터 계약, 서비스 계약, 운영 절차를 연결한다. 코드 변경으로 API, 이벤트, 데이터 구조, 운영 방식이 바뀌면 관련 문서를 같은 PR에서 갱신한다.
 
+## Docker 실행 화면
+
+Docker Compose로 실행한 메인 페이지입니다.
+
+![Detective Agent main page](Docs/images/main-page.png)
+
 ## 로컬 실행
 
 ```bash
