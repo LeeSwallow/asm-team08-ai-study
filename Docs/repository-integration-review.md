@@ -9,11 +9,21 @@
 ## 변경 요약
 
 - 루트 저장소를 Git 저장소로 초기화했다.
-- `origin`을 `https://github.com/142spp/asm-team06-ai-study.git`로 설정했다.
+- `origin`을 `git@github.com:LeeSwallow/asm-team08-ai-study.git`로 설정했다.
 - 하위 폴더별 `.git` 메타데이터를 제거하고 루트 `.git`만 유지했다.
 - 루트 `.gitignore`를 Python, Node, 빌드 산출물, 캐시, 세션 데이터, 비밀 파일, 로컬 오케스트레이션 산출물 기준으로 정리했다.
 - README를 프로젝트 소개, 서비스 구조, 데이터 흐름, 디렉터리 구조, 실행/검증, Git 운영 중심으로 재작성했다.
 - `Docs/git-workflow.md`에 `dev` 중심 브랜치 전략, 최소 커밋 기준, Issue/PR/merge 절차, 리뷰 체크리스트를 정의했다.
+
+## 변경 묶음
+
+| Issue | Branch | 범위 |
+| --- | --- | --- |
+| `#1` | `chore/1-root-repo-ops` | 루트 Git 운영, `.gitignore`, README, Docker Compose, workflow 문서 |
+| `#2` | `feat/2-ai-uv-service` | AI 서비스 코드와 `uv` 기반 Python 프로젝트 구성 |
+| `#3` | `feat/3-be-uv-service` | Backend 서비스 코드와 `uv` 기반 Python 프로젝트 구성 |
+| `#4` | `feat/4-fe-app-assets` | Frontend 앱, 공개 에셋, nginx/Docker 구성 |
+| `#5` | `docs/5-product-contracts` | PRD, 시나리오, 서비스 계약, 아키텍처 문서 |
 
 ## 검토 결과
 
