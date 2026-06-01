@@ -4,6 +4,8 @@
 
 FastAPI 기반 Backend API를 구현한다. Backend는 게임 상태의 단일 진실 공급원이며, 대화 제한, 사건 진행, 시나리오/캐릭터별 타임라인, 룰 기반 모순 판정, visualState 산출, 저장/조회, AI Service 호출을 담당한다.
 
+Python 의존성 관리는 `pyproject.toml`과 `uv.lock`을 기준으로 한다. Docker 런타임은 `uv sync --frozen --no-dev`로 lock 파일에 고정된 의존성을 설치한다.
+
 ## 책임 범위
 
 | 영역 | 구현사항 |
