@@ -17,23 +17,43 @@ logger = logging.getLogger(__name__)
 
 class LocalAIClient:
     async def dialogue_response_info(self, payload: Dict[str, Any], fallback: str) -> Dict[str, Any]:
-        req = DialogueRequest.model_validate(payload)
-        result = await asyncio.to_thread(run_dialogue_graph, req)
-        answer = result.text or fallback
-        proposed_events = [e.model_dump(mode="json") for e in result.proposedEvents]
-        safety = result.safety.model_dump(mode="json") if result.safety else {"status": "checked"}
-        safety.setdefault("status", "degraded" if result.degraded else "checked")
-        return {
-            "answer": answer,
-            "proposedEvents": proposed_events,
-            "fallbackUsed": result.fallbackUsed,
-            "degraded": result.degraded,
-            "provider": result.provider or "local",
-            "model": result.model,
-            "intent": result.intent,
-            "dialogueMode": result.dialogueMode,
-            "safety": safety,
-        }
+        try:
+            req = DialogueRequest.model_validate(payload)
+            result = await asyncio.to_thread(run_dialogue_graph, req)
+            answer = result.text or fallback
+            proposed_events = [e.model_dump(mode="json") for e in result.proposedEvents]
+            safety = result.safety.model_dump(mode="json") if result.safety else {"status": "checked"}
+            safety.setdefault("status", "degraded" if result.degraded else "checked")
+            return {
+                "answer": answer,
+                "proposedEvents": proposed_events,
+                "fallbackUsed": result.fallbackUsed,
+                "degraded": result.degraded,
+                "degradedReason": None,
+                "provider": result.provider or "local",
+                "model": result.model,
+                "intent": result.intent,
+                "dialogueMode": result.dialogueMode,
+                "safety": safety,
+            }
+        except Exception as exc:
+            reason = type(exc).__name__
+            logger.warning(
+                "local ai dialogue_response_info failed",
+                extra={"service": "backend", "reason": reason, "fallback_used": False},
+            )
+            return {
+                "answer": None,
+                "proposedEvents": [],
+                "fallbackUsed": False,
+                "degraded": True,
+                "degradedReason": reason,
+                "provider": "local",
+                "model": None,
+                "intent": None,
+                "dialogueMode": None,
+                "safety": {"status": "degraded", "fallbackUsed": False, "degraded": True},
+            }
 
     async def dialogue_response(self, payload: Dict[str, Any], fallback: str) -> str:
         return (await self.dialogue_response_info(payload, fallback))["answer"]

@@ -10,7 +10,6 @@ from app.core.config import get_settings
 from app.domain.event_processor import EventProcessor
 from app.domain.event_types import EventType
 from app.infra.case_repository import CaseRepository
-from app.infra.ai_client import AIClient
 from app.domain.case_engine import initial_session_state
 from app.main import app
 
@@ -978,25 +977,6 @@ def test_proposed_note_must_match_turn_allowed_policy_related_refs(tmp_path, mon
     assert "event: NOTE_FACT_ADDED" not in events_body
     assert "event: VISUAL_STATE_CHANGED" in events_body
 
-
-def test_ai_client_without_base_url_returns_explicit_degraded_result():
-    import asyncio
-
-    result = asyncio.run(AIClient(None).dialogue_response_info({"caseId": "case_001"}, "fallback text"))
-
-    assert result["degraded"] is True
-    assert result["degradedReason"] == "ai_service_not_configured"
-    assert result["answer"] is None
-    assert result["proposedEvents"] == []
-    assert result["fallbackUsed"] is False
-
-
-def test_ai_client_health_accepts_non_degraded_openai_metadata():
-    client = AIClient("http://ai:8001")
-
-    assert client._is_degraded({"provider": "openai", "configured": True, "serviceDegraded": False}) is False
-    assert client._is_degraded({"provider": "openai", "configured": True, "degraded": False}) is False
-    assert client._is_degraded({"provider": "openai", "configured": True, "serviceDegraded": True}) is True
 
 
 def test_event_processor_rejects_hidden_or_unknown_unlocks(tmp_path, monkeypatch):

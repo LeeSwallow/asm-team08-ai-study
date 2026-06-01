@@ -178,10 +178,12 @@ class SessionCommands:
         session, case = self.load_session_and_case(session_id)
         self._assert_public_user_accusation_text(motive, method)
 
-        # Snapshot session state so we can roll back if the backend-derived
-        # result contains forbidden refs (e.g. solution.endings text).
+        # Snapshot all fields mutated by rule_engine.judge_accusation so we can
+        # fully roll back if the backend-derived result contains forbidden refs.
         original_accusation = session.accusation
         original_phase = session.phase
+        original_selected_suspect_id = session.selectedSuspectId
+        original_newly_unlocked_ids = list(session.newlyUnlockedIds)
 
         result = self.rule_engine.judge_accusation(
             session,
@@ -210,6 +212,8 @@ class SessionCommands:
         except ValueError as exc:
             session.accusation = original_accusation
             session.phase = original_phase
+            session.selectedSuspectId = original_selected_suspect_id
+            session.newlyUnlockedIds = original_newly_unlocked_ids
             logger.error(
                 "accusation public result contains forbidden ref; rolled back",
                 extra={"service": "backend", "session_id": session_id, "fallback_used": False},
