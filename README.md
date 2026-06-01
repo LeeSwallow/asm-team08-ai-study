@@ -170,6 +170,9 @@ Docker Compose로 실행한 메인 페이지입니다. 스크린샷은 1440x1100
 
 ![Detective Agent main page](Docs/images/main-page.png)
 
+<img width="1905" height="988" alt="image" src="https://github.com/user-attachments/assets/7ad559f3-b8fe-465c-9810-c344afa6e30c" />
+
+
 ## 로컬 실행
 
 ```bash
