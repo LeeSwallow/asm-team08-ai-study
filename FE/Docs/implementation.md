@@ -81,6 +81,12 @@ type GameSessionView = {
 - 기본 API 경로는 동일 오리진의 `/api/v1/*`이며, nginx 컨테이너에서는 `/api/` 요청을 `API_PROXY_PASS`로 프록시한다. 기본값은 `http://backend:8000`이다.
 - 별도 API 호스트를 빌드 시점에 박아야 하는 배포에서는 `docker build --build-arg VITE_API_BASE_URL=https://example.com ...` 또는 로컬 `.env`의 `VITE_API_BASE_URL`을 사용한다.
 
+## 에셋과 산출물 관리
+
+- 공개 런타임 에셋은 `public/assets/`를 추적 대상으로 둔다.
+- 에셋 생성 참고 자료는 루트 `ref/`와 `scripts/`에 둔다.
+- `dist/`, `node_modules/`, `*.tsbuildinfo`, Vite generated JS/DTS 파일은 루트 `.gitignore`와 FE `.gitignore`에서 제외한다.
+
 ## 비동기 이벤트 처리
 
 MVP는 SSE를 우선 사용한다. 대화 HTTP 응답은 캐릭터 답변을 즉시 보여주는 용도이고, GameMasterAgent가 제안한 수첩 기록/증거 해금/타임라인 공개/긴장도/배경 변경은 Backend Event Processor가 검증한 뒤 SSE로 도착한다. FE는 이벤트 타입별 reducer를 둔다.
