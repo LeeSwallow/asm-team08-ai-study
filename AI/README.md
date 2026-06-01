@@ -20,6 +20,8 @@ uv sync
 uv run uvicorn app.main:app --reload --port 8001
 ```
 
+`pyproject.toml` and `uv.lock` are the primary dependency manifests. `requirements.txt` remains for compatibility with older tooling and quick inspection.
+
 LangGraph is optional at runtime. If it is installed, graph workflows run through LangGraph. If it is missing or unavailable, the same node sequence runs through the deterministic fallback pipeline.
 
 Production-like runs should set `AI_LLM_PROVIDER=openai`, `AI_OPENAI_API_KEY`, and `AI_MODEL_NAME`. The default `AI_LLM_PROVIDER=fallback` is an explicit deterministic degraded mode for local development and tests; responses expose `fallbackUsed`, `serviceDegraded`, and `blockedReason` metadata so Backend can avoid treating degraded output as normal provider-backed progress.
