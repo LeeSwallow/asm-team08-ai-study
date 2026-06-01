@@ -1,0 +1,755 @@
+{
+  "caseId": "case_001",
+  "sceneId": "scene_001",
+  "title": "진실은, 서로의 말 속에 있다",
+  "summary": "폭풍우 치던 밤, 강도준은 저택 2층 서재에서 쓰러진 채 발견됐다. 외부 침입 흔적은 없고 네 명의 용의자가 서로 다른 알리바이를 주장한다.",
+  "victimId": "victim_kangdojun",
+  "victimName": "강도준",
+  "incidentTime": "22:00~22:10",
+  "incidentLocation": "저택 2층 서재",
+  "questionLimit": 12,
+  "suspects": [
+    {
+      "characterId": "char_hanseoyeon",
+      "name": "한서연",
+      "role": "조카",
+      "publicProfile": "상속 문제로 피해자와 갈등이 있었다.",
+      "secret": "22:02에 서재에 들어갔고 정전 중 현장을 조작했다.",
+      "motiveCandidate": true,
+      "isCulprit": true
+    },
+    {
+      "characterId": "char_yoonjaeho",
+      "name": "윤재호",
+      "role": "집사",
+      "publicProfile": "사건 최초 발견자이며 저택 내부 사정을 잘 안다.",
+      "secret": "피해자의 유언장 변경 사실을 알고 있었다.",
+      "motiveCandidate": false,
+      "isCulprit": false
+    },
+    {
+      "characterId": "char_parkmingyu",
+      "name": "박민규",
+      "role": "주치의",
+      "publicProfile": "피해자의 건강을 관리했다.",
+      "secret": "약 처방 변경 문제로 피해자와 다툰 적이 있다.",
+      "motiveCandidate": true,
+      "isCulprit": false
+    },
+    {
+      "characterId": "char_choiyuna",
+      "name": "최윤아",
+      "role": "비서",
+      "publicProfile": "피해자의 일정과 업무를 관리했다.",
+      "secret": "피해자가 비밀리에 유언장 변경을 준비한 사실을 알고 있다.",
+      "motiveCandidate": false,
+      "isCulprit": false
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "ev_broken_watch",
+      "name": "깨진 회중시계",
+      "type": "physical",
+      "description": "서재 바닥에서 발견됐다. 21:40에 멈춰 있지만 유리 파편의 흩어짐이 부자연스럽다.",
+      "foundAt": "서재 바닥",
+      "timeWindow": "21:40",
+      "reliability": 0.65,
+      "initiallyVisible": true
+    },
+    {
+      "evidenceId": "ev_wine_glass",
+      "name": "와인잔",
+      "type": "physical",
+      "description": "서재 책상에서 발견됐다. 립스틱 흔적이 남아 있다.",
+      "foundAt": "서재 책상",
+      "timeWindow": "22:00 전후",
+      "reliability": 0.8,
+      "initiallyVisible": true
+    },
+    {
+      "evidenceId": "ev_study_entry_log",
+      "name": "서재 출입 기록",
+      "type": "record",
+      "description": "22:02에 한서연의 출입 기록이 남아 있다.",
+      "foundAt": "저택 보안 시스템",
+      "timeWindow": "22:02",
+      "reliability": 0.95,
+      "initiallyVisible": true
+    },
+    {
+      "evidenceId": "ev_servant_log",
+      "name": "부검 전 현장 기록",
+      "type": "record",
+      "description": "사망 추정 시각은 22:00~22:10이다.",
+      "foundAt": "현장 기록",
+      "timeWindow": "22:00~22:10",
+      "reliability": 0.9,
+      "initiallyVisible": true
+    },
+    {
+      "evidenceId": "ev_torn_will",
+      "name": "찢어진 유언장",
+      "type": "physical",
+      "description": "상속 비율이 변경된 흔적이 있다. 한서연의 몫이 크게 줄어드는 내용이다.",
+      "foundAt": "서재 금고 옆",
+      "timeWindow": "불명",
+      "reliability": 0.85,
+      "initiallyVisible": false,
+      "unlockCondition": "con_room_claim_vs_entry_log"
+    },
+    {
+      "evidenceId": "ev_phone_call",
+      "name": "통화 기록",
+      "type": "digital",
+      "description": "21:55에 피해자가 최윤아에게 전화를 걸었다.",
+      "foundAt": "피해자 휴대폰",
+      "timeWindow": "21:55",
+      "reliability": 0.9,
+      "initiallyVisible": false,
+      "unlockCondition": "q_choiyuna_last_call"
+    },
+    {
+      "evidenceId": "ev_medicine_box",
+      "name": "약 상자",
+      "type": "physical",
+      "description": "복용 시간이 21:30으로 표시되어 있고 치명적인 약물 반응 흔적은 없다.",
+      "foundAt": "피해자 침실",
+      "timeWindow": "21:30",
+      "reliability": 0.75,
+      "initiallyVisible": false,
+      "unlockCondition": "q_parkmingyu_medicine"
+    },
+    {
+      "evidenceId": "ev_storm_blackout",
+      "name": "정전 기록",
+      "type": "record",
+      "description": "22:05~22:07 사이 저택 일부가 정전됐다.",
+      "foundAt": "관리실 로그",
+      "timeWindow": "22:05~22:07",
+      "reliability": 0.88,
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_blackout"
+    }
+  ],
+  "records": [
+    {
+      "recordId": "rec_opening_report",
+      "name": "초동 수사 보고",
+      "description": "외부 침입 흔적은 없고 서재 내부에서 충돌 흔적이 발견됐다.",
+      "timeWindow": "22:10",
+      "initiallyVisible": true
+    },
+    {
+      "recordId": "rec_hallway_patrol",
+      "name": "2층 복도 순찰 기록",
+      "description": "윤재호는 22:10에 서재 앞 복도에 있었다.",
+      "timeWindow": "22:10",
+      "initiallyVisible": true
+    },
+    {
+      "recordId": "rec_will_revision_notice",
+      "name": "유언장 변경 예약 기록",
+      "description": "피해자는 사건 다음 날 변호사를 만나 유언장 변경을 확정할 예정이었다.",
+      "timeWindow": "사건 다음 날",
+      "initiallyVisible": false,
+      "unlockCondition": "con_call_record"
+    }
+  ],
+  "relations": [
+    {
+      "relationshipId": "rel_hanseoyeon_inheritance",
+      "characterId": "char_hanseoyeon",
+      "description": "조카이자 상속 후보",
+      "conflict": "상속 비율 변경으로 강한 갈등이 있었다.",
+      "initiallyVisible": true
+    },
+    {
+      "relationshipId": "rel_yoonjaeho_loyalty",
+      "characterId": "char_yoonjaeho",
+      "description": "오래된 집사",
+      "conflict": "유언장 변경 사실을 숨겼다.",
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_will"
+    },
+    {
+      "relationshipId": "rel_parkmingyu_medical",
+      "characterId": "char_parkmingyu",
+      "description": "주치의",
+      "conflict": "처방 문제로 책임 추궁 가능성이 있었다.",
+      "initiallyVisible": true
+    },
+    {
+      "relationshipId": "rel_choiyuna_schedule",
+      "characterId": "char_choiyuna",
+      "description": "비서",
+      "conflict": "피해자의 비밀 일정을 관리했다.",
+      "initiallyVisible": false,
+      "unlockCondition": "q_choiyuna_schedule"
+    }
+  ],
+  "statements": [
+    {
+      "statementId": "st_hanseoyeon_room_2200",
+      "characterId": "char_hanseoyeon",
+      "questionText": "22:00에 어디 있었나요?",
+      "text": "저는 22:00에 제 방에 있었어요.",
+      "timeWindow": "22:00",
+      "location": "자기 방",
+      "initiallyVisible": true
+    },
+    {
+      "statementId": "st_hanseoyeon_no_reason",
+      "characterId": "char_hanseoyeon",
+      "questionText": "상속 문제로 다툰 적 있나요?",
+      "text": "상속 문제로 다툰 적은 있지만 죽일 이유는 없었어요.",
+      "timeWindow": "불명",
+      "location": "불명",
+      "initiallyVisible": true
+    },
+    {
+      "statementId": "st_yoonjaeho_found_2210",
+      "characterId": "char_yoonjaeho",
+      "questionText": "피해자를 언제 발견했나요?",
+      "text": "22:10쯤 서재 문이 열려 있는 걸 보고 발견했습니다.",
+      "timeWindow": "22:10",
+      "location": "서재 앞",
+      "initiallyVisible": true
+    },
+    {
+      "statementId": "st_parkmingyu_guestroom_2200",
+      "characterId": "char_parkmingyu",
+      "questionText": "22:00에 어디 있었나요?",
+      "text": "손님방에서 의료 기록을 정리하고 있었습니다.",
+      "timeWindow": "22:00",
+      "location": "손님방",
+      "initiallyVisible": true
+    },
+    {
+      "statementId": "st_choiyuna_call_2155",
+      "characterId": "char_choiyuna",
+      "questionText": "피해자와 마지막으로 연락한 때는?",
+      "text": "21:55에 전화를 받았지만 직접 만나진 않았습니다.",
+      "timeWindow": "21:55",
+      "location": "응접실",
+      "initiallyVisible": true
+    },
+    {
+      "statementId": "st_hanseoyeon_pressure",
+      "characterId": "char_hanseoyeon",
+      "questionText": "서재 출입 기록을 제시한다",
+      "text": "잠깐 들어갔을 뿐이에요. 그때 이미 상황이 이상했습니다.",
+      "timeWindow": "22:02",
+      "location": "서재",
+      "initiallyVisible": false,
+      "unlockCondition": "con_room_claim_vs_entry_log"
+    },
+    {
+      "statementId": "st_yoonjaeho_blackout",
+      "characterId": "char_yoonjaeho",
+      "questionText": "정전 당시 무엇을 했나요?",
+      "text": "관리실 쪽 전등이 꺼져 복도를 확인하고 있었습니다.",
+      "timeWindow": "22:05~22:07",
+      "location": "2층 복도",
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_blackout"
+    },
+    {
+      "statementId": "st_parkmingyu_medicine",
+      "characterId": "char_parkmingyu",
+      "questionText": "약은 언제 확인했나요?",
+      "text": "21:30 복용분까지 확인했고 이후에는 손대지 않았습니다.",
+      "timeWindow": "21:30",
+      "location": "침실",
+      "initiallyVisible": false,
+      "unlockCondition": "q_parkmingyu_medicine"
+    },
+    {
+      "statementId": "st_choiyuna_call_record",
+      "characterId": "char_choiyuna",
+      "questionText": "통화 내용을 말해 주세요.",
+      "text": "회장님은 내일 변호사를 부르라고 지시했습니다. 유언장 때문이라고 들었습니다.",
+      "timeWindow": "21:55",
+      "location": "응접실",
+      "initiallyVisible": false,
+      "unlockCondition": "q_choiyuna_last_call"
+    }
+  ],
+  "questions": [
+    {
+      "questionId": "q_hanseoyeon_alibi",
+      "characterId": "char_hanseoyeon",
+      "text": "22:00에 어디 있었나요?",
+      "answer": "제 방에 있었습니다. 폭풍 때문에 밖으로 나갈 생각도 못 했어요.",
+      "unlocksStatementIds": [
+        "st_hanseoyeon_room_2200"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_hanseoyeon_inheritance",
+      "characterId": "char_hanseoyeon",
+      "text": "상속 문제로 다툰 적 있나요?",
+      "answer": "말다툼은 있었지만 가족끼리 그럴 수 있잖아요. 죽일 이유는 없었습니다.",
+      "unlocksStatementIds": [
+        "st_hanseoyeon_no_reason"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_hanseoyeon_study_entry",
+      "characterId": "char_hanseoyeon",
+      "text": "22:02 서재 출입 기록을 설명해 주세요.",
+      "answer": "정확히 기억나지 않습니다. 문이 열려 있었는지 확인만 했을 수도 있어요.",
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_hanseoyeon_after_pressure",
+      "characterId": "char_hanseoyeon",
+      "text": "서재에 들어갔다면 무엇을 봤나요?",
+      "answer": "이미 회장님이 쓰러진 것처럼 보였습니다. 겁이 나서 바로 나왔어요.",
+      "unlocksStatementIds": [
+        "st_hanseoyeon_pressure"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "con_room_claim_vs_entry_log"
+    },
+    {
+      "questionId": "q_yoonjaeho_discovery",
+      "characterId": "char_yoonjaeho",
+      "text": "피해자를 언제 발견했나요?",
+      "answer": "22:10쯤 순찰 중 서재 문이 열려 있는 걸 보고 안을 확인했습니다.",
+      "unlocksStatementIds": [
+        "st_yoonjaeho_found_2210"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_yoonjaeho_blackout",
+      "characterId": "char_yoonjaeho",
+      "text": "정전 당시 무엇을 했나요?",
+      "answer": "22:05부터 몇 분간 전등이 꺼졌습니다. 관리실 기록을 확인하면 남아 있을 겁니다.",
+      "unlocksStatementIds": [
+        "st_yoonjaeho_blackout"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_storm_blackout"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_yoonjaeho_will",
+      "characterId": "char_yoonjaeho",
+      "text": "유언장 변경 사실을 알고 있었나요?",
+      "answer": "회장님이 변호사를 부르라고 하신 건 들었습니다. 자세한 내용은 모릅니다.",
+      "unlocksRelationIds": [
+        "rel_yoonjaeho_loyalty"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_parkmingyu_alibi",
+      "characterId": "char_parkmingyu",
+      "text": "22:00에 어디 있었나요?",
+      "answer": "손님방에서 의료 기록을 정리하고 있었습니다.",
+      "unlocksStatementIds": [
+        "st_parkmingyu_guestroom_2200"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_parkmingyu_medicine",
+      "characterId": "char_parkmingyu",
+      "text": "피해자의 약은 언제 확인했나요?",
+      "answer": "21:30 복용분을 확인했습니다. 약으로 인한 급사는 아닐 겁니다.",
+      "unlocksStatementIds": [
+        "st_parkmingyu_medicine"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_medicine_box"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_choiyuna_last_call",
+      "characterId": "char_choiyuna",
+      "text": "피해자와 마지막으로 연락한 때는?",
+      "answer": "21:55에 전화를 받았습니다. 내일 변호사 일정을 잡으라는 지시였습니다.",
+      "unlocksStatementIds": [
+        "st_choiyuna_call_record"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_phone_call"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_choiyuna_schedule",
+      "characterId": "char_choiyuna",
+      "text": "비밀 일정이 있었나요?",
+      "answer": "내일 변호사와 만날 예정이었습니다. 회장님은 다른 가족에게 알리지 말라고 했습니다.",
+      "unlocksRelationIds": [
+        "rel_choiyuna_schedule"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "questionId": "q_choiyuna_wine",
+      "characterId": "char_choiyuna",
+      "text": "서재의 와인잔을 알고 있나요?",
+      "answer": "저는 와인을 마시지 않았습니다. 립스틱 색도 제 것이 아닙니다.",
+      "initiallyUnlocked": true
+    }
+  ],
+  "contradictions": [
+    {
+      "contradictionId": "con_room_claim_vs_entry_log",
+      "title": "방에 있었다는 진술과 서재 출입 기록의 충돌",
+      "relatedCharacterId": "char_hanseoyeon",
+      "requiredStatementIds": [
+        "st_hanseoyeon_room_2200"
+      ],
+      "requiredEvidenceIds": [
+        "ev_study_entry_log"
+      ],
+      "severity": "core",
+      "pressureDelta": 40,
+      "reasonCode": "time_location_conflict",
+      "message": "한서연의 22:00 방 알리바이는 22:02 서재 출입 기록과 충돌합니다.",
+      "unlockedIds": [
+        "st_hanseoyeon_pressure",
+        "q_hanseoyeon_after_pressure",
+        "ev_torn_will"
+      ]
+    },
+    {
+      "contradictionId": "con_watch_time_manipulated",
+      "title": "회중시계 시각 조작 의혹",
+      "relatedCharacterId": "char_hanseoyeon",
+      "requiredStatementIds": [
+        "st_hanseoyeon_pressure"
+      ],
+      "requiredEvidenceIds": [
+        "ev_broken_watch",
+        "ev_storm_blackout"
+      ],
+      "severity": "major",
+      "pressureDelta": 25,
+      "reasonCode": "scene_manipulation_during_blackout",
+      "message": "정전 시간과 부자연스러운 회중시계 파편은 현장 조작 가능성을 뒷받침합니다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_inheritance_motive",
+      "title": "상속 갈등과 찢어진 유언장",
+      "relatedCharacterId": "char_hanseoyeon",
+      "requiredStatementIds": [
+        "st_hanseoyeon_no_reason"
+      ],
+      "requiredEvidenceIds": [
+        "ev_torn_will"
+      ],
+      "severity": "core",
+      "pressureDelta": 35,
+      "reasonCode": "inheritance_motive_confirmed",
+      "message": "죽일 이유가 없다는 진술은 상속 비율 변경 흔적이 있는 찢어진 유언장과 충돌합니다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_call_record",
+      "title": "피해자의 마지막 통화와 비서의 은폐",
+      "relatedCharacterId": "char_choiyuna",
+      "requiredStatementIds": [
+        "st_choiyuna_call_2155"
+      ],
+      "requiredEvidenceIds": [
+        "ev_phone_call"
+      ],
+      "severity": "minor",
+      "pressureDelta": 10,
+      "reasonCode": "hidden_will_schedule",
+      "message": "최윤아는 직접 만남은 숨기지 않았지만 유언장 변경 일정을 축소해 말했습니다.",
+      "unlockedIds": [
+        "rec_will_revision_notice"
+      ]
+    }
+  ],
+  "solution": {
+    "culpritId": "char_hanseoyeon",
+    "motive": "상속 비율 변경으로 인한 갈등",
+    "method": "서재에서 피해자와 대면한 뒤 정전 시간을 이용해 현장을 조작했다.",
+    "requiredContradictionIds": [
+      "con_room_claim_vs_entry_log",
+      "con_inheritance_motive"
+    ],
+    "requiredEvidenceIds": [
+      "ev_study_entry_log",
+      "ev_torn_will"
+    ],
+    "requiredStatementIds": [
+      "st_hanseoyeon_room_2200",
+      "st_hanseoyeon_no_reason"
+    ],
+    "endings": {
+      "correct": "한서연의 알리바이는 서재 출입 기록과 충돌했고, 찢어진 유언장이 동기를 뒷받침했다.",
+      "partial": "범인은 맞혔지만 상속 동기 또는 서재 출입 모순을 충분히 입증하지 못했다.",
+      "wrong": "일부 증거가 의심을 만들었지만, 결정적 모순은 한서연의 알리바이에 있었다."
+    }
+  },
+  "opening": {
+    "hook": "폭풍우가 저택을 고립시킨 밤, 강도준은 2층 서재에서 사망한 채 발견됐다. 네 사람의 알리바이는 서로 맞물리지만 어딘가 하나씩 어긋난다.",
+    "objective": "12번의 탐문 안에 알리바이의 충돌, 동기, 조작 흔적을 연결해 최종 범인을 지목하라.",
+    "rules": [
+      "질문 1회마다 남은 탐문 횟수가 1 감소한다.",
+      "진술과 증거를 조합해 모순을 제기한다.",
+      "핵심 모순을 맞히면 새 질문/증거가 해금된다.",
+      "최종 지목은 범인, 동기, 수단, 핵심 근거를 함께 평가한다."
+    ],
+    "victoryCondition": "한서연의 방 알리바이를 깨고 상속 동기를 입증한 뒤 필수 근거와 함께 최종 지목한다."
+  },
+  "storyline": {
+    "publicPremise": "외부 침입 흔적이 없는 저택 내부 사건이다. 플레이어는 각 인물의 시간대별 진술과 객관 기록을 대조해 말의 충돌을 찾아야 한다.",
+    "acts": [
+      {
+        "actId": "intro",
+        "title": "도입",
+        "objective": "사건 개요와 기본 증거를 확인한다.",
+        "entryCondition": "start",
+        "focusSuspectIds": [],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_alibi",
+          "q_yoonjaeho_discovery"
+        ],
+        "requiredClueIds": [
+          "ev_servant_log",
+          "ev_study_entry_log"
+        ],
+        "playerHint": "먼저 사망 추정 시각과 서재 출입 기록을 비교할 준비를 하라.",
+        "completionCondition": "첫 용의자 알리바이 탐문 시작"
+      },
+      {
+        "actId": "alibi_collection",
+        "title": "알리바이 수집",
+        "objective": "22:00 전후 각 용의자의 위치 진술을 확보한다.",
+        "entryCondition": "start",
+        "focusSuspectIds": [
+          "char_hanseoyeon",
+          "char_yoonjaeho",
+          "char_parkmingyu",
+          "char_choiyuna"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_alibi",
+          "q_parkmingyu_alibi",
+          "q_yoonjaeho_discovery",
+          "q_choiyuna_last_call"
+        ],
+        "requiredClueIds": [
+          "st_hanseoyeon_room_2200",
+          "ev_study_entry_log"
+        ],
+        "playerHint": "한서연의 방 알리바이와 22:02 서재 출입 기록을 나란히 보라.",
+        "completionCondition": "con_room_claim_vs_entry_log 해결"
+      },
+      {
+        "actId": "first_break",
+        "title": "첫 모순",
+        "objective": "방에 있었다는 진술과 서재 출입 기록의 충돌을 제기한다.",
+        "entryCondition": "con_room_claim_vs_entry_log",
+        "focusSuspectIds": [
+          "char_hanseoyeon"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_after_pressure",
+          "q_yoonjaeho_blackout"
+        ],
+        "requiredClueIds": [
+          "st_hanseoyeon_pressure",
+          "ev_torn_will",
+          "ev_storm_blackout"
+        ],
+        "playerHint": "압박 후 한서연의 서재 진술과 새로 열린 단서를 확인하라.",
+        "completionCondition": "압박으로 동기 단서 확인"
+      },
+      {
+        "actId": "motive_reveal",
+        "title": "동기 확정",
+        "objective": "상속 갈등과 찢어진 유언장을 연결해 동기를 입증한다.",
+        "entryCondition": "con_inheritance_motive",
+        "focusSuspectIds": [
+          "char_hanseoyeon",
+          "char_choiyuna"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_inheritance",
+          "q_choiyuna_schedule",
+          "q_choiyuna_last_call"
+        ],
+        "requiredClueIds": [
+          "st_hanseoyeon_no_reason",
+          "ev_torn_will",
+          "rec_will_revision_notice"
+        ],
+        "playerHint": "죽일 이유가 없다는 말과 유언장 변경 흔적이 동시에 참일 수 있는지 검토하라.",
+        "completionCondition": "con_inheritance_motive 해결"
+      },
+      {
+        "actId": "final_accusation",
+        "title": "최종 지목",
+        "objective": "범인, 동기, 수단, 알리바이 모순 근거를 제출한다.",
+        "entryCondition": "core contradictions found",
+        "focusSuspectIds": [
+          "char_hanseoyeon"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_after_pressure"
+        ],
+        "requiredClueIds": [
+          "con_room_claim_vs_entry_log",
+          "con_inheritance_motive",
+          "ev_study_entry_log",
+          "ev_torn_will"
+        ],
+        "playerHint": "최종 지목에는 출입 기록과 상속 동기를 함께 넣어야 한다.",
+        "completionCondition": "accusation submitted"
+      }
+    ],
+    "timeline": [
+      {
+        "time": "21:30",
+        "title": "약 복용 확인",
+        "description": "피해자의 21:30 복용분이 확인됐다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_medicine_box",
+        "unlockCondition": "q_parkmingyu_medicine"
+      },
+      {
+        "time": "21:55",
+        "title": "마지막 통화",
+        "description": "피해자가 최윤아에게 전화를 걸어 다음 날 일정을 지시했다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_phone_call",
+        "unlockCondition": "q_choiyuna_last_call"
+      },
+      {
+        "time": "22:00~22:10",
+        "title": "사망 추정 시간",
+        "description": "현장 기록상 강도준은 이 시간대에 사망한 것으로 추정된다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_servant_log"
+      },
+      {
+        "timelineId": "tl_global_2202_study_entry",
+        "time": "22:02",
+        "title": "한서연 서재 출입 기록",
+        "description": "보안 시스템에 한서연의 서재 출입 기록이 남아 있다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_study_entry_log"
+      },
+      {
+        "time": "22:05~22:07",
+        "title": "저택 일부 정전",
+        "description": "관리실 로그에 짧은 정전이 기록됐다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_storm_blackout",
+        "unlockCondition": "q_yoonjaeho_blackout"
+      },
+      {
+        "time": "22:06",
+        "title": "숨겨진 현장 조작",
+        "description": "정전 중 현장 조작이 있었다.",
+        "sourceType": "inference",
+        "sourceId": "solution_hidden_scene_manipulation",
+        "hidden": true
+      }
+    ],
+    "cluePaths": [
+      {
+        "pathId": "path_alibi_break",
+        "title": "방 알리바이 검증",
+        "objective": "한서연의 22:00 위치 진술을 객관 기록과 비교한다.",
+        "steps": [
+          {
+            "order": 1,
+            "type": "statement",
+            "id": "st_hanseoyeon_room_2200",
+            "prompt": "한서연은 22:00에 어디 있었다고 말하는가?"
+          },
+          {
+            "order": 2,
+            "type": "evidence",
+            "id": "ev_study_entry_log",
+            "prompt": "22:02에 서재 출입 기록이 있는 인물은 누구인가?"
+          },
+          {
+            "order": 3,
+            "type": "contradiction",
+            "id": "con_room_claim_vs_entry_log",
+            "prompt": "두 정보가 동시에 성립 가능한지 판단하라."
+          }
+        ],
+        "resolvesContradictionId": "con_room_claim_vs_entry_log",
+        "unlocks": [
+          "q_hanseoyeon_after_pressure",
+          "ev_torn_will"
+        ],
+        "secretNote": "이 경로는 범인의 첫 거짓말을 드러낸다."
+      },
+      {
+        "pathId": "path_motive",
+        "title": "상속 동기 검증",
+        "objective": "죽일 이유가 없다는 진술과 유언장 변경 흔적을 비교한다.",
+        "steps": [
+          {
+            "order": 1,
+            "type": "statement",
+            "id": "st_hanseoyeon_no_reason",
+            "prompt": "한서연은 상속 갈등을 어떻게 축소하는가?"
+          },
+          {
+            "order": 2,
+            "type": "evidence",
+            "id": "ev_torn_will",
+            "prompt": "찢어진 유언장은 누구의 이해관계를 흔드는가?"
+          },
+          {
+            "order": 3,
+            "type": "contradiction",
+            "id": "con_inheritance_motive",
+            "prompt": "동기 부정 진술과 물증이 충돌하는지 판단하라."
+          }
+        ],
+        "resolvesContradictionId": "con_inheritance_motive",
+        "unlocks": [],
+        "secretNote": "최종 지목의 동기 필수 근거다."
+      }
+    ],
+    "currentObjectiveRules": [
+      {
+        "priority": 10,
+        "when": {
+          "missingContradictionId": "con_room_claim_vs_entry_log"
+        },
+        "objective": "한서연의 22:00 방 알리바이와 22:02 서재 출입 기록을 대조하라.",
+        "actId": "alibi_collection"
+      },
+      {
+        "priority": 20,
+        "when": {
+          "discoveredContradictionId": "con_room_claim_vs_entry_log",
+          "missingContradictionId": "con_inheritance_motive"
+        },
+        "objective": "압박으로 열린 단서를 확인하고 상속 갈등의 동기를 입증하라.",
+        "actId": "motive_reveal"
+      },
+      {
+        "priority": 30,
+        "when": {
+          "discoveredContradictionId": "con_inheritance_motive"
+        },
+        "objective": "범인, 동기, 수단, 알리바이 모순 근거를 모아 최종 지목하라.",
+        "actId": "final_accusation"
+      }
+    ]
+  }
+}
