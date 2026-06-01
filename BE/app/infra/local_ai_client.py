@@ -1,0 +1,71 @@
+import asyncio
+import logging
+from typing import Any, Dict
+
+from app.ai_engine.core.llm import llm_status
+from app.ai_engine.graph.dialogue_graph import run_dialogue_graph
+from app.ai_engine.graph.ending_graph import run_ending_graph
+from app.ai_engine.graph.hint_graph import run_hint_graph
+from app.ai_engine.graph.summary_graph import run_summary_graph
+from app.ai_engine.schemas.dialogue import DialogueRequest
+from app.ai_engine.schemas.endings import EndingExplainRequest
+from app.ai_engine.schemas.hints import HintRequest
+from app.ai_engine.schemas.notes import NotesSummaryRequest
+
+logger = logging.getLogger(__name__)
+
+
+class LocalAIClient:
+    async def dialogue_response_info(self, payload: Dict[str, Any], fallback: str) -> Dict[str, Any]:
+        req = DialogueRequest.model_validate(payload)
+        result = await asyncio.to_thread(run_dialogue_graph, req)
+        answer = result.text or fallback
+        proposed_events = [e.model_dump(mode="json") for e in result.proposedEvents]
+        safety = result.safety.model_dump(mode="json") if result.safety else {"status": "checked"}
+        safety.setdefault("status", "degraded" if result.degraded else "checked")
+        return {
+            "answer": answer,
+            "proposedEvents": proposed_events,
+            "fallbackUsed": result.fallbackUsed,
+            "degraded": result.degraded,
+            "provider": result.provider or "local",
+            "model": result.model,
+            "intent": result.intent,
+            "dialogueMode": result.dialogueMode,
+            "safety": safety,
+        }
+
+    async def dialogue_response(self, payload: Dict[str, Any], fallback: str) -> str:
+        return (await self.dialogue_response_info(payload, fallback))["answer"]
+
+    async def notes_summary(self, payload: Dict[str, Any], fallback: str) -> str:
+        try:
+            req = NotesSummaryRequest.model_validate(payload)
+            result = await asyncio.to_thread(run_summary_graph, req)
+            return result.summary or fallback
+        except Exception as exc:
+            logger.warning("local ai notes_summary failed", extra={"reason": str(exc)})
+            return fallback
+
+    async def hint(self, payload: Dict[str, Any], fallback: str) -> str:
+        try:
+            req = HintRequest.model_validate(payload)
+            result = await asyncio.to_thread(run_hint_graph, req)
+            return result.text or fallback
+        except Exception as exc:
+            logger.warning("local ai hint failed", extra={"reason": str(exc)})
+            return fallback
+
+    async def ending(self, payload: Dict[str, Any], fallback: str) -> str:
+        try:
+            req = EndingExplainRequest.model_validate(payload)
+            result = await asyncio.to_thread(run_ending_graph, req)
+            return result.explanation or fallback
+        except Exception as exc:
+            logger.warning("local ai ending failed", extra={"reason": str(exc)})
+            return fallback
+
+    async def health(self) -> Dict[str, Any]:
+        status = llm_status()
+        ok = not status.get("serviceDegraded", True)
+        return {"ok": ok, **status}

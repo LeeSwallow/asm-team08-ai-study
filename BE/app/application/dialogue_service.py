@@ -23,7 +23,7 @@ from app.domain.event_processor import EventProcessor, build_visual_state
 from app.domain.event_types import EventType
 from app.domain.models import Case, DialogueEntry, SessionState
 from app.domain.rule_engine import RuleEngine
-from app.infra.ai_client import AIClient
+from app.infra.local_ai_client import LocalAIClient as AIClient
 from app.infra.case_repository import CaseRepository
 from app.infra.event_repository import EventRepository
 from app.infra.session_repository import SessionRepository
