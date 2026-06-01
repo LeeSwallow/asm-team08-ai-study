@@ -2640,3 +2640,261 @@ Routed AI `[CROSS-FEEDBACK]` high contract/documentation to DOCS, BE, and `orche
 - Continue monitoring and stay silent if no new blockers or state changes appear.
 - If new implementation or commit work is requested, inspect diffs carefully, split into atomic Conventional Commits, and commit only validated rollback-friendly milestones.
 - Keep browser/Playwright dogfood disabled unless re-approved; continue using build/curl/Docker health/logs.
+
+## 2026-06-01T18:33:23+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- `DOCS:1.1`: idle/completed. Bounded-generative-autonomy docs addendum remains processed; visible prompt asks for recent commits, no runtime blocker.
+- `BE:1.1`: idle/completed. BE still reports forwarding/proposal distinction expected; no new BE feedback or final-accusation blocker visible.
+- `AI:1.1`: idle/completed. AI still reports study-entry AI proposedEvents blocker fixed with `47 passed, 1 warning`, Docker `ai/backend` refresh, direct AI and FE-proxy smoke PASS.
+- `FE:1.1`: idle/completed. FE still reports diagnostics/sourceRefs sanitizer fixed, smoke/build PASS, frontend Docker refresh PASS.
+- `Reviewer:1.1`: idle/completed. FE independent re-review remains PASS under no-browser/no-additional-command scope; no new reviewer blocker.
+- `orchest:1.1`: idle/completed. Last visible interaction confirms local Docker deployment is up and latest runtime changes are reflected.
+
+### Feedback detected / routed
+- No new unhandled `[CROSS-FEEDBACK]` or `[ORCH-FEEDBACK]` blocker detected this tick.
+- No prompt sent to panes; no routing was required.
+
+### Validations / repo-state actions run by ORCH this tick
+- Captured all target panes with `tmux capture-pane`.
+- Checked repository state before this status append: root git repository was clean; no nested `BE/`, `AI/`, `FE/`, or `Docs/` `.git` directories visible in this checkout. No commit made by cron.
+- Rechecked Docker Compose status: `detective_agent-ai-1` and `detective_agent-backend-1` are running/healthy; `detective_agent-frontend-1` is running on port 8080.
+- Rechecked health endpoints:
+  - `GET http://127.0.0.1:8080/` => 200.
+  - `GET http://127.0.0.1:8080/api/v1/health` => 200.
+  - `GET http://127.0.0.1:8000/api/v1/ready` => 200 with AI ok, provider `openai`, model `gpt-4o-mini`.
+  - `GET http://127.0.0.1:8001/health` => 200 with provider `openai`, configured, `serviceDegraded=false`.
+
+### Active blockers and commit impact
+- Current runtime/global gate status from ORCH perspective: **PASS**.
+- AI current gate: PASS; timeline/GM context retriever remains a next quality milestone, not a blocker.
+- BE final accusation/public leak gate: PASS based on prior independent/runtime validation and no new BE runtime changes this tick.
+- FE no-mock/public diagnostics gate: PASS from independent reviewer and FE validation summary.
+- Docker refresh: satisfied for affected services; current local deployment health remains PASS.
+- Remaining non-runtime commit step: none requested; cron did not commit.
+
+### Docker refresh requirements
+- No new runtime code changed by ORCH this tick; no additional Docker refresh required.
+- Future runtime edits must rebuild/recreate affected services and rerun health/smoke validation.
+
+### Next actions
+- Continue monitoring and stay silent if no new blockers or state changes appear.
+- If new implementation or commit work is requested, inspect diffs carefully, split into atomic Conventional Commits, and commit only validated rollback-friendly milestones.
+- Keep browser/Playwright dogfood disabled unless re-approved; continue using build/curl/Docker health/logs.
+
+## 2026-06-01T18:41:12+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- Configured target panes could not be captured: `DOCS:1.1`, `BE:1.1`, `AI:1.1`, `FE:1.1`, `Reviewer:1.1`, and `orchest:1.1` all returned `can't find session`.
+- Current tmux inventory has only `codex:1.1` in session `codex`, current path `/home/min/Projects/Swmaestro/02-AI-SKILL-STUDY/Detective_Agent`, command/title `claude`.
+- `codex:1.1`: active/working. Claude Code has an active user goal in Korean: merge the AI and BE stacks into a single instance because separate AI/BE are no longer considered necessary. It is reading AI/BE files and shows a `Puzzling...`/thinking state. ORCH did **not** interrupt or paste feedback.
+
+### Feedback detected / routed
+- No target-domain panes were available to receive routed feedback.
+- New architectural direction detected from the active `codex:1.1` pane: AI and BE merge into one instance. This supersedes the previous split-service assumption and means existing split AI/BE runtime gates must be revalidated after the active implementation stabilizes.
+- No prompt was sent this tick to avoid interrupting the active Claude work.
+
+### Validations / repo-state actions run by ORCH this tick
+- Listed tmux sessions/panes and captured `codex:1.1` after the configured sessions were missing.
+- Checked git state before this append: root repo had `Docs/orchestration-status.md` modified from orchestration updates; nested `git -C BE/AI/FE status` also reported the same root-tracked status via `../Docs/orchestration-status.md`.
+- Checked Docker Compose status: no project services were running (`docker compose ps` returned only the table header).
+- Health checks failed because services are down:
+  - `http://127.0.0.1:8080/` => connection refused.
+  - `http://127.0.0.1:8080/api/v1/health` => connection refused.
+  - `http://127.0.0.1:8000/api/v1/ready` => connection refused.
+  - `http://127.0.0.1:8001/health` => connection refused.
+- Wrote `.hermes/orchestration-heartbeat.json` for this tick with missing target pane state, active `codex:1.1` state, blockers, and next actions.
+
+### Active blockers and commit impact
+- Previous runtime/global gate PASS is no longer currently verifiable because Docker services are stopped and a new AI/BE merge implementation is actively underway.
+- Commit-ready is blocked until the active AI/BE merge work reports completion and ORCH verifies diffs, tests, Docker refresh, no-mock behavior, leak/SSE/public payload guards, final-accusation no-persist/no-SSE regression, and degraded no-progress behavior against the new single-instance topology.
+- Dedicated target sessions being absent is an orchestration topology blocker for role-based routing; next ticks should either continue monitoring `codex:1.1` or recreate/retarget panes after the active merge stabilizes.
+
+### Docker refresh requirements
+- Docker services are currently stopped; after merge/runtime changes, affected services must be rebuilt/recreated before any runtime gate can pass.
+- The previous split `ai/backend/frontend` refresh evidence should not be treated as sufficient for the new merged architecture.
+
+### Next actions
+- Continue to capture `codex:1.1` without interruption while it is working.
+- When the merge agent reaches an idle/completion report, inspect diffs and run targeted validation instead of trusting the report.
+- If the user still wants separate DOCS/BE/AI/FE/Reviewer/orchest agents, recreate or retarget tmux sessions after the current active merge work is no longer in progress.
+
+### 2026-06-01T18:44:30+09:00 tick addendum: active merge edits observed
+- Re-captured `codex:1.1` before finalizing this tick: Claude is still active and has already applied AI/BE merge edits. Visible changes include `BE/app/api/deps.py` wiring `LocalAIClient`, `BE/app/application/dialogue_service.py` and `session_commands.py` type/import changes, `BE/pyproject.toml` adding AI dependencies, `BE/Dockerfile` defaulting `AI_LLM_PROVIDER=fallback`, `docker-compose.yml` removing the separate `ai` service and folding OpenAI env into `backend`, and `BE/app/core/config.py` removing old remote AI client settings.
+- Current `git status --short` after active agent edits shows runtime WIP: `BE/Dockerfile`, `BE/app/api/deps.py`, `BE/app/application/dialogue_service.py`, `BE/app/application/session_commands.py`, `BE/app/core/config.py`, `BE/pyproject.toml`, `docker-compose.yml`, plus new `BE/app/ai_engine/` and `BE/app/infra/local_ai_client.py`; `Docs/orchestration-status.md` remains modified by ORCH.
+- ORCH did not interrupt the active pane. These edits are not commit-ready until the active agent reports completion and ORCH independently verifies tests, diffs, Docker rebuild/recreate, no-mock/degraded behavior, final accusation no-persist/no-SSE, SSE/public leak scans, and FE compatibility under the merged topology.
+
+## 2026-06-01T19:00:00+09:00
+
+### AI/BE 서비스 병합 완료
+
+- **변경 내용**: AI 서비스(`detective-ai-service:local`, 포트 8001)가 BE(`detective-agent-be:local`, 포트 8000) 내부로 통합되었다.
+- **핵심 변경 파일**:
+  - `BE/app/ai_engine/` — AI `app/` 서브패키지 전체 이동 (모든 `from app.X` import → `from app.ai_engine.X`)
+  - `BE/app/infra/local_ai_client.py` — HTTP 기반 `AIClient` 대체, graph 함수 직접 호출
+  - `BE/app/api/deps.py` — `LocalAIClient` 사용으로 교체
+  - `BE/app/application/dialogue_service.py`, `session_commands.py` — `LocalAIClient` 타입 별칭 적용
+  - `BE/pyproject.toml` — `langgraph>=0.2.0`, `typing-extensions>=4.11` 추가
+  - `BE/Dockerfile` — `AI_LLM_PROVIDER=fallback` 기본값 추가
+  - `BE/app/core/config.py` — `ai_service_base_url`, `ai_timeout_seconds`, `ai_max_retries` 제거
+  - `docker-compose.yml` — `ai:` 서비스 제거, AI 환경 변수를 `backend:` 서비스로 이동
+- **검증**: `pytest -q` 30개 통과 (BE 디렉터리 기준).
+- **Docker 상태**: `backend` + `frontend` 2개 서비스만 운영. `ai` 서비스 없음.
+- **다음 작업**: Upstage API를 기본 LLM 프로바이더로 설정, OpenAI를 fallback으로 구성.
+
+### Docs 한글화 및 업데이트 완료
+
+- `architecture-quality-gates.md` — 전체 한글 번역, AI 엔진 섹션을 BE 통합 기준으로 수정.
+- `docker-refresh-policy.md` — 전체 한글 번역, `ai` 서비스 명령 제거.
+- `codex-orchestration.md` — 전체 한글 번역, 서비스 목록 업데이트.
+- `tmux-feedback-protocol.md` — 전체 한글 번역, AI 창 제거.
+- `dogfood-loop.md` — 검증 명령에서 AI 항목 제거, 전체 한글화.
+- `implementation-overview.md` — AI 행 제거, BE 설명 갱신, 서비스 구성 2개로 축소.
+- `index.md` — 한글 섹션 제목으로 통일.
+- `structure-audit.md` — AI 섹션을 "AI 엔진 (BE 내부 통합)" 기준으로 재작성.
+
+## 2026-06-01T18:49:55+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- Configured target panes remain unavailable: `DOCS:1.1`, `BE:1.1`, `AI:1.1`, `FE:1.1`, `Reviewer:1.1`, and `orchest:1.1` each returned `can't find session`.
+- `codex:1.1`: working/active. The pane is in `/home/min/Projects/Swmaestro/02-AI-SKILL-STUDY/Detective_Agent` running Claude. It reports AI/BE merge + docs localization completed in the visible status, then moved to the user-requested Upstage API as primary provider with OpenAI fallback. Current visible activity: reading AI engine code and `character_agent.py`, with a `Percolating...`/thinking indicator. ORCH did not interrupt.
+
+### Feedback detected / routed
+- No new `[CROSS-FEEDBACK]` or `[ORCH-FEEDBACK]` block was detected in the available pane capture.
+- No feedback was routed because all role-specific target panes are absent and the only active pane is working.
+- New architectural/runtime direction remains in progress: split `ai` service has been removed in favor of BE-local AI engine, and provider configuration is being changed toward Upstage-primary/OpenAI-fallback. This invalidates previous split-service Docker/runtime PASS evidence until reverified.
+
+### Validations / repo-state actions run by ORCH this tick
+- Captured all configured target panes and fallback `codex:1.1` via `tmux capture-pane`.
+- Checked git state: runtime WIP remains in `BE/Dockerfile`, `BE/app/api/deps.py`, `BE/app/application/dialogue_service.py`, `BE/app/application/session_commands.py`, `BE/app/core/config.py`, `BE/pyproject.toml`, `BE/uv.lock`, `docker-compose.yml`, new `BE/app/ai_engine/`, new `BE/app/infra/local_ai_client.py`, plus root docs updates.
+- Checked Docker Compose state: no project services are currently running (`docker compose ps` only showed the table header).
+- Wrote `.hermes/orchestration-heartbeat.json` with current pane states, active blockers, last actions, and next actions.
+
+### Active blockers and commit impact
+- **Global commit-ready remains blocked.** The AI/BE merge and Upstage-provider work are WIP and not independently verified by ORCH.
+- Runtime gates cannot pass while Docker services are stopped. After active changes stabilize, ORCH must rebuild/recreate backend/frontend and rerun health/smoke validation under the merged topology.
+- Required post-completion verification remains: BE tests/compile, no-mock/degraded behavior, final-accusation no-persist/no-SSE regression, public response/SSE forbidden-key scans, FE compatibility/no-local-fallback checks, and Docker health/smoke.
+- No commit made by ORCH this tick.
+
+### Docker refresh requirements
+- Docker refresh is required after the active runtime/provider changes finish.
+- Previous `ai/backend/frontend` refresh evidence is obsolete for the new `backend/frontend` merged topology.
+
+### Next actions
+- Continue monitoring `codex:1.1` without interruption while it shows active work.
+- When it returns idle or reports completion, inspect diffs and run targeted validation rather than trusting the report.
+- If the user still wants the role-specific DOCS/BE/AI/FE/Reviewer/orchest routing model, recreate or retarget those sessions after current active WIP stabilizes.
+
+## 2026-06-01T19:03:18+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- Configured target panes remain unavailable: `DOCS:1.1`, `BE:1.1`, `AI:1.1`, `FE:1.1`, `Reviewer:1.1`, and `orchest:1.1` each still map to missing tmux sessions.
+- `codex:1.1`: initially idle at a Claude prompt after reporting AI/BE merge + Upstage-primary/OpenAI-fallback work and discussing a possible `CaseRetrieverAgent`. ORCH cleared stale prompt text with `C-u`, routed critical review feedback, pressed Enter, and re-captured the pane showing the submitted `[ORCH-FEEDBACK]` and `Levitating...`/working status.
+
+### Feedback detected / routed
+- No new `[CROSS-FEEDBACK]` block was detected from the available pane before ORCH action.
+- ORCH ran an independent no-edit Codex review after the pane's completion-like report. Result: **FAIL**.
+- Routed critical `[ORCH-FEEDBACK]` to `codex:1.1` because the role-specific BE/AI/Reviewer panes are absent. Feedback explicitly blocks commit-ready and says not to start `CaseRetrieverAgent` as the current implementation; retriever remains NEXT quality milestone unless tests prove current breakage.
+
+### Validations run by ORCH this tick
+- `cd BE && python -m compileall app tests && python -m pytest tests -q` => **PASS** (`30 passed, 1 warning`).
+- `docker compose up -d --build backend frontend` => **PASS**; backend/frontend images rebuilt, containers recreated, backend healthy, frontend started. Compose warned about orphan `detective_agent-ai-1` from the removed split AI service.
+- `docker compose ps` => backend healthy on `:8000`, frontend up on `:8080`.
+- Health checks:
+  - `http://127.0.0.1:8080/` => 200
+  - `http://127.0.0.1:8080/api/v1/health` => 200
+  - `http://127.0.0.1:8000/api/v1/ready` => 200
+  - `http://127.0.0.1:8000/api/v1/health` => `{"status":"ok","service":"Detective Agent Backend"}`
+- Runtime dialogue/accusation smoke through FE proxy:
+  - Created `case_001` session.
+  - `POST /dialogue` greeting returned 200, provider `upstage`, `fallbackUsed=false`, no forbidden public-key hits.
+  - Alibi question matched `q_hanseoyeon_alibi`, provider `upstage`, `fallbackUsed=false`, no forbidden public-key hits.
+  - Unmatched/evidence-ish hallway question returned 200 with `consumedQuestion=false`, no forbidden public-key hits.
+  - SSE replay returned visual-state events and no forbidden public-key hits in the checked slice.
+  - Malicious accusation with motive `secret user typed` returned 400 `FORBIDDEN_REF_IN_ACCUSATION:FORBIDDEN_REF_LEAK`; follow-up session stayed `investigation`, `accusation` remained null, and SSE did not contain `ACCUSATION_RESOLVED` or forbidden key hits.
+- Independent no-edit Codex review command:
+  - `codex exec 'No-edit independent review. Inspect the current Detective_Agent diff, focusing on BE final accusation forbidden-ref/no-persist/no-SSE ordering, AI-down degraded no-progress behavior, public response/SSE forbidden key leaks, and the BE-local AI merge/provider fallback contract. Do not modify files. Return PASS/FAIL with concrete blocker file/line evidence and validation commands.'`
+  - Result: **FAIL**.
+
+### Independent review blockers routed
+1. **Final accusation ordering still unsafe for backend-derived forbidden fields.** Review says `judge_accusation()` writes `session.accusation = result`, then caller saves before route-level public/SSE validation. If `solution.endings[...]` or another backend-derived accusation field contains forbidden tokens, persistence can occur before `_append_accusation_event()` / `_merge_session_payload()` rejection.
+2. **Public response/SSE guard ordering inconsistent for notes.** Review says note text is accepted, saved, and event-appended before `_merge_session_payload()` can reject forbidden public text; e.g. a user note text `secret` could persist/event-store before response rejection.
+3. **BE-local provider fallback is hidden.** Review says `ChainedLLM` can catch Upstage failure and return fallback output while `CharacterAgent`/graph still reports primary provider with `fallbackUsed=false`, `degraded=false`; this violates the no-fake-success/fallback observability contract.
+
+### Active blockers and commit impact
+- **Global commit-ready remains blocked.** Passing tests and Docker health are not sufficient because independent review found source-ordering and provider-contract blockers.
+- No commit made by ORCH this tick.
+- The AI/BE merge + Upstage provider work remains WIP until the critical review blockers are fixed, regression-tested, Docker-refreshed, and re-reviewed.
+- The old split `ai` service is removed from compose, but an orphan container remains; this is not the primary blocker but should be cleaned up with `--remove-orphans` during the next verified Docker refresh if safe.
+
+### Docker refresh requirements
+- Docker refresh was performed this tick for `backend frontend` and health passed.
+- Another Docker refresh is required after the blocker fixes because they affect runtime BE/AI-engine behavior.
+
+### Next actions
+- Do not interrupt `codex:1.1` while it is now working on the critical feedback.
+- After completion, rerun BE compile/tests, targeted regressions, independent no-edit review, Docker `backend frontend` rebuild/recreate, health checks, malicious accusation smoke, forbidden-note no-persist/no-SSE smoke, provider fallback observability smoke, SSE/public forbidden-key scan, and FE compatibility checks.
+- Do not mark `CaseRetrieverAgent` implementation as part of current commit-ready unless the above blockers are clear; keep it as a next quality milestone.
+
+## 2026-06-01T19:19:09+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- Configured role panes are still unavailable: `DOCS:1.1`, `BE:1.1`, `AI:1.1`, `FE:1.1`, `Reviewer:1.1`, and `orchest:1.1` all returned `can't find session` this tick.
+- `codex:1.1`: initially idle at a completion report after applying the three prior critical fixes. The prompt showed stale pasted content, so ORCH used `C-u`, pasted the newest follow-up blocker, pressed Enter, and verified the submitted `[ORCH-FEEDBACK]` plus `Sprouting…` working status.
+
+### Feedback detected / routed
+- No new `[CROSS-FEEDBACK]` was detected from target panes because the role sessions are absent.
+- ORCH routed high follow-up review feedback to `codex:1.1` because it is the only available implementation pane. Commit-ready remains blocked until the test coverage gaps are fixed and independent review returns PASS.
+
+### Validations run by ORCH this tick
+- Source inspection confirmed the implementation now validates backend-derived accusation result text before save/SSE, validates note create/update text before mutation/save, and tracks ChainedLLM fallback state for CharacterAgent metadata.
+- `cd BE && python -m compileall app tests && python -m pytest tests/ -q` => **PASS** (`34 passed, 1 warning`).
+- Independent no-edit Codex follow-up review => **FAIL**, with implementation mostly accepted but regression coverage gaps remaining.
+
+### Independent review blockers routed
+1. `test_chained_llm_fallback_tracks_used_provider` only instantiates `ChainedLLM`; add CharacterAgent/dialogue-graph/LocalAIClient-level coverage that asserts public response metadata reports `fallbackUsed=true` and the fallback provider (e.g. `openai`) when primary fails.
+2. `test_note_update_forbidden_text_does_not_persist_or_emit_sse` checks rejected persistence but not absence of `NOTE_UPDATED` SSE/event; add explicit event/public-payload assertions.
+3. Independent review's targeted pytest command timed out under Codex sandbox, although ORCH's full suite passed; implementation pane must report exact targeted/full commands and results after fixing coverage.
+
+### Active blockers and commit impact
+- **Global commit-ready remains blocked.** Core fixes look directionally correct, but independent review is still FAIL on regression coverage and Docker was not refreshed after the latest fixes in this tick.
+- No commit made by ORCH.
+- Keep `CaseRetrieverAgent`/retriever work as NEXT quality milestone only; do not make it part of current blocker remediation.
+
+### Docker refresh requirements
+- Docker refresh remains required after code/test fixes stabilize because runtime BE/AI-engine behavior changed.
+- Use merged topology (`backend frontend`) and remove stale orphan `ai` container when safe.
+
+### Next actions
+- Wait for `codex:1.1` to complete the follow-up coverage fixes.
+- Then rerun BE compile/tests, targeted regression tests, independent no-edit review, Docker `backend frontend` rebuild/recreate, health checks, malicious accusation/no-persist SSE smoke, forbidden note create/update no-SSE smoke, provider fallback metadata smoke, and public/SSE forbidden-key scans before considering any atomic commit-ready milestone.
+
+## 2026-06-01T19:35:24+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- Configured role panes remain unavailable: `DOCS:1.1`, `BE:1.1`, `AI:1.1`, `FE:1.1`, `Reviewer:1.1`, and `orchest:1.1` all returned `can't find session`.
+- Available pane `codex:1.1` was active in a Claude session. It completed a user-requested documentation artifact (`Docs/db-migration-plan.md`), then the queued ORCH blocker feedback was submitted and the pane entered active `Crafting…`; delivery is now verified as submitted/working.
+
+### Feedback detected / routed
+- No new `[CROSS-FEEDBACK]` detected from absent role panes.
+- Independent no-edit backend review returned **FAIL** and produced two concrete source-ordering blockers. ORCH routed this as `[ORCH-FEEDBACK]` to the only available implementation pane (`codex:1.1`) without further Enter spam after seeing it queued behind active work.
+
+### Validations run by ORCH this tick
+- `cd BE && python -m compileall app tests -q && python -m pytest tests/ -q` => **PASS** (`35 passed, 1 warning`).
+- Independent no-edit Codex backend review => **FAIL**:
+  1. Final accusation still pre-validates only `result.message`; complete public accusation/event payload fields such as missing IDs/submitted fields/verdict can still be exposed/validated after save, so a backend-derived forbidden token could leave persisted accusation state before route-level public/SSE guard rejection.
+  2. Note update validates text but not tags/link metadata before assignment/save/event append; `PUT /notes/{id}` with `tags:["secret"]` can persist and create `NOTE_UPDATED` before public payload guard rejects.
+  3. Provider fallback metadata path was judged source-correct for the requested blocker.
+
+### Active blockers and commit impact
+- **Global commit-ready remains blocked.** Passing tests are insufficient while independent BE review is FAIL.
+- No commit made by ORCH.
+- BE runtime/test changes are not commit-ready until the two ordering gaps are fixed, regressions pass, independent review returns PASS, and Docker/runtime smokes are refreshed.
+
+### Docker refresh requirements
+- Docker refresh remains required after the BE blocker fixes because runtime backend/AI-engine behavior changed.
+- Use merged topology (`backend frontend`) and clean stale orphan `ai` container with `--remove-orphans` when safe.
+
+### Next actions
+- Re-capture `codex:1.1` next tick to collect its completion report for the submitted critical blocker feedback; do not interrupt while it shows `Crafting`/active work.
+- After BE reports fixes: rerun BE compile/full tests, targeted regressions for accusation complete payload no-persist/no-SSE and note tag no-persist/no-SSE, independent no-edit review, Docker refresh, health checks, malicious accusation smoke, forbidden note smoke, provider fallback metadata smoke, and public/SSE forbidden-key scans before marking any BE milestone commit-ready.

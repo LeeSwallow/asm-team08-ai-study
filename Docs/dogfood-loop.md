@@ -1,62 +1,61 @@
-# Dogfood QA Loop
+# Dogfood QA 루프
 
 이 프로젝트는 구현 보고만으로 완료 처리하지 않는다. 오케스트레이터가 직접 실행된 사이트를 탐방하고, 목표 UI/기능과 비교한 뒤 수정 지시를 반복한다.
 
-## Required loop
+## 필수 루프
 
-1. Implement milestone in BE/FE/AI.
-2. Run repo validation.
+1. BE/FE에서 마일스톤 구현.
+2. 저장소 검증 실행.
    - BE: `pytest -q`, `python -m compileall app tests`
    - FE: `npm run build`
-   - AI: `pytest -q`, `python -m compileall app tests`
-3. Start/verify the service locally or through Docker Compose.
-4. Browser dogfood the app directly.
-   - Navigate to the FE URL.
-   - Check browser console after load and after each meaningful interaction.
-   - Use visual inspection against `FE/target/chatgpt-shared-detective-interface.png`.
-   - Interact with suspect selection, natural-language dialogue, evidence, contradiction, and event-driven updates.
-5. Record issues with severity, repro steps, expected/actual behavior, and screenshot path when available.
-6. Send precise fix requests to the responsible tmux agent.
-7. Re-test after fixes.
-8. Commit only stable, verified, reviewable milestones with atomic Conventional Commits.
+3. 로컬 또는 Docker Compose로 서비스 시작/확인.
+4. 앱을 직접 브라우저로 dogfood.
+   - FE URL로 이동.
+   - 로드 후와 각 의미 있는 상호작용 후 브라우저 콘솔 확인.
+   - `FE/target/chatgpt-shared-detective-interface.png`와 시각적으로 비교.
+   - 용의자 선택, 자연어 대화, 증거, 모순, 이벤트 기반 업데이트와 상호작용.
+5. 심각도, 재현 단계, 기대/실제 동작, 스크린샷 경로(있는 경우)와 함께 이슈 기록.
+6. 담당 tmux 에이전트에게 정확한 수정 요청 전달.
+7. 수정 후 재테스트.
+8. 원자적 Conventional Commits으로 안정적이고, 검증되고, 리뷰 가능한 마일스톤만 커밋.
 
-## Visual QA criteria
+## 시각적 QA 기준
 
-The first screen must remain close to the target:
+첫 화면은 목표에 근접해야 한다:
 
-- dark noir full-screen dashboard
-- left suspect cards
-- central interrogation scene with character and speech bubble
-- natural-language input and send action
-- right evidence grid
-- contradiction panel
-- bottom internal system-flow strip
-- no severe clipping, overflow, broken proportions, or generic admin-dashboard styling
+- 다크 누아르 전체 화면 대시보드
+- 왼쪽 용의자 카드
+- 캐릭터와 말풍선이 있는 중앙 심문 장면
+- 자연어 입력창과 전송 액션
+- 오른쪽 증거 그리드
+- 모순 패널
+- 하단 내부 시스템 흐름 스트립
+- 심각한 클리핑, 오버플로우, 비율 깨짐, 일반 어드민 대시보드 스타일 없음
 
-## Functional QA criteria
+## 기능적 QA 기준
 
-The service must support the MVP loop:
+서비스는 MVP 루프를 지원해야 한다:
 
-- create/load case and session
-- select suspect
-- submit natural-language question
-- receive dialogue response
-- AI returns proposedEvents only
-- BE validates/applies events
-- FE receives/reflects session state/SSE updates
-- submit contradiction
-- observe objective/timeline/evidence/notebook/visual state changes where implemented
+- 사건/세션 생성/로드
+- 용의자 선택
+- 자연어 질문 제출
+- 대화 응답 수신
+- AI 엔진이 proposedEvents만 반환
+- BE가 이벤트 검증/적용
+- FE가 세션 상태/SSE 업데이트 수신/반영
+- 모순 제출
+- 구현된 경우 목표/타임라인/증거/수첩/시각적 상태 변화 확인
 
-## Blockers
+## 차단 항목
 
-Treat these as blockers before accepting done:
+완료 수락 전 다음을 차단 조건으로 처리한다:
 
-- FE fails to build
-- app cannot load in browser
-- console errors on normal flow
-- target UI is not recognizable
-- natural-language dialogue flow broken
-- FE calls AI directly
-- hidden/private/solution data exposed in public payload or logs
-- BE trusts AI for authoritative state changes
-- generated/vendor/env files included in commits
+- FE 빌드 실패
+- 브라우저에서 앱 로드 불가
+- 일반 흐름에서 콘솔 오류
+- 목표 UI 인식 불가
+- 자연어 대화 흐름 깨짐
+- FE가 AI 엔진을 직접 호출
+- 공개 페이로드 또는 로그에 숨겨진/비공개/정답 데이터 노출
+- BE가 권위 있는 상태 변경을 AI에 위임
+- 생성된/벤더/환경 파일이 커밋에 포함

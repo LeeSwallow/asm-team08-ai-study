@@ -52,17 +52,19 @@
 - 최종 지목 request schema에 motive/method가 없어 PRD F-060의 “동기/수단 제출”이 판정 데이터로 보존되지 않는다.
 - 서버 테스트 실행 시 기본 `pytest`는 PYTHONPATH 문제로 실패할 수 있다. pyproject 또는 pytest.ini로 pythonpath 설정 필요.
 
-### AI
+### AI 엔진 (BE 내부 통합)
 
 충족:
-- FastAPI internal routes, dialogue/hint/summary/ending graph 존재.
+- `BE/app/ai_engine/` 서브패키지로 통합. 별도 프로세스/포트 없이 BE에서 직접 호출.
+- dialogue/hint/summary/ending graph 존재.
 - Dialogue는 allowedStatement 기반으로만 답변을 재작성하고 guard로 사건 사실 추가를 차단.
 - AI 실패 시 deterministic fallback 구조 존재.
-- 테스트 통과: `pytest -q` 7 passed.
+- BE 테스트 30개 통과 (AI 엔진 포함).
 
-수정 완료:
-- OpenAI 호출 시 승인 진술(seed_text)이 메시지에 포함되지 않던 문제 수정.
-- `.secret/.env`의 OPENAI_API_KEY를 Docker compose env_file로 AI에 주입하고, AI provider를 openai로 설정.
+변경 완료:
+- `LocalAIClient`가 HTTP 기반 `AIClient`를 대체하여 graph 함수를 직접 Python 함수 호출.
+- `BE/app/ai_engine/core/config.py`가 동일한 `AI_*` 환경 변수를 읽음.
+- `BE/pyproject.toml`에 `langgraph` 의존성 추가.
 
 남은 갭:
 - 현재 guard는 LLM이 부가 표현을 시도했다가 최종 텍스트가 allowedStatement로 축약된 경우 safety.violatesCaseFacts=true를 유지할 수 있다. 보안적으로는 안전하지만 UI/로그에 표시한다면 혼동될 수 있다.

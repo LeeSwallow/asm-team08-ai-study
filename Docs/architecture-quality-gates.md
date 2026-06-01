@@ -1,114 +1,114 @@
-# Architecture & Quality Gates — Detective Agent
+# 아키텍처 & 품질 게이트 — Detective Agent
 
-This document is the shared quality bar for BE, FE, and AI agents. It is mandatory for all new implementation and refactoring work.
+이 문서는 BE, FE 에이전트가 공유하는 품질 기준이다. 모든 신규 구현과 리팩터링 작업에 필수로 적용한다.
 
-## Non-negotiable principles
+## 불변 원칙
 
-1. Clean Architecture first
-   - Separate presentation/API, application/use-case, domain, and infrastructure concerns.
-   - Business rules must not live in route handlers, React page monoliths, or LLM/provider adapters.
-   - Cross-boundary data must use explicit typed schemas/contracts.
+1. **Clean Architecture 우선**
+   - 프레젠테이션/API, 애플리케이션/유스케이스, 도메인, 인프라 계층을 반드시 분리한다.
+   - 비즈니스 룰은 라우트 핸들러, React 페이지 모노리스, LLM/프로바이더 어댑터에 두지 않는다.
+   - 경계를 넘는 데이터는 명시적으로 타입된 스키마/계약을 사용한다.
 
-2. Component/module decomposition
-   - Split large files before they become dumping grounds.
-   - Prefer small components/functions with one reason to change.
-   - Avoid god objects, mega components, catch-all helpers, and duplicated mapping logic.
+2. **컴포넌트/모듈 분리**
+   - 파일이 쓰레기통이 되기 전에 분리한다.
+   - 변경 이유가 하나인 작은 컴포넌트/함수를 선호한다.
+   - 갓 오브젝트, 메가 컴포넌트, 만능 헬퍼, 중복 매핑 로직을 피한다.
 
-3. No dummy-code smell
-   - Do not leave placeholder behavior pretending to be production behavior.
-   - Mock/fallback code must be explicitly named as fallback, isolated, and logged.
-   - Remove commented-out code, unused branches, dead props, fake TODO implementations, and console/debug prints.
+3. **더미 코드 금지**
+   - 플레이스홀더 동작이 프로덕션 동작인 것처럼 남기지 않는다.
+   - Mock/Fallback 코드는 명시적으로 fallback으로 이름 짓고, 격리하고, 로그에 남긴다.
+   - 주석 처리된 코드, 미사용 분기, dead props, fake TODO 구현, console/debug 출력을 제거한다.
 
-4. Observable by design
-   - Logging must be centralized behind a small utility/module per repo.
-   - Logs must be structured and include correlation fields where available.
-   - Never log secrets, full hidden case data, API keys, or full player free text by default.
+4. **관찰 가능성 설계**
+   - 로그는 저장소별 소형 유틸리티/모듈 뒤에 집중화한다.
+   - 로그는 구조화되어야 하며, 가능한 경우 correlation 필드를 포함해야 한다.
+   - 기밀 정보, 숨겨진 사건 전체 데이터, API 키, 플레이어 자유 입력 전문은 기본적으로 로그에 남기지 않는다.
 
-5. Validation before done
-   - Each agent completion report must include changed files, validation commands/results, remaining code smell risk, and contract deltas.
+5. **완료 전 검증**
+   - 각 에이전트 완료 보고에는 변경된 파일, 검증 명령/결과, 잔여 코드 스멜 위험, 계약 델타가 포함되어야 한다.
 
-## Layering expectations
+## 계층 기대치
 
-### Backend
+### Backend (BE + AI 엔진 통합)
 
-Expected direction:
+권장 방향:
 
-- API layer: FastAPI routes, dependency injection, request/response conversion only.
-- Application/use-case layer: session commands, dialogue orchestration, event processing coordination.
-- Domain layer: case rules, verdicts, event validation, pressure/timeline/notebook logic.
-- Infrastructure layer: repositories, AI client, persistence, SSE transport, logging adapters.
+- **API 계층**: FastAPI 라우트, 의존성 주입, 요청/응답 변환만 담당.
+- **애플리케이션/유스케이스 계층**: 세션 커맨드, 대화 오케스트레이션, 이벤트 처리 조율.
+- **도메인 계층**: 사건 룰, 판정, 이벤트 검증, 압박/타임라인/수첩 로직.
+- **AI 엔진 계층** (`app/ai_engine/`): CharacterAgent → LightRuleCheck → GameMasterAgent 그래프. 판정/상태 변경 권한 없음.
+- **인프라 계층**: 저장소, 퍼시스턴스, SSE 전송, 로그 어댑터.
 
-Forbidden smells:
+금지 패턴:
 
-- Route handlers directly mutating complex session state.
-- LLM response trusted as authority for unlocks/verdicts/state transitions.
-- Stringly-typed event handling scattered across files.
-- Persistence format knowledge leaking into domain rules.
+- 라우트 핸들러가 복잡한 세션 상태를 직접 변경하는 것.
+- LLM 응답을 해금/판정/상태 전이의 권위자로 신뢰하는 것.
+- 파일 전반에 흩어진 스트링 타입 이벤트 처리.
+- 퍼시스턴스 포맷 지식이 도메인 룰로 새어 나오는 것.
 
 ### Frontend
 
-Expected direction:
+권장 방향:
 
-- Page/container layer: orchestration and screen-level data flow.
-- Feature components: suspect list, interrogation stage, evidence grid, contradiction panel, system flow strip.
-- Hooks/services: API calls, SSE subscription, session persistence, reducers.
-- View models/adapters: convert BE payloads to UI-ready props.
-- Shared utilities: logging, formatting, accessibility helpers.
+- **페이지/컨테이너 계층**: 오케스트레이션과 화면 수준 데이터 흐름.
+- **기능 컴포넌트**: 용의자 목록, 심문 장면, 증거 그리드, 모순 패널, 시스템 흐름 스트립.
+- **훅/서비스**: API 호출, SSE 구독, 세션 퍼시스턴스, 리듀서.
+- **뷰 모델/어댑터**: BE 페이로드를 UI 프롭으로 변환.
+- **공유 유틸리티**: 로그, 포맷팅, 접근성 헬퍼.
 
-Forbidden smells:
+금지 패턴:
 
-- One huge `App.tsx` owning all rendering, state transitions, API calls, and mapping logic.
-- Local fake truth that disagrees with BE state.
-- Inline duplicated ID/status mapping across components.
-- Visual parity achieved by brittle hard-coded data instead of typed view models.
+- 렌더링, 상태 전이, API 호출, 매핑 로직을 모두 소유한 거대 `App.tsx`.
+- BE 상태와 불일치하는 로컬 가짜 진실.
+- 컴포넌트 전반에 중복된 인라인 ID/상태 매핑.
+- 타입된 뷰 모델 없이 하드코딩 데이터로 달성한 시각적 완성도.
 
-### AI service
+### AI 엔진 (`BE/app/ai_engine/`)
 
-Expected direction:
+권장 방향:
 
-- Route layer: schema validation and response conversion only.
-- Application/graph layer: CharacterAgent -> LightRuleCheck -> GameMasterAgent orchestration.
-- Domain/safety layer: guard rules, allowed-event policy enforcement, redaction/repair.
-- Infrastructure layer: LLM provider client, prompt loading/versioning, logging.
-- Prompts: versioned files/modules, not buried inside route handlers.
+- **그래프/애플리케이션 계층**: CharacterAgent → LightRuleCheck → GameMasterAgent 오케스트레이션.
+- **도메인/안전 계층**: guard 룰, allowed-event 정책 적용, 텍스트 redaction/repair.
+- **인프라 계층**: LLM 프로바이더 클라이언트, 프롬프트 로딩/버저닝, 로그.
+- **프롬프트**: 라우트 핸들러 내부가 아닌 버저닝된 파일/모듈로 관리.
 
-Forbidden smells:
+금지 패턴:
 
-- Provider code mixed into graph/domain logic.
-- Hidden truth used when `revealAllowed=false`.
-- AI mutating or deciding authoritative game state.
-- Global mutable per-session state.
+- 프로바이더 코드가 그래프/도메인 로직에 혼재.
+- `revealAllowed=false`일 때 숨겨진 진실 사용.
+- AI가 권위 있는 게임 상태를 변경하거나 결정.
+- 전역 가변 세션 상태.
 
-## Observability contract
+## 관찰 가능성 계약
 
-Minimum correlation fields:
+최소 correlation 필드:
 
 - `service`
-- `request_id` or `requestId`
-- `session_id` or `sessionId`
-- `case_id` or `caseId`
-- operation/action name
-- duration/latency in ms where meaningful
-- fallback/repair status where meaningful
+- `request_id` 또는 `requestId`
+- `session_id` 또는 `sessionId`
+- `case_id` 또는 `caseId`
+- 작업/액션 이름
+- 의미 있는 경우 duration/latency (ms 단위)
+- 의미 있는 경우 fallback/repair 상태
 
-Event-specific fields:
+이벤트별 필드:
 
-- Backend: `route`, `event_id`, `event_type`, `suspect_id`, `verdict`, `fallback_used`.
-- Frontend: `component`, `action`, `eventId`, `eventType`, `suspectId`, `connectionState`, `durationMs`.
-- AI: `graph`, `node`, `provider`, `model`, `latency_ms`, `fallback_used`, `repaired`, `blocked_reason`, `proposed_event_count`.
+- **Backend**: `route`, `event_id`, `event_type`, `suspect_id`, `verdict`, `fallback_used`
+- **Frontend**: `component`, `action`, `eventId`, `eventType`, `suspectId`, `connectionState`, `durationMs`
+- **AI 엔진**: `graph`, `node`, `provider`, `model`, `latency_ms`, `fallback_used`, `repaired`, `blocked_reason`, `proposed_event_count`
 
-## Completion checklist for every agent
+## 에이전트별 완료 체크리스트
 
-Before reporting done, each BE/FE/AI agent must answer:
+완료 보고 전 각 BE/FE 에이전트가 답해야 할 항목:
 
-1. Which files changed?
-2. Which architecture boundaries were preserved or improved?
-3. Which large files/components were split or intentionally left as-is and why?
-4. Which dummy/mock/fallback paths remain, and are they isolated/logged?
-5. Which validation commands passed or failed?
-6. What contract changes are required from the other repos?
-7. What code smell risk remains?
+1. 어떤 파일이 변경되었는가?
+2. 어떤 아키텍처 경계가 보존 또는 개선되었는가?
+3. 어떤 큰 파일/컴포넌트가 분리되었거나, 그대로 두었다면 이유는 무엇인가?
+4. 어떤 더미/mock/fallback 경로가 남아 있으며, 격리/로그 처리가 되어 있는가?
+5. 어떤 검증 명령이 통과 또는 실패했는가?
+6. 다른 서비스에 필요한 계약 변경은 무엇인가?
+7. 잔여 코드 스멜 위험은 무엇인가?
 
-## Refactoring priority
+## 리팩터링 우선순위
 
-If implementation and clean architecture conflict, do the minimal user-visible implementation first only when needed to preserve progress, then immediately refactor within the same task before reporting done. Do not let MVP speed become permanent architecture debt.
+구현과 Clean Architecture가 충돌할 경우, 진행 상황 보존을 위해 반드시 필요할 때만 최소한의 사용자-가시적 구현을 먼저 수행하고, 완료 보고 전 동일한 작업 내에서 즉시 리팩터링한다. MVP 속도가 영구적인 아키텍처 부채가 되지 않도록 한다.

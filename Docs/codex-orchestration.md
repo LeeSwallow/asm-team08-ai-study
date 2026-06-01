@@ -1,53 +1,49 @@
-# Codex Orchestration Context — Detective Agent
+# Codex 오케스트레이션 컨텍스트 — Detective Agent
 
-## Current repository layout
+## 현재 저장소 구조
 
-This workspace is a multi-repo project under one directory, not a single git root.
+이 워크스페이스는 하나의 루트 Git 저장소 아래에 있는 멀티 디렉터리 프로젝트다.
 
-- `BE/`: FastAPI Backend. Single source of truth for sessions, rule engine, safe public payloads, AI gateway, Event Processor/SSE.
-- `FE/`: React/Vite Frontend. Single-screen investigation desk, natural-language dialogue, BE API + SSE consumer.
-- `AI/`: FastAPI/LangGraph-like internal AI service. CharacterAgent -> LightRuleCheck -> GameMasterAgent proposed events.
+- `BE/`: FastAPI Backend. 세션, 룰 엔진, 안전한 공개 페이로드, AI 엔진, Event Processor/SSE의 단일 진실 공급원.
+  - `BE/app/ai_engine/`: CharacterAgent → LightRuleCheck → GameMasterAgent AI 처리 로직. 별도 프로세스 없이 BE 내부에서 직접 호출된다.
+- `FE/`: React/Vite 프론트엔드. 단일 화면 수사 데스크, 자연어 대화, BE API + SSE 소비.
 
-Each subdirectory has its own `.git` repository. Run git commands inside the relevant repo.
+## 보존해야 할 제품 방향
 
-## Product direction to preserve
+MVP는 자연어 탐정 시뮬레이션이다. 선택지 버튼 퀴즈로 만들지 않는다. 안정적인 설계는 다음과 같다:
 
-The MVP is a natural-language detective simulation. Do not turn it into a choice-button quiz. The stable design is:
+`CharacterAgent → LightRuleCheck → GameMasterAgent(proposedEvents) → BE Event Processor(검증/적용) → SSE → FE 상태 업데이트`
 
-`CharacterAgent -> LightRuleCheck -> GameMasterAgent(proposedEvents) -> BE Event Processor(validates/applies) -> SSE -> FE state updates`.
+BE는 룰 판정과 상태 변경의 권위자다. AI 엔진은 룰을 덮어쓰지 않는다. FE는 BE 상태를 반영한다.
 
-BE remains authoritative for rule verdicts and state mutation. AI never overwrites rules. FE reflects BE state.
+## FE 비주얼 목표
 
-## FE visual target
+FE는 `FE/target/chatgpt-shared-detective-interface.png`를 최대한 근접하게 구현해야 한다. FE Codex 작업을 오케스트레이션할 때 이 이미지를 주요 UI 레퍼런스로 삼고, FE 에이전트가 완료 보고 전 렌더링된 첫/기본 화면을 이미지와 비교하도록 요청한다. 목표는 상단 네비, 왼쪽 용의자 카드, 중앙 심문 장면/입력창, 오른쪽 증거 그리드 + 모순 패널, 하단 내부 처리 흐름 스트립이 있는 다크 누아르 수사 대시보드다.
 
-FE must match `FE/target/chatgpt-shared-detective-interface.png` as closely as practical. When orchestrating FE Codex work, make this image the primary UI reference and ask the FE agent to compare the rendered first/default screen against it before reporting completion. The target is a dark noir investigation dashboard with top nav, left suspect cards, central interrogation scene/input, right evidence grid + contradiction panel, and bottom internal-processing flow strip.
-
-## Documentation added for Codex agents
+## Codex 에이전트용 추가 문서
 
 - `BE/AGENTS.md`, `BE/SKILL.md`, `BE/Docs/commit-convention.md`
 - `FE/AGENTS.md`, `FE/SKILL.md`, `FE/Docs/commit-convention.md`
-- `AI/AGENTS.md`, `AI/SKILL.md`, `AI/Docs/commit-convention.md`
 
-## Orchestration protocol
+## 오케스트레이션 프로토콜
 
-1. Capture tmux panes before sending new tasks.
-2. Assign work to the owning repo agent first. Do not directly edit specialist code unless central integration/verification requires it.
-3. Ask agents to report: changed files, validation commands, failures, and cross-repo contract changes.
-4. Verify centrally after agents finish:
+1. 새 작업 전송 전 tmux 창 캡처.
+2. 담당 저장소 에이전트에게 먼저 작업 할당. 중앙 통합/검증이 필요하지 않으면 전문가 코드를 직접 수정하지 않는다.
+3. 에이전트에게 변경된 파일, 검증 명령, 실패, 크로스 저장소 계약 변경 보고 요청.
+4. 에이전트 완료 후 중앙에서 검증:
    - BE: `pytest -q`
    - FE: `npm run build`
-   - AI: `pytest -q`
-5. If a contract changes, update the matching `Docs/implementation.md` and tell counterpart agents the exact schema/endpoint delta.
+5. 계약이 변경되면 `BE/Docs/implementation.md`를 업데이트하고 상대 에이전트에게 정확한 스키마/엔드포인트 델타를 알린다.
 
-## Code smell and observability standard
+## 코드 스멜 및 관찰 가능성 기준
 
-All repos should minimize:
+모든 저장소에서 최소화해야 할 것:
 
-- large god files/functions
-- duplicated payload mapping
-- hidden client/server truth divergence
-- untyped request/response blobs
-- silent broad exception swallowing
-- logs containing secrets/private case truth/player free text by default
+- 크고 복잡한 파일/함수
+- 중복된 페이로드 매핑
+- 숨겨진 클라이언트/서버 진실 불일치
+- 타입되지 않은 요청/응답 블롭
+- 조용한 광범위 예외 삼킴
+- 기밀/비공개 사건 진실/플레이어 자유 입력을 기본적으로 포함하는 로그
 
-All repos should add structured logs with request/session/case IDs, duration, decision/event metadata, and fallback/error reason.
+모든 저장소에서 추가해야 할 것: 요청/세션/사건 ID, 지속시간, 결정/이벤트 메타데이터, fallback/오류 이유가 포함된 구조화 로그.
