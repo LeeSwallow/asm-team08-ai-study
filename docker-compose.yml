@@ -1,0 +1,55 @@
+services:
+  ai:
+    build:
+      context: ./AI
+    image: detective-ai-service:local
+    env_file:
+      - ./.secret/.env
+    environment:
+      AI_LLM_PROVIDER: openai
+      AI_MODEL_NAME: gpt-4o-mini
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./BE
+    image: detective-agent-be:local
+    environment:
+      BE_AI_SERVICE_BASE_URL: http://ai:8001
+      BE_AI_TIMEOUT_SECONDS: "10.0"
+      BE_DEBUG_TOOLS_ENABLED: "true"
+    volumes:
+      - backend-sessions:/app/data/sessions
+    ports:
+      - "8000:8000"
+    depends_on:
+      ai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./FE
+      args:
+        VITE_API_BASE_URL: ""
+    image: detective-agent-fe:local
+    environment:
+      API_PROXY_PASS: http://backend:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend-sessions:
