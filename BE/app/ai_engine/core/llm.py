@@ -9,6 +9,25 @@ from app.ai_engine.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+SUSPECT_DIALOGUE_SYSTEM_PROMPT = (
+    "너는 현대 한국 추리 게임의 심문실에 앉아 있는 용의자다. "
+    "출력은 용의자가 실제로 말하는 한국어 대사 한 줄만 쓴다. "
+    "따옴표, 화자명, 대본 지문, 해설, 시스템 메시지, GameMaster 메시지는 쓰지 않는다. "
+    "FACT ANCHOR에 있는 공개 사실만 보존하고 새 사건 사실은 추가하지 않는다. "
+    "말투는 2020년대 현대 한국어 구어체다. 사극, 무협, 고문서, 노학자 같은 장르 말투는 실패다. "
+    "플레이어에게 더 구체적으로 물어보라고 요청하지 말고, 보고서처럼 정리하지 말고, 심문받는 사람처럼 바로 반응한다."
+)
+
+
+def _dialogue_user_message(prompt: str, fact_anchor: str) -> str:
+    return (
+        f"{prompt.strip()}\n\n"
+        "FACT ANCHOR - 보존할 공개 사실이며 말투 템플릿이 아니다:\n"
+        f"{fact_anchor.strip()}\n\n"
+        "이제 용의자의 다음 대사만 출력하라. 따옴표 없이, 현대 한국어 구어체로, 한 줄만."
+    )
+
+
 class DeterministicFallbackLLM:
     """외부 프로바이더 미설정 시 사용하는 로컬 결정론적 fallback."""
 
@@ -24,25 +43,24 @@ class UpstageAILLM:
     BASE_URL = "https://api.upstage.ai/v1/chat/completions"
     provider_name = "upstage"
 
+    def __init__(self, model_name: str | None = None) -> None:
+        self.model_name = model_name or settings.upstage_model_name
+
     def complete(self, prompt: str, *, seed_text: str, max_length: int = 220) -> str:
         with httpx.Client(timeout=settings.request_timeout_seconds) as client:
             response = client.post(
                 self.BASE_URL,
                 headers={"Authorization": f"Bearer {settings.upstage_api_key}"},
                 json={
-                    "model": settings.upstage_model_name,
-                    "temperature": 0.5,
+                    "model": self.model_name,
+                    "temperature": 0.35,
                     "max_tokens": max(80, min(420, max_length * 2)),
                     "messages": [
                         {
                             "role": "system",
-                            "content": (
-                                "You are an AI module inside a Korean detective simulation MVP. "
-                                "Follow the provided constraints exactly, avoid adding unapproved facts, "
-                                "and answer in concise Korean unless the prompt explicitly says otherwise."
-                            ),
+                            "content": SUSPECT_DIALOGUE_SYSTEM_PROMPT,
                         },
-                        {"role": "user", "content": f"{prompt.strip()}\n\nAllowed statement to rewrite:\n{seed_text}"},
+                        {"role": "user", "content": _dialogue_user_message(prompt, seed_text)},
                     ],
                 },
             )
@@ -56,25 +74,24 @@ class OpenAILLM:
 
     provider_name = "openai"
 
+    def __init__(self, model_name: str | None = None) -> None:
+        self.model_name = model_name or settings.model_name
+
     def complete(self, prompt: str, *, seed_text: str, max_length: int = 220) -> str:
         with httpx.Client(timeout=settings.request_timeout_seconds) as client:
             response = client.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {settings.openai_api_key}"},
                 json={
-                    "model": settings.model_name,
-                    "temperature": 0.5,
+                    "model": self.model_name,
+                    "temperature": 0.35,
                     "max_tokens": max(80, min(420, max_length * 2)),
                     "messages": [
                         {
                             "role": "system",
-                            "content": (
-                                "You are an AI module inside a Korean detective simulation MVP. "
-                                "Follow the provided constraints exactly, avoid adding unapproved facts, "
-                                "and answer in concise Korean unless the prompt explicitly says otherwise."
-                            ),
+                            "content": SUSPECT_DIALOGUE_SYSTEM_PROMPT,
                         },
-                        {"role": "user", "content": f"{prompt.strip()}\n\nAllowed statement to rewrite:\n{seed_text}"},
+                        {"role": "user", "content": _dialogue_user_message(prompt, seed_text)},
                     ],
                 },
             )
@@ -133,6 +150,14 @@ def get_llm() -> ChainedLLM | UpstageAILLM | OpenAILLM | DeterministicFallbackLL
         return UpstageAILLM()
     if provider in {"openai", "gpt"} and settings.openai_api_key:
         return OpenAILLM()
+    return DeterministicFallbackLLM()
+
+
+def get_tone_llm() -> OpenAILLM | UpstageAILLM | DeterministicFallbackLLM:
+    if settings.openai_api_key:
+        return OpenAILLM(model_name=settings.tone_model_name)
+    if settings.upstage_api_key:
+        return UpstageAILLM(model_name=settings.upstage_model_name)
     return DeterministicFallbackLLM()
 
 

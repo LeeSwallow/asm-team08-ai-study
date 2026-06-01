@@ -85,8 +85,17 @@ class DialogueService:
             }
 
         story_progress = current_story_progress(session, case)
-        visual_state = build_visual_state(session, case, suspect.characterId)
         allowed_event_policy = self._allowed_event_policy(case, session, match, allowed_statement, message)
+        decisive_pressure_hit = self._apply_decisive_evidence_pressure(
+            case=case,
+            session=session,
+            suspect_id=suspect.characterId,
+            match=match,
+            player_message=message,
+            allowed_statement=allowed_statement,
+            allowed_event_policy=allowed_event_policy,
+        )
+        visual_state = build_visual_state(session, case, suspect.characterId)
         character_knowledge_pack = self.knowledge_service.character_pack(case, session, suspect.characterId)
         ai_payload = {
             "requestId": request_context.request_id,
@@ -121,7 +130,10 @@ class DialogueService:
             "visibleFacts": self._visible_facts(case, session),
             "dialogueHistorySummary": self._dialogue_history_summary(session),
             "visualState": visual_state,
-            "style": {"tone": self._dialogue_tone(session, suspect.characterId), "maxLength": 220},
+            "style": {
+                "tone": "evidence_shock" if decisive_pressure_hit else self._dialogue_tone(session, suspect.characterId),
+                "maxLength": 220,
+            },
             "revealAllowed": False,
             "allowedEventPolicy": allowed_event_policy,
         }
@@ -208,10 +220,12 @@ class DialogueService:
                 "aiDialogueMode": ai_result.get("dialogueMode"),
                 "emotionalState": emotional_state(session.pressureBySuspect.get(suspect.characterId, 0)),
                 "tensionLevel": tension_level(session.pressureBySuspect.get(suspect.characterId, 0)),
+                "decisiveEvidencePressure": decisive_pressure_hit,
                 "proposedEventsCount": len(ai_proposed_events),
                 "beProposedEventsCount": len(be_proposed_events),
                 "totalProposedEventsCount": len(proposed_events),
                 "appliedEventsCount": len(applied_events),
+                "appliedEvents": [event.model_dump(mode="json") for event in applied_events],
             },
             "questionResult": {
                 "questionId": question_id_for_log,
@@ -379,6 +393,7 @@ class DialogueService:
 
     def _polish_answer(self, answer: str, suspect_name: str) -> str:
         polished = answer.strip()
+        polished = self._strip_dialogue_quotes(polished)
         role_artifacts = (
             "조카로서 조심스럽게 말씀드리면",
             "조카로서 말씀드리자면",
@@ -387,8 +402,34 @@ class DialogueService:
         for artifact in role_artifacts:
             polished = polished.replace(f"{artifact} ", "")
             polished = polished.replace(artifact, "")
+        replacements = {
+            "것이오": "겁니다",
+            "하오": "해요",
+            "하소": "하세요",
+            "했소": "했습니다",
+            "계셨지": "계셨습니다",
+            "걷고 계셨지": "악화되고 있었습니다",
+            "그대": "형사님",
+        }
+        for old, new in replacements.items():
+            polished = polished.replace(old, new)
+        polished = re.sub(r"(?<![가-힣])소([.?!,]|$)", r"습니다\1", polished)
+        polished = self._strip_dialogue_quotes(polished)
         polished = re.sub(r"\s{2,}", " ", polished).strip()
         return polished or answer
+
+    def _strip_dialogue_quotes(self, text: str) -> str:
+        stripped = text.strip()
+        quote_pairs = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』"))
+        changed = True
+        while changed and len(stripped) >= 2:
+            changed = False
+            for left, right in quote_pairs:
+                if stripped.startswith(left) and stripped.endswith(right):
+                    stripped = stripped[len(left) : -len(right)].strip()
+                    changed = True
+                    break
+        return stripped
 
     def _allowed_statement_for_question(self, case: Case, question, fallback_answer: str) -> dict[str, Any]:
         for statement_id in question.unlocksStatementIds:
@@ -568,7 +609,7 @@ class DialogueService:
             if name_score >= 2 or description_score >= 2:
                 return {
                     "id": item_id,
-                    "text": f"공개된 단서: {name}. {description}",
+                    "text": f"{name}. {description}",
                     "sourceRefs": {
                         "statementIds": [],
                         "timelineIds": self._timeline_ids_for_source(case, item_id),
@@ -804,6 +845,50 @@ class DialogueService:
             if statement_set & set(contradiction.requiredStatementIds) or evidence_set & set(contradiction.requiredEvidenceIds):
                 related.append(contradiction.contradictionId)
         return related
+
+    def _apply_decisive_evidence_pressure(
+        self,
+        case: Case,
+        session: SessionState,
+        suspect_id: str,
+        match: DialogueMatch,
+        player_message: str,
+        allowed_statement: dict[str, Any],
+        allowed_event_policy: dict,
+    ) -> bool:
+        if match.dialogue_mode != "evidence_question":
+            return False
+        related_ids = set(allowed_event_policy.get("relatedContradictionIds") or [])
+        if not related_ids:
+            return False
+        normalized = self._normalize_text(player_message)
+        visible_statements = set(session.unlockedStatementIds)
+        visible_evidence = set(session.unlockedEvidenceIds)
+        for contradiction in case.contradictions:
+            if contradiction.contradictionId not in related_ids:
+                continue
+            if contradiction.relatedCharacterId != suspect_id:
+                continue
+            if not set(contradiction.requiredStatementIds).issubset(visible_statements):
+                continue
+            if not set(contradiction.requiredEvidenceIds).issubset(visible_evidence):
+                continue
+            evidence_was_presented = any(
+                self._source_mentioned(normalized, evidence.name, evidence.description)
+                for evidence in case.evidence
+                if evidence.evidenceId in contradiction.requiredEvidenceIds
+            )
+            if not evidence_was_presented:
+                continue
+            refs = allowed_statement.setdefault("sourceRefs", {})
+            refs["contradictionIds"] = self._dedupe([*(refs.get("contradictionIds") or []), contradiction.contradictionId])
+            if contradiction.contradictionId not in session.discoveredContradictionIds:
+                session.discoveredContradictionIds.append(contradiction.contradictionId)
+                current = session.pressureBySuspect.get(suspect_id, 0)
+                severity_floor = {"minor": 45, "major": 55, "core": 70}.get(contradiction.severity, 45)
+                session.pressureBySuspect[suspect_id] = min(100, current + max(contradiction.pressureDelta, severity_floor))
+            return True
+        return False
 
     def _dedupe_visible(self, values: list[str], visible_values: list[str]) -> list[str]:
         visible = set(visible_values)

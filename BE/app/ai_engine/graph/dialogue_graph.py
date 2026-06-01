@@ -4,8 +4,9 @@ import logging
 from typing import Any
 
 from app.ai_engine.application.character_agent import CharacterAgent, build_character_agent_input, render_dialogue_seed
+from app.ai_engine.application.dialogue_tone_polisher import DialogueTonePolisher
 from app.ai_engine.application.game_master_agent import GameMasterAgent
-from app.ai_engine.application.knowledge_retriever import RetrievedContext, get_knowledge_retriever
+from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext, get_knowledge_retriever
 from app.ai_engine.application.light_rule_check import LightRuleCheck
 from app.ai_engine.core.guard import extract_case_context_terms, normalize_text
 from app.ai_engine.core.observability import AiLogContext, emit_ai_node_log, now_ms
@@ -112,7 +113,7 @@ def retrieve_context(state: dict[str, Any]) -> dict[str, Any]:
     unlocked_statement_ids = list(getattr(pack, "unlockedStatementIds", []) or []) if pack else []
     unlocked_evidence_ids = list(getattr(pack, "unlockedEvidenceIds", []) or []) if pack else []
     discovered_contradiction_ids = list(getattr(pack, "discoveredContradictionIds", []) or []) if pack else []
-    retrieved = get_knowledge_retriever().retrieve(
+    retrieved = get_knowledge_retriever().retrieve_dialogue_context(
         case_id=payload.caseId,
         suspect_id=payload.suspect.id,
         question_text=payload.question.text,
@@ -126,13 +127,18 @@ def retrieve_context(state: dict[str, Any]) -> dict[str, Any]:
         node="KnowledgeRetriever",
         started_at=started_at,
     )
-    return {"retrieved_context": retrieved}
+    return {
+        "character_context": retrieved.character_context,
+        "event_context": retrieved.event_context,
+        # Compatibility key for existing LightRule/diagnostic code paths.
+        "retrieved_context": retrieved.character_context,
+    }
 
 
 def generate_response(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
-    retrieved: RetrievedContext | None = state.get("retrieved_context")
+    retrieved: CharacterRetrievedContext | None = state.get("character_context")
     agent_input = build_character_agent_input(payload)
     result = CharacterAgent().run(agent_input, retrieved_context=retrieved)
     emit_ai_node_log(
@@ -176,7 +182,7 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
         enforceStatementScope=intent not in {"greeting", "unmatched"} and not provider_blocked,
         allowedContextTerms=_allowed_context_terms(payload),
         intent=intent,
-        retrieved_context=state.get("retrieved_context"),
+        retrieved_context=state.get("character_context"),
     )
     checked = LightRuleCheck().run(check_input)
     safety = checked.safetyFindings
@@ -244,6 +250,28 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
+    started_at = now_ms()
+    payload: DialogueRequest = state["payload"]
+    draft_reply = state["draft_reply"]
+    polished = DialogueTonePolisher().run(payload, draft_reply)
+    tone_polished = polished.draftText != draft_reply.draftText
+    emit_ai_node_log(
+        _context(payload),
+        node="DialogueTonePolisher",
+        started_at=started_at,
+        provider=state.get("provider"),
+        model=state.get("model"),
+        fallback_used=bool(state.get("fallback_used", False)),
+        repaired=tone_polished,
+    )
+    return {
+        "draft_reply": polished,
+        "text": polished.draftText,
+        "tone_polished": tone_polished,
+    }
+
+
 def propose_events(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
@@ -257,6 +285,7 @@ def propose_events(state: dict[str, Any]) -> dict[str, Any]:
         allowedEventPolicy=payload.allowedEventPolicy,
         visibleRefs=state["checked_reply"].sourceRefs,
         providerDegraded=provider_degraded,
+        event_context=state.get("event_context"),
     )
     proposal = GameMasterAgent().run(gm_input)
     emit_ai_node_log(
@@ -373,6 +402,7 @@ def run_dialogue_graph(payload: DialogueRequest) -> DialogueResponse:
             ("validate_scope", validate_scope),
             ("KnowledgeRetriever", retrieve_context),
             ("CharacterAgent", generate_response),
+            ("DialogueTonePolisher", polish_tone),
             ("LightRuleCheck", guard_response),
             ("GameMasterAgent", propose_events),
             ("format_response", format_response),

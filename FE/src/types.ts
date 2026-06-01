@@ -63,6 +63,15 @@ export type DialogueRuntimeDiagnostics = {
   tensionLevel?: string;
 };
 
+export type GameEventFeedItem = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  createdAt?: string;
+  payload?: Record<string, unknown>;
+};
+
 export type Opening = {
   hook: string;
   objective: string;
@@ -282,6 +291,7 @@ export type GameSessionView = {
   visibleTimeline: TimelineEvent[];
   source?: "api" | "local";
   visualState?: VisualState;
+  latestEvents?: GameEventFeedItem[];
   runtimeDiagnostics?: DialogueRuntimeDiagnostics;
   lastVerdict?: {
     verdict: Verdict;

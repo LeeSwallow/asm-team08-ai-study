@@ -27,6 +27,20 @@ def _safe_short_text(value: object, max_length: int = 120) -> str:
     return text
 
 
+def _strip_outer_dialogue_quotes(text: str) -> str:
+    stripped = text.strip()
+    quote_pairs = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』"))
+    changed = True
+    while changed and len(stripped) >= 2:
+        changed = False
+        for left, right in quote_pairs:
+            if stripped.startswith(left) and stripped.endswith(right):
+                stripped = stripped[len(left) : -len(right)].strip()
+                changed = True
+                break
+    return stripped
+
+
 def _knowledge_persona(payload: DialogueRequest) -> str:
     pack = payload.characterKnowledgePack
     if not pack:
@@ -72,6 +86,11 @@ def _question_mentions_lipstick_mark(payload: DialogueRequest) -> bool:
 def _has_matched_evidence_refs(payload: DialogueRequest) -> bool:
     refs = payload.allowedStatement.sourceRefs
     return bool(refs.evidenceIds or payload.allowedEventPolicy.relatedEvidenceIds)
+
+
+def _has_matched_contradiction_refs(payload: DialogueRequest) -> bool:
+    refs = payload.allowedStatement.sourceRefs
+    return bool(refs.contradictionIds or payload.allowedEventPolicy.relatedContradictionIds)
 
 
 def _knowledge_prompt_context(payload: DialogueRequest, retrieved_context: object | None = None) -> str:
@@ -263,6 +282,13 @@ def render_dialogue_seed(payload: DialogueRequest) -> str:
         tone = "tense"
     if act_id in {"first_break", "motive_reveal", "final_accusation"} and payload.suspect.pressureState == "normal":
         tone = "pressed"
+    is_broken_state = (
+        payload.suspect.pressureState == "broken"
+        or tension_label == "critical"
+        or payload.suspect.emotionalState in {"breakdown", "broken"}
+        or (numeric_tension is not None and numeric_tension >= 70)
+        or (overlay and overlay.tone == "broken")
+    )
 
     def say(prefix: str, include_base: bool = True, suffix: str = "") -> str:
         parts = []
@@ -280,7 +306,17 @@ def render_dialogue_seed(payload: DialogueRequest) -> str:
     if intent == "greeting":
         return say(f"안녕하세요. 저는 {name}입니다. 사건에 대해 제가 공개적으로 말할 수 있는 범위에서만 답하겠습니다.", include_base=False)
     if intent == "unmatched":
-        return say("그 질문만으로는 제가 확인해 드릴 수 있는 일이 떠오르지 않습니다. 시간, 장소, 또는 특정 단서를 짚어서 다시 물어봐 주세요.", include_base=False)
+        if is_broken_state:
+            return say("알겠습니다. 지금 공개적으로 말할 수 있는 건 더 돌리지 않고 말씀드리겠습니다.", include_base=False)
+        if tension_label == "high" or payload.suspect.pressureState == "pressed":
+            return say("그 질문은 너무 넓습니다. 핵심만 물어보시죠.", include_base=False)
+        if tension_label == "medium" or tone in {"defensive", "guarded_defensive"}:
+            return say("잠깐만요. 그렇게 몰아가듯 물으시면 대답하기 어렵습니다.", include_base=False)
+        return say("그렇게 넓게 물으시면 제가 뭘 더 말해야 할지 모르겠군요. 기억나는 것만 말씀드리겠습니다.", include_base=False)
+    if is_broken_state:
+        return say("알겠습니다.", suffix="공개된 범위에서 더 돌려 말하지 않겠습니다.")
+    if intent == "evidence" and (_has_matched_contradiction_refs(payload) or tone == "evidence_shock"):
+        return say("잠깐만요.", suffix="그 증거가 그렇게 이어진다면 제 말이 흔들리는 건 인정합니다.")
     overlay_directives = " ".join(overlay.styleDirectives).lower() if overlay else ""
     overlay_pressed = bool(overlay and (overlay.tone in {"pressed", "tense", "critical"} or "short" in overlay_directives or "압박" in overlay_directives))
     if (
@@ -291,9 +327,13 @@ def render_dialogue_seed(payload: DialogueRequest) -> str:
         or payload.suspect.pressureState in {"pressed", "broken"}
     ):
         suffix = "방금 말씀드린 범위를 넘겨 단정하라고 하시면 곤란합니다." if _recent_dialogue_pressure(payload) else "다만 같은 말을 반복하라는 식의 질문은 불편하군요."
-        return say("몰아붙여도 지금 제 대답은 달라지지 않습니다.", suffix=suffix)
+        return say("그만하시죠. 지금 제 대답은 달라지지 않습니다.", suffix=suffix)
     if intent == "location_time":
-        return say("시간대를 묻는 거라면, 제 기억은 이렇게 정리됩니다.", suffix="그 이상은 추측하고 싶지 않습니다.")
+        if tension_label == "high" or payload.suspect.pressureState == "pressed":
+            return say("아까도 말했습니다.", suffix="그 시간만큼은 분명히 기억합니다.")
+        if tension_label == "medium" or tone in {"defensive", "guarded_defensive"}:
+            return say("잠깐만요, 시간을 흐리려는 게 아닙니다.", suffix="그 부분은 분명히 말씀드릴 수 있어요.")
+        return say("22시요?", suffix="그 부분은 분명히 말씀드릴 수 있어요.")
     if intent == "evidence":
         focus = _question_focus(payload)
         if focus == "lipstick_wine":
@@ -307,7 +347,7 @@ def render_dialogue_seed(payload: DialogueRequest) -> str:
             return say("의학 쪽 단서를 묻는 거라면, 제가 공개적으로 확인할 수 있는 범위는 제한적입니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
         if focus == "person_relation":
             return say("다른 사람을 특정하라는 질문이라면, 제가 공개적으로 확인할 수 있는 범위는 제한적입니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
-        return say("그 단서를 묻는 거라면, 제 말만으로 단정할 수는 없습니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
+        return say("그 단서 얘기를 제게 돌리셔도, 제가 직접 본 것 이상은 말할 수 없습니다.")
     if tone in {"calm_defensive", "defensive"}:
         return say("솔직히 말하면,") + " 더 보탤 말은 많지 않아요."
     if overlay and overlay.voice:
@@ -339,6 +379,7 @@ class CharacterAgent:
             error_type: str | None = None,
         ) -> DraftCharacterReply:
             overlay = agent_input.activePersonaOverlay
+            text = _strip_outer_dialogue_quotes(text)
             refs = payload.allowedStatement.sourceRefs.model_copy()
             intent = agent_input.intent or classify_dialogue_intent(payload.question.text, payload.dialogueMode)
             if intent in {"greeting", "unmatched"}:

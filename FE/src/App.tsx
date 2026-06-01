@@ -45,6 +45,7 @@ export default function App() {
           suspects={desk.session.suspects}
           latestAnswer={desk.latestAnswer}
           dialogueLog={desk.session.dialogueLog}
+          eventFeed={desk.eventFeed}
           draftQuestion={desk.draftQuestion}
           questionHint={desk.questionHint}
           busy={desk.busy}

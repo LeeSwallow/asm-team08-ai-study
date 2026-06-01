@@ -19,6 +19,12 @@ _ATMOSPHERE_BREAK_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_STIFF_SUMMARY_TONE_PATTERNS = re.compile(
+    r"시간대를 묻는 거라면|제 기억은 이렇게 정리됩니다|제 기억은 이렇습니다|그 이상은 추측하고 싶지 않습니다"
+    r"|제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다|공개적으로 확인할 수 있는 범위는 제한적입니다"
+    r"|구체적 단서를 언급|언급해주신다면|답변드리겠습니다|아는 범위 내에서 답변",
+)
+
 
 def _quality_issues(
     text: str,
@@ -49,6 +55,11 @@ def _quality_issues(
     # 게임 분위기 파괴 표현 감지
     if _ATMOSPHERE_BREAK_PATTERNS.search(text):
         issues.append("atmosphere_break")
+
+    # 진술서/요약문처럼 들리는 안전문구는 사실상 fallback 냄새가 강하므로 대화체로 재생성한다.
+    intent = agent_input.intent or ""
+    if intent not in {"greeting", "unmatched"} and _STIFF_SUMMARY_TONE_PATTERNS.search(text):
+        issues.append("stiff_summary_tone")
 
     return issues
 
@@ -85,6 +96,7 @@ def _build_regen_prompt(
         "seed_verbatim": "LLM이 기본 텍스트를 그대로 반환했습니다. 캐릭터의 목소리로 자연스럽게 다시 표현해야 합니다.",
         "no_style_tic": f"캐릭터의 말투 습관({tic})이 응답에 없습니다. 자연스럽게 포함하세요.",
         "atmosphere_break": "응답이 탐정 누아르 분위기를 벗어났습니다. 용의자 심문 맥락으로 유지하세요.",
+        "stiff_summary_tone": "응답이 진술서/요약문처럼 딱딱합니다. 실제 심문 중 말하는 사람처럼 자연스러운 대화체로 바꾸세요.",
     }
     fail_reasons = "\n".join(f"- {issue_map.get(i, i)}" for i in issues)
 
@@ -125,7 +137,9 @@ def _build_regen_prompt(
 1. 허용된 사실 외에 새로운 사건 사실을 절대 추가하지 마세요.
 2. 범인, 동기, 흉기, solution 같은 비밀 정보는 절대 언급하지 마세요.
 3. 탐정 누아르 분위기를 유지하세요.
-4. 재시도 {attempt + 1}번째: 더 자연스럽고 캐릭터에 맞게 표현하세요."""
+4. "시간대를 묻는 거라면", "제 기억은 이렇게 정리됩니다", "그 이상은 추측하고 싶지 않습니다" 같은 보고서식 문구를 쓰지 마세요.
+5. 허용된 진술 문장은 사실 앵커로 포함하되, 앞뒤를 1~2문장의 자연스러운 대화체로만 감싸세요.
+6. 재시도 {attempt + 1}번째: 더 자연스럽고 캐릭터에 맞게 표현하세요."""
 
     return system, seed_text
 

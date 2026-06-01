@@ -1,9 +1,43 @@
 import { useEffect } from "react";
 import { getSession, sessionEventsUrl } from "../api";
 import { logEvent } from "../utils/observability";
-import type { GameSessionView } from "../types";
+import type { GameEventFeedItem, GameSessionView } from "../types";
 
-export function useSessionEvents(session: GameSessionView | null, onSessionUpdate: (session: GameSessionView) => void) {
+function feedItemFromSse(event: MessageEvent): GameEventFeedItem | null {
+  try {
+    const data = JSON.parse(event.data) as { id?: string; type?: string; eventType?: string; createdAt?: string; payload?: Record<string, unknown> };
+    const type = data.type ?? data.eventType ?? event.type;
+    const payload = data.payload ?? {};
+    const text = typeof payload.text === "string" ? payload.text : undefined;
+    const contradictionId = typeof payload.contradictionId === "string" ? payload.contradictionId : undefined;
+    const evidenceId = typeof payload.evidenceId === "string" ? payload.evidenceId : undefined;
+    const sourceId = typeof payload.sourceId === "string" ? payload.sourceId : undefined;
+    const titles: Record<string, string> = {
+      NOTE_FACT_ADDED: "단서 기록",
+      NOTE_CONTRADICTION_CANDIDATE_ADDED: "모순 후보",
+      EVIDENCE_UNLOCKED: "증거 해금",
+      TIMELINE_EVENT_REVEALED: "타임라인 갱신",
+      VISUAL_STATE_CHANGED: "심문 반응",
+      BOOKMARK_SUGGESTED: "북마크 제안",
+    };
+    return {
+      id: data.id ?? event.lastEventId ?? `${type}_${Date.now()}`,
+      type,
+      title: titles[type] ?? type,
+      message: text ?? contradictionId ?? evidenceId ?? sourceId ?? type,
+      createdAt: data.createdAt,
+      payload,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function useSessionEvents(
+  session: GameSessionView | null,
+  onSessionUpdate: (session: GameSessionView) => void,
+  onFeedEvent?: (event: GameEventFeedItem) => void,
+) {
   useEffect(() => {
     if (!session) return;
     if (session.source === "local" || session.sessionId.startsWith("mock_")) {
@@ -47,7 +81,9 @@ export function useSessionEvents(session: GameSessionView | null, onSessionUpdat
       let eventType = "message";
       try {
         const data = JSON.parse(event.data) as { id?: string; type?: string; eventType?: string };
-        eventType = data.type ?? data.eventType ?? eventType;
+        eventType = data.type ?? data.eventType ?? event.type ?? eventType;
+        const feedItem = feedItemFromSse(event);
+        if (feedItem) onFeedEvent?.(feedItem);
         logEvent({
           level: "info",
           component: "SessionEvents",
@@ -107,6 +143,7 @@ export function useSessionEvents(session: GameSessionView | null, onSessionUpdat
       "TIMELINE_EVENT_REVEALED",
       "TENSION_CHANGED",
       "VISUAL_STATE_CHANGED",
+      "BOOKMARK_SUGGESTED",
       "DEBUG_SESSION_UPDATED",
     ].forEach((eventName) => eventSource.addEventListener(eventName, handleEvent));
 

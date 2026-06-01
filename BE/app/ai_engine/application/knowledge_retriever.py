@@ -38,11 +38,10 @@ class QuestionEntities:
 
 
 @dataclass
-class RetrievedContext:
+class CharacterRetrievedContext:
     matched_timeline_events: list[dict] = field(default_factory=list)
     matched_evidence: list[dict] = field(default_factory=list)
     matched_statements: list[dict] = field(default_factory=list)
-    related_contradictions: list[dict] = field(default_factory=list)
     alibi_summary: str | None = None
     fact_boundary: str = ""
     retrieval_debug: dict = field(default_factory=dict)
@@ -52,8 +51,37 @@ class RetrievedContext:
             self.matched_timeline_events
             or self.matched_evidence
             or self.matched_statements
-            or self.related_contradictions
         )
+
+
+@dataclass
+class GameMasterEventContext:
+    matched_statement_ids: list[str] = field(default_factory=list)
+    matched_evidence_ids: list[str] = field(default_factory=list)
+    matched_timeline_ids: list[str] = field(default_factory=list)
+    candidate_contradiction_ids: list[str] = field(default_factory=list)
+    note_fact_source_refs: dict = field(default_factory=dict)
+    retrieval_debug: dict = field(default_factory=dict)
+
+    def is_empty(self) -> bool:
+        return not (
+            self.matched_statement_ids
+            or self.matched_evidence_ids
+            or self.matched_timeline_ids
+            or self.candidate_contradiction_ids
+        )
+
+
+@dataclass
+class DialogueRetrievedContext:
+    character_context: CharacterRetrievedContext = field(default_factory=CharacterRetrievedContext)
+    event_context: GameMasterEventContext = field(default_factory=GameMasterEventContext)
+    retrieval_debug: dict = field(default_factory=dict)
+
+
+# Backward-compatible alias for older imports. New code should use the
+# Character/GameMaster-specific context classes above.
+RetrievedContext = CharacterRetrievedContext
 
 
 def extract_question_entities(question_text: str, allowed_statement_text: str = "") -> QuestionEntities:
@@ -80,7 +108,7 @@ class KnowledgeRetriever:
     def _available(self) -> bool:
         return self._graph is not None and getattr(self._graph, "available", False)
 
-    def retrieve(
+    def retrieve_character_context(
         self,
         *,
         case_id: str,
@@ -90,9 +118,55 @@ class KnowledgeRetriever:
         unlocked_statement_ids: list[str],
         unlocked_evidence_ids: list[str],
         discovered_contradiction_ids: list[str],
-    ) -> RetrievedContext:
+    ) -> CharacterRetrievedContext:
+        return self.retrieve_dialogue_context(
+            case_id=case_id,
+            suspect_id=suspect_id,
+            question_text=question_text,
+            allowed_statement_text=allowed_statement_text,
+            unlocked_statement_ids=unlocked_statement_ids,
+            unlocked_evidence_ids=unlocked_evidence_ids,
+            discovered_contradiction_ids=discovered_contradiction_ids,
+        ).character_context
+
+    def retrieve_event_context(
+        self,
+        *,
+        case_id: str,
+        suspect_id: str,
+        question_text: str,
+        allowed_statement_text: str,
+        unlocked_statement_ids: list[str],
+        unlocked_evidence_ids: list[str],
+        discovered_contradiction_ids: list[str],
+    ) -> GameMasterEventContext:
+        return self.retrieve_dialogue_context(
+            case_id=case_id,
+            suspect_id=suspect_id,
+            question_text=question_text,
+            allowed_statement_text=allowed_statement_text,
+            unlocked_statement_ids=unlocked_statement_ids,
+            unlocked_evidence_ids=unlocked_evidence_ids,
+            discovered_contradiction_ids=discovered_contradiction_ids,
+        ).event_context
+
+    def retrieve_dialogue_context(
+        self,
+        *,
+        case_id: str,
+        suspect_id: str,
+        question_text: str,
+        allowed_statement_text: str,
+        unlocked_statement_ids: list[str],
+        unlocked_evidence_ids: list[str],
+        discovered_contradiction_ids: list[str],
+    ) -> DialogueRetrievedContext:
         if not self._available:
-            return RetrievedContext(fact_boundary=allowed_statement_text)
+            return DialogueRetrievedContext(
+                character_context=CharacterRetrievedContext(fact_boundary=allowed_statement_text),
+                event_context=GameMasterEventContext(),
+                retrieval_debug={"neo4j": False},
+            )
 
         entities = extract_question_entities(question_text, allowed_statement_text)
         debug: dict = {
@@ -107,7 +181,7 @@ class KnowledgeRetriever:
         timeline_events: list[dict] = []
         matched_evidence: list[dict] = []
         matched_statements: list[dict] = []
-        related_contradictions: list[dict] = []
+        candidate_contradiction_ids: list[str] = []
         alibi_summary: str | None = None
 
         try:
@@ -155,8 +229,9 @@ class KnowledgeRetriever:
                             alibi_summary = f"{row['timeWindow']} {row.get('location', '')} (공개 알리바이)".strip()
                         # 충돌 모순 수집
                         for con in (row.get("contradictions") or []):
-                            if con.get("contradictionId") and con not in related_contradictions:
-                                related_contradictions.append(con)
+                            contradiction_id = con.get("contradictionId")
+                            if contradiction_id and contradiction_id not in candidate_contradiction_ids:
+                                candidate_contradiction_ids.append(contradiction_id)
 
             # ② 질문에 언급된 증거 → 관련 모순 탐색
             if entities.evidence_terms and unlocked_evidence_ids:
@@ -196,8 +271,9 @@ class KnowledgeRetriever:
                             "timeWindow": row.get("timeWindow"),
                         })
                         for con in (row.get("contradictions") or []):
-                            if con.get("contradictionId") and con not in related_contradictions:
-                                related_contradictions.append(con)
+                            contradiction_id = con.get("contradictionId")
+                            if contradiction_id and contradiction_id not in candidate_contradiction_ids:
+                                candidate_contradiction_ids.append(contradiction_id)
 
             # ③ 공개 타임라인 시간대 이벤트
             if entities.time_expressions:
@@ -229,7 +305,7 @@ class KnowledgeRetriever:
                 "timelineEvents": len(timeline_events),
                 "evidence": len(matched_evidence),
                 "statements": len(matched_statements),
-                "contradictions": len(related_contradictions),
+                "candidateContradictions": len(candidate_contradiction_ids),
             }
 
         except Exception as exc:
@@ -239,15 +315,42 @@ class KnowledgeRetriever:
             )
             debug["error"] = type(exc).__name__
 
-        return RetrievedContext(
-            matched_timeline_events=timeline_events,
-            matched_evidence=matched_evidence,
-            matched_statements=matched_statements,
-            related_contradictions=[c for c in related_contradictions if c.get("contradictionId")],
-            alibi_summary=alibi_summary,
-            fact_boundary=allowed_statement_text,
+        matched_statement_ids = [item["id"] for item in matched_statements if item.get("id")]
+        matched_evidence_ids = [item["id"] for item in matched_evidence if item.get("id")]
+        matched_timeline_ids = [item["id"] for item in timeline_events if item.get("id")]
+        note_fact_source_refs = {
+            key: value
+            for key, value in {
+                "statementIds": matched_statement_ids,
+                "evidenceIds": matched_evidence_ids,
+                "timelineIds": matched_timeline_ids,
+                "contradictionIds": candidate_contradiction_ids,
+            }.items()
+            if value
+        }
+        return DialogueRetrievedContext(
+            character_context=CharacterRetrievedContext(
+                matched_timeline_events=timeline_events,
+                matched_evidence=matched_evidence,
+                matched_statements=matched_statements,
+                alibi_summary=alibi_summary,
+                fact_boundary=allowed_statement_text,
+                retrieval_debug=debug,
+            ),
+            event_context=GameMasterEventContext(
+                matched_statement_ids=matched_statement_ids,
+                matched_evidence_ids=matched_evidence_ids,
+                matched_timeline_ids=matched_timeline_ids,
+                candidate_contradiction_ids=candidate_contradiction_ids,
+                note_fact_source_refs=note_fact_source_refs,
+                retrieval_debug=debug,
+            ),
             retrieval_debug=debug,
         )
+
+    def retrieve(self, **kwargs: object) -> CharacterRetrievedContext:
+        """Compatibility wrapper. Prefer retrieve_character_context or retrieve_event_context."""
+        return self.retrieve_character_context(**kwargs)  # type: ignore[arg-type]
 
 
 # ── 글로벌 인스턴스 관리 ─────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { askQuestion, createNote, createSession, debugSetPressure, debugUnlock, deleteNote, getCases, getSession, submitAccusation, submitContradiction, updateNote } from "../api";
 import { QUESTION_LIMIT } from "../constants/presentation";
 import { clearStoredSession, loadStoredSession, loadStoredSessionId, saveStoredSession } from "../storage";
-import type { CaseSummary, GameSessionView } from "../types";
+import type { CaseSummary, GameEventFeedItem, GameSessionView } from "../types";
 import {
   buildContradictionCandidates,
   buildEvidenceTiles,
@@ -24,6 +24,7 @@ export function useInvestigationSession() {
   const [busy, setBusy] = useState(false);
   const [autoStarted, setAutoStarted] = useState(false);
   const [statusMessage, setStatusMessage] = useState("사건 파일을 불러오는 중입니다.");
+  const [eventFeed, setEventFeed] = useState<GameEventFeedItem[]>([]);
   const [activeDrawer, setActiveDrawer] = useState<"case" | "evidence" | "notes" | "contradiction" | "relations" | "accusation" | "settings" | null>(null);
   const [inspectedEvidenceId, setInspectedEvidenceId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState("");
@@ -33,7 +34,16 @@ export function useInvestigationSession() {
   const [accusationMotive, setAccusationMotive] = useState("");
   const [accusationMethod, setAccusationMethod] = useState("");
 
-  useSessionEvents(session, setSession);
+  function appendFeedEvents(items: GameEventFeedItem[]) {
+    if (items.length === 0) return;
+    setEventFeed((current) => {
+      const byId = new Map(current.map((item) => [item.id, item]));
+      items.forEach((item) => byId.set(item.id, item));
+      return Array.from(byId.values()).slice(-8);
+    });
+  }
+
+  useSessionEvents(session, setSession, (event) => appendFeedEvents([event]));
 
   useEffect(() => {
     const done = createActionTimer({ component: "InvestigationSession", action: "load_cases" });
@@ -123,6 +133,7 @@ export function useInvestigationSession() {
     try {
       const next = await askQuestion(session, session.selectedSuspectId, typedQuestion);
       setSession(next);
+      appendFeedEvents(next.latestEvents ?? []);
       setDraftQuestion("");
       const diagnostic = next.runtimeDiagnostics;
       const matchedRefs = [
@@ -193,6 +204,7 @@ export function useInvestigationSession() {
     try {
       const next = await submitContradiction(session, selectedStatementIds, selectedEvidenceIds);
       setSession(next);
+      appendFeedEvents(next.latestEvents ?? []);
       setStatusMessage(next.lastVerdict?.message ?? "모순 사항을 제출했습니다.");
       done({ level: "info", fallbackUsed: next.source === "local", eventType: next.lastVerdict?.verdict });
     } finally {
@@ -382,6 +394,7 @@ export function useInvestigationSession() {
     accusationMethod,
     busy,
     statusMessage,
+    eventFeed,
     remainingQuestions: session?.remainingQuestions ?? QUESTION_LIMIT,
     setDraftQuestion,
     submitQuestion,

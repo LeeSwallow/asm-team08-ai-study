@@ -23,7 +23,7 @@ services:
       POSTGRES_USER: detective
       POSTGRES_PASSWORD: detective_secret
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -42,6 +42,7 @@ services:
       AI_LLM_PROVIDER: upstage
       AI_UPSTAGE_MODEL_NAME: solar-pro
       AI_MODEL_NAME: gpt-4o-mini
+      AI_TONE_MODEL_NAME: solar-pro
       BE_DEBUG_TOOLS_ENABLED: "true"
       BE_NEO4J_URI: bolt://neo4j:7687
       BE_NEO4J_USER: neo4j

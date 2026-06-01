@@ -1,11 +1,12 @@
 import { backgroundAsset, suspectAsset } from "../constants/presentation";
-import type { DialogueLogItem, DialogueRuntimeDiagnostics, Suspect, VisualState } from "../types";
+import type { DialogueLogItem, DialogueRuntimeDiagnostics, GameEventFeedItem, Suspect, VisualState } from "../types";
 
 type InterrogationStageProps = {
   selectedSuspect?: Suspect;
   suspects: Suspect[];
   latestAnswer: string;
   dialogueLog: DialogueLogItem[];
+  eventFeed: GameEventFeedItem[];
   draftQuestion: string;
   questionHint?: string;
   busy: boolean;
@@ -22,6 +23,7 @@ export function InterrogationStage({
   suspects,
   latestAnswer,
   dialogueLog,
+  eventFeed,
   draftQuestion,
   questionHint,
   busy,
@@ -33,8 +35,11 @@ export function InterrogationStage({
   onPresentEvidence,
 }: InterrogationStageProps) {
   const tensionLevel = visualState?.tensionLevel ?? "unknown";
-  const expression = visualState?.expression ?? selectedSuspect?.expression ?? "neutral";
-  const emotion = visualState?.emotionalState ?? selectedSuspect?.emotion ?? "guarded";
+  const visualAppliesToSelected = Boolean(
+    selectedSuspect && (!visualState?.suspectId || visualState.suspectId === selectedSuspect.id),
+  );
+  const expression = visualAppliesToSelected ? (visualState?.expression ?? selectedSuspect?.expression ?? "neutral") : (selectedSuspect?.expression ?? "neutral");
+  const emotion = visualAppliesToSelected ? (visualState?.emotionalState ?? selectedSuspect?.emotion ?? "guarded") : (selectedSuspect?.emotion ?? "guarded");
   const pressure = selectedSuspect?.pressure ?? 0;
   const stageBackground = backgroundAsset(visualState?.backgroundId);
   const diagnosticTone = runtimeDiagnostics?.source === "local" || runtimeDiagnostics?.fallbackUsed ? "fallback" : "api";
@@ -110,6 +115,14 @@ export function InterrogationStage({
           <strong>{selectedSuspect ? `${selectedSuspect.name} (${selectedSuspect.role})` : "미선택"}</strong>
           <em>{selectedSuspect ? selectedSuspect.id : "왼쪽 용의자를 선택해야 질문할 수 있습니다."}</em>
         </div>
+        <aside className="gm-event-feed" aria-label="GameMaster 이벤트 피드" aria-live="polite">
+          {eventFeed.slice(-4).map((item) => (
+            <article key={item.id} className={`gm-feed-item ${item.type.toLowerCase()}`}>
+              <strong>{item.title}</strong>
+              <p>{item.message}</p>
+            </article>
+          ))}
+        </aside>
         <div className="lamp-glow" aria-hidden="true" />
         <div className="scene-dialogue-log bubble-transcript" aria-label="턴별 대화 말풍선" aria-live="polite">
           {visibleDialogue.length > 0 ? visibleDialogue.map((item) => {
@@ -119,7 +132,7 @@ export function InterrogationStage({
             return (
               <article key={item.id} className={`turn-bubble ${isDetective ? "detective" : isSystem ? "system" : "suspect"}`}>
                 {!isDetective && !isSystem ? (
-                  <img src={suspectAsset(speaker.suspect?.id, speaker.suspect?.expression ?? expression)} alt={`${speaker.name} 만화 초상`} />
+                  <img src={suspectAsset(speaker.suspect?.id, speaker.suspect?.expression ?? "neutral")} alt={`${speaker.name} 만화 초상`} />
                 ) : (
                   <span className="turn-avatar" aria-hidden="true">{speaker.avatar}</span>
                 )}

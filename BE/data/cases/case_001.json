@@ -786,11 +786,11 @@
       "title": "와인잔 립스틱과 부인 진술",
       "relatedCharacterId": "char_hanseoyeon",
       "requiredStatementIds": ["st_hanseoyeon_wine_deny"],
-      "requiredEvidenceIds": ["ev_lipstick_tube"],
+      "requiredEvidenceIds": ["ev_wine_glass"],
       "severity": "minor",
       "pressureDelta": 15,
       "reasonCode": "physical_trace_contradiction",
-      "message": "한서연은 와인을 마시지 않았다고 했지만, 서재에서 발견된 립스틱 케이스와 와인잔의 흔적 색상이 일치합니다.",
+      "message": "한서연은 와인을 마시지 않았다고 했지만, 서재 와인잔에는 특정 색상의 립스틱 흔적이 남아 있습니다.",
       "unlockedIds": []
     }
   ],

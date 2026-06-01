@@ -8,7 +8,7 @@ from app.ai_engine.schemas.common import AllowedEventPolicy, CharacterKnowledgeP
 from app.ai_engine.schemas.dialogue import AllowedStatement, DialogueRequest, SourceRefs
 
 if TYPE_CHECKING:
-    from app.ai_engine.application.knowledge_retriever import RetrievedContext
+    from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext, GameMasterEventContext
 
 
 class CharacterAgentInput(FlexibleModel):
@@ -66,7 +66,7 @@ class LightRuleCheckInput(FlexibleModel):
     enforceStatementScope: bool = True
     allowedContextTerms: list[str] = Field(default_factory=list)
     intent: str | None = None
-    # KnowledgeRetriever 결과 (재생성 품질 개선에 사용, 없으면 기본 동작)
+    # CharacterKnowledgeRetriever 결과 (재생성 품질 개선에 사용, 없으면 기본 동작)
     retrieved_context: Any | None = Field(default=None, exclude=True)
 
 
@@ -100,6 +100,8 @@ class GameMasterAgentInput(FlexibleModel):
     allowedEventPolicy: AllowedEventPolicy = Field(default_factory=AllowedEventPolicy)
     visibleRefs: SourceRefs = Field(default_factory=SourceRefs)
     providerDegraded: bool = False
+    # GameMasterKnowledgeRetriever 결과. 캐릭터 말투/개별 발화 근거와 분리된 이벤트 제안용 공개 refs.
+    event_context: Any | None = Field(default=None, exclude=True)
 
 
 class GameMasterProposal(FlexibleModel):

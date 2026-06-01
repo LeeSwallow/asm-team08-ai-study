@@ -38,9 +38,9 @@ export const suspectAssetPaths: Record<string, string> = Object.fromEntries(
 
 export const suspectExpressionAssetCoverage: Record<string, readonly CanonicalExpression[]> = {
   char_hanseoyeon: canonicalExpressions,
-  char_yoonjaeho: ["neutral"],
-  char_parkmingyu: ["neutral"],
-  char_choiyuna: ["neutral"],
+  char_yoonjaeho: canonicalExpressions,
+  char_parkmingyu: canonicalExpressions,
+  char_choiyuna: canonicalExpressions,
 };
 
 export const evidenceIconByType: Record<Evidence["type"], string> = {
@@ -59,6 +59,10 @@ export const evidenceAssetPaths: Record<string, string> = {
   ev_phone_call: "/assets/evidence_phone.png",
   ev_medicine_box: "/assets/evidence_medicine.png",
   ev_storm_blackout: "/assets/evidence_blackout.png",
+  ev_ring_near_victim: "/assets/evidence_ring.png",
+  ev_lipstick_tube: "/assets/evidence_lipstick_tube.png",
+  ev_window_bolt: "/assets/evidence_window_bolt.png",
+  ev_deleted_cctv: "/assets/evidence_deleted_cctv.png",
 };
 
 export const lockedEvidenceAssetPath = "/assets/evidence_locked.svg";
