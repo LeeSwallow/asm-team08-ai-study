@@ -21,6 +21,7 @@
 - `git-workflow.md`: Issue, branch, commit, PR, review, merge 절차
 - `repository-integration-review.md`: 루트 저장소 통합 검토 기록
 - `codex-orchestration.md`: Codex 작업 오케스트레이션
+- `orchestration-status.md`: 오케스트레이션 상태 로그
 - `docker-refresh-policy.md`: Docker refresh 정책
 - `dogfood-loop.md`: dogfood loop
 - `tmux-feedback-protocol.md`: tmux feedback protocol
