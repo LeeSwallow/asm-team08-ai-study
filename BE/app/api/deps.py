@@ -4,7 +4,7 @@ from app.application.dialogue_service import DialogueService
 from app.application.session_commands import SessionCommands
 from app.core.config import get_settings
 from app.domain.rule_engine import RuleEngine
-from app.infra.ai_client import AIClient
+from app.infra.local_ai_client import LocalAIClient
 from app.infra.case_repository import CaseRepository
 from app.infra.event_repository import EventRepository
 from app.infra.session_repository import SessionRepository
@@ -34,9 +34,8 @@ def get_rule_engine() -> RuleEngine:
 
 
 @lru_cache
-def get_ai_client() -> AIClient:
-    settings = get_settings()
-    return AIClient(settings.ai_service_base_url, settings.ai_timeout_seconds, settings.ai_max_retries)
+def get_ai_client() -> LocalAIClient:
+    return LocalAIClient()
 
 
 def get_session_commands() -> SessionCommands:

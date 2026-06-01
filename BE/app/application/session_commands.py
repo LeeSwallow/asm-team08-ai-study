@@ -12,7 +12,7 @@ from app.domain.case_engine import apply_unlocks, initial_session_state, pressur
 from app.domain.event_processor import target_is_visible
 from app.domain.models import BookmarkEntry, Case, DialogueEntry, NoteEntry, SessionState
 from app.domain.rule_engine import RuleEngine
-from app.infra.ai_client import AIClient
+from app.infra.local_ai_client import LocalAIClient as AIClient
 from app.infra.case_repository import CaseRepository
 from app.infra.session_repository import SessionRepository
 
@@ -177,6 +177,14 @@ class SessionCommands:
         started_at = time.perf_counter()
         session, case = self.load_session_and_case(session_id)
         self._assert_public_user_accusation_text(motive, method)
+
+        # Snapshot all fields mutated by rule_engine.judge_accusation so we can
+        # fully roll back if the backend-derived result contains forbidden refs.
+        original_accusation = session.accusation
+        original_phase = session.phase
+        original_selected_suspect_id = session.selectedSuspectId
+        original_newly_unlocked_ids = list(session.newlyUnlockedIds)
+
         result = self.rule_engine.judge_accusation(
             session,
             case,
@@ -187,6 +195,34 @@ class SessionCommands:
             motive=motive,
             method=method,
         )
+
+        # Validate ALL public accusation fields that will appear in SSE/response
+        # BEFORE any persistence. This covers backend-derived data (message,
+        # missingEvidenceIds, missingContradictionIds, missingStatementIds)
+        # that could contain forbidden tokens from case JSON.
+        accusation_public_fields = {
+            "verdict": result.get("verdict"),
+            "message": result.get("message"),
+            "missingEvidenceIds": result.get("missingEvidenceIds", []),
+            "missingContradictionIds": result.get("missingContradictionIds", []),
+            "missingStatementIds": result.get("missingStatementIds", []),
+        }
+        try:
+            assert_no_forbidden_refs(accusation_public_fields, surface="accusation_public_result")
+        except ValueError as exc:
+            session.accusation = original_accusation
+            session.phase = original_phase
+            session.selectedSuspectId = original_selected_suspect_id
+            session.newlyUnlockedIds = original_newly_unlocked_ids
+            logger.error(
+                "accusation public result contains forbidden ref; rolled back",
+                extra={"service": "backend", "session_id": session_id, "fallback_used": False},
+            )
+            raise service_unavailable(
+                "ACCUSATION_RESULT_FORBIDDEN_REF",
+                {"degradedReason": str(exc).split(":", 2)[0], "fallbackUsed": False},
+            )
+
         session.dialogueLog.append(
             DialogueEntry(
                 id=f"dlg_{uuid4().hex}",
@@ -219,6 +255,11 @@ class SessionCommands:
     ) -> dict:
         if not text.strip():
             raise bad_request("NOTE_TEXT_REQUIRED")
+        # Validate text AND tags BEFORE any session mutation or persistence.
+        try:
+            assert_no_forbidden_refs({"text": text, "tags": tags}, surface="note_fields")
+        except ValueError as exc:
+            raise bad_request(f"NOTE_TEXT_FORBIDDEN_REF:{str(exc).split(':', 2)[0]}")
         session, case = self.load_session_and_case(session_id)
         self._validate_note_links(session, linked_statement_ids, linked_evidence_ids, linked_record_ids)
         note = NoteEntry(
@@ -251,9 +292,22 @@ class SessionCommands:
         next_evidence_ids = note.linkedEvidenceIds if linked_evidence_ids is None else linked_evidence_ids
         next_record_ids = note.linkedRecordIds if linked_record_ids is None else linked_record_ids
         self._validate_note_links(session, next_statement_ids, next_evidence_ids, next_record_ids)
+
+        # Validate ALL user-supplied public fields BEFORE any mutation or persistence.
+        if text is not None and not text.strip():
+            raise bad_request("NOTE_TEXT_REQUIRED")
+        fields_to_validate: dict = {}
         if text is not None:
-            if not text.strip():
-                raise bad_request("NOTE_TEXT_REQUIRED")
+            fields_to_validate["text"] = text
+        if tags is not None:
+            fields_to_validate["tags"] = tags
+        if fields_to_validate:
+            try:
+                assert_no_forbidden_refs(fields_to_validate, surface="note_fields")
+            except ValueError as exc:
+                raise bad_request(f"NOTE_TEXT_FORBIDDEN_REF:{str(exc).split(':', 2)[0]}")
+
+        if text is not None:
             note.text = text.strip()
         if tags is not None:
             note.tags = tags
