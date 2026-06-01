@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="rainy noir mansion study comic background">
+<defs><linearGradient id="g" y1="0" y2="1"><stop stop-color="#1a2634"/><stop offset=".45" stop-color="#111721"/><stop offset="1" stop-color="#050608"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="8" flood-color="#000" flood-opacity=".6"/></filter></defs>
+<rect width="1200" height="720" fill="url(#g)"/><rect x="38" y="40" width="1124" height="640" rx="34" fill="none" stroke="#314254" stroke-width="8"/><path d="M0 590 C210 520 430 548 650 520 C862 493 1024 538 1200 487 L1200 720 L0 720 Z" fill="#0b0d11"/>
+<g stroke="#617083" stroke-width="4" opacity=".52"><path d="M170 92 h350 v420 h-350z" fill="#101722"/><path d="M210 132 v335 M260 132 v335 M310 132 v335 M360 132 v335 M410 132 v335 M460 132 v335"/><path d="M170 184 h350 M170 244 h350 M170 304 h350 M170 364 h350 M170 424 h350"/></g>
+<g filter="url(#shadow)"><path d="M700 120 h310 v370 h-310z" fill="#111a24" stroke="#6b7f94" stroke-width="6"/><path d="M720 140 h270 v330 h-270z" fill="#17283c"/><path d="M725 145 L990 470 M990 145 L725 470" stroke="#87a1b6" stroke-width="4" opacity=".35"/></g>
+<g stroke="#9db9ce" stroke-width="4" stroke-linecap="round" opacity=".55"><path d="M742 105 l-68 190 M825 80 l-86 270 M920 80 l-72 240 M1045 104 l-82 245"/></g>
+<path d="M520 470 h240 l50 95 h-340z" fill="#342217" stroke="#0a0706" stroke-width="8"/><path d="M552 460 h165" stroke="#ccab67" stroke-width="7" stroke-linecap="round"/><circle cx="650" cy="165" r="54" fill="#d64b3f" opacity=".24"/><text x="62" y="650" fill="#cfb16b" font-family="serif" font-size="42" font-weight="800">CASE FILE: RAIN AT THE STUDY</text>
+</svg>
