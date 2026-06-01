@@ -181,7 +181,7 @@ class PersonaOverlay(FlexibleModel):
     selectedFrom: str | None = None
     selectionReason: str | None = None
     evasiveness: float | None = Field(default=None, ge=0, le=1)
-    hesitation: str | None = None
+    hesitation: str | int | float | None = None
     allowedTone: list[str] = Field(default_factory=list)
     forbiddenTone: list[str] = Field(default_factory=list)
     recentDialoguePressure: float | None = Field(default=None, ge=0, le=1)

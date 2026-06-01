@@ -74,7 +74,11 @@ class GameMasterAgent:
                     "noStateMutation": True,
                 },
             )
-        events = propose_dialogue_events(agent_input.payload, provider_degraded=agent_input.providerDegraded)
+        events = propose_dialogue_events(
+            agent_input.payload,
+            provider_degraded=agent_input.providerDegraded,
+            event_context=agent_input.event_context,
+        )
         safe_events = []
         rejected = []
         for event in events:

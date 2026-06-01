@@ -217,6 +217,60 @@ def test_investigation_read_models_include_case_file_notebook_and_contradiction_
     assert "con_room_claim_vs_entry_log" in events_body
 
 
+def test_natural_dialogue_contradictions_create_notebook_proof_and_readiness(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch, debug_tools=True)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    client.post(f"/api/v1/sessions/{session_id}/debug/unlock", json={"target": "all"})
+
+    room = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "message": "22시에 방에 있었다고 했는데 서재 출입 기록에는 22:02 카드키가 찍혀 있어요. 모순 아닌가요?",
+        },
+    ).json()
+    room_transition = room["dialogueResult"]["interrogationTransition"]
+    assert room_transition["newlyDiscoveredContradictionIds"] == ["con_room_claim_vs_entry_log"]
+    assert room["accusationReadiness"]["eligible"] is False
+
+    will = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "message": "상속 때문에 다툰 적 없다고 했는데 찢어진 유언장에는 한서연 몫이 줄어드는 변경 흔적이 있네요.",
+        },
+    ).json()
+    will_transition = will["dialogueResult"]["interrogationTransition"]
+    assert will_transition["newlyDiscoveredContradictionIds"] == ["con_inheritance_motive"]
+    assert will["accusationReadiness"]["eligible"] is True
+
+    contradiction_notes = [
+        note
+        for note in will["notes"]
+        if EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value.lower() in note["tags"]
+    ]
+    note_ids = {item["linkedContradictionIds"][0] for item in contradiction_notes}
+    assert {"con_room_claim_vs_entry_log", "con_inheritance_motive"}.issubset(note_ids)
+
+    proof_evidence_ids = sorted({item for note in contradiction_notes for item in note["linkedEvidenceIds"]})
+    proof_statement_ids = sorted({item for note in contradiction_notes for item in note["linkedStatementIds"]})
+    accusation = client.post(
+        f"/api/v1/sessions/{session_id}/accusation",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "motive": "상속 비율 변경 때문에 피해자와 갈등했다.",
+            "method": "서재 출입 기록과 유언장 흔적을 근거로 최종 지목한다.",
+            "evidenceIds": proof_evidence_ids,
+            "contradictionIds": will["discoveredContradictionIds"],
+            "statementIds": proof_statement_ids,
+        },
+    ).json()
+    assert accusation["accusationResult"]["verdict"] == "correct"
+    assert accusation["accusationResult"]["proofComplete"] is True
+
+
 def test_tension_policy_only_changes_on_new_validated_contradiction(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
@@ -240,8 +294,8 @@ def test_tension_policy_only_changes_on_new_validated_contradiction(tmp_path, mo
     ).json()
     assert first["contradictionResult"]["verdict"] == "correct"
     assert first["contradictionResult"]["newlyDiscovered"] is True
-    assert first["contradictionResult"]["pressureDelta"] == 40
-    assert first["pressureBySuspect"]["char_hanseoyeon"] == 40
+    assert first["contradictionResult"]["pressureDelta"] == 42
+    assert first["pressureBySuspect"]["char_hanseoyeon"] == 42
 
     duplicate = client.post(
         f"/api/v1/sessions/{session_id}/contradictions",
@@ -254,7 +308,7 @@ def test_tension_policy_only_changes_on_new_validated_contradiction(tmp_path, mo
     assert duplicate["contradictionResult"]["verdict"] == "correct"
     assert duplicate["contradictionResult"]["newlyDiscovered"] is False
     assert duplicate["contradictionResult"]["pressureDelta"] == 0
-    assert duplicate["pressureBySuspect"]["char_hanseoyeon"] == 40
+    assert duplicate["pressureBySuspect"]["char_hanseoyeon"] == 42
 
     events = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert events.count("event: TENSION_CHANGED") == 1
@@ -805,6 +859,16 @@ def test_dialogue_evidence_question_policy_includes_visible_contradiction_path(t
     assert policy["relatedStatementIds"] == ["st_hanseoyeon_room_2200"]
     assert policy["relatedContradictionIds"] == ["con_room_claim_vs_entry_log"]
     assert "tl_global_2202_study_entry" in policy["relatedTimelineEventIds"]
+    assert ai_payload["turnInterpretation"]["intent"] == "press_inconsistency"
+    assert ai_payload["turnInterpretation"]["candidateContradictionIds"] == ["con_room_claim_vs_entry_log"]
+    assert ai_payload["turnInterpretation"]["mentionedEvidenceIds"] == ["ev_study_entry_log"]
+    assert ai_payload["interrogationTransition"]["decisiveEvidence"] is True
+    assert ai_payload["interrogationTransition"]["newlyDiscoveredContradictionIds"] == ["con_room_claim_vs_entry_log"]
+    assert ai_payload["interrogationTransition"]["disclosureStage"] == "forced_explanation"
+    refs = ai_payload["allowedStatement"]["sourceRefs"]
+    assert refs["contradictionIds"] == ["con_room_claim_vs_entry_log"]
+    assert refs["evidenceIds"] == ["ev_study_entry_log"]
+    assert refs["statementIds"] == ["st_hanseoyeon_room_2200"]
     assert payload["dialogueResult"]["appliedEventsCount"] == 2
     events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert "event: NOTE_CONTRADICTION_CANDIDATE_ADDED" in events_body

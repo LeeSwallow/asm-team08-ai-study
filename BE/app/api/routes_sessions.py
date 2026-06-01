@@ -17,6 +17,8 @@ from app.core.observability import RequestContext
 from app.domain.case_engine import visible_session_payload
 from app.domain.event_processor import build_visual_state
 from app.domain.event_types import EventType
+from app.domain.interrogation_state import pressure_state as _pressure_state
+from app.domain.interrogation_state import tension_level as _tension_level
 from app.domain.models import Case, EventEntry, SessionState
 from app.infra.event_repository import EventRepository
 from app.infra.sse_transport import session_event_stream
@@ -546,24 +548,6 @@ def request_suspect_id(verdict: dict, case: Case) -> str | None:
     contradiction_id = verdict.get("contradictionId")
     contradiction = next((item for item in case.contradictions if item.contradictionId == contradiction_id), None)
     return contradiction.relatedCharacterId if contradiction else None
-
-
-def _pressure_state(pressure: int) -> str:
-    if pressure >= 70:
-        return "broken"
-    if pressure >= 30:
-        return "pressed"
-    return "normal"
-
-
-def _tension_level(pressure: int) -> str:
-    if pressure >= 70:
-        return "critical"
-    if pressure >= 45:
-        return "high"
-    if pressure >= 30:
-        return "medium"
-    return "low"
 
 
 def _request_context(request: Request) -> RequestContext:

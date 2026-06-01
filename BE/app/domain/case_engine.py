@@ -1,5 +1,6 @@
 from typing import Iterable, List, Set
 
+from app.domain.interrogation_state import emotional_state, pressure_state, tension_level
 from app.domain.models import Case, SessionState
 
 
@@ -74,7 +75,7 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
                 "pressureState": pressure_state(session.pressureBySuspect.get(item.characterId, 0)),
                 "tensionLevel": tension_level(session.pressureBySuspect.get(item.characterId, 0)),
                 "emotionalState": emotional_state(session.pressureBySuspect.get(item.characterId, 0)),
-                "speechStyle": public_speech_style(item.characterId),
+                "speechStyle": item.speechStyle or public_speech_style(item.characterId),
                 "publicTimeline": character_public_timeline(case, session, item.characterId),
             }
             for item in case.suspects
@@ -97,6 +98,7 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
             suspect.characterId: pressure_state(session.pressureBySuspect.get(suspect.characterId, 0))
             for suspect in case.suspects
         },
+        "accusationReadiness": public_accusation_readiness(case, session),
         "accusation": session.accusation,
         "notebook": public_notebook(case, session),
         "contradictions": public_contradiction_read_model(case, session),
@@ -140,6 +142,24 @@ def public_notebook(case: Case, session: SessionState) -> dict:
             "characterId",
         ),
         "contradictions": public_contradiction_read_model(case, session),
+        "accusationReadiness": public_accusation_readiness(case, session),
+    }
+
+
+def public_accusation_readiness(case: Case, session: SessionState) -> dict:
+    required_contradictions = set(case.solution.requiredContradictionIds)
+    required_evidence = set(case.solution.requiredEvidenceIds)
+    required_statements = set(case.solution.requiredStatementIds)
+    missing_contradictions = required_contradictions.difference(session.discoveredContradictionIds)
+    missing_evidence = required_evidence.difference(session.unlockedEvidenceIds)
+    missing_statements = required_statements.difference(session.unlockedStatementIds)
+    return {
+        "eligible": not missing_contradictions and not missing_evidence and not missing_statements,
+        "missingRequiredContradictionCount": len(missing_contradictions),
+        "missingRequiredEvidenceCount": len(missing_evidence),
+        "missingRequiredStatementCount": len(missing_statements),
+        "discoveredRequiredContradictionCount": len(required_contradictions.intersection(session.discoveredContradictionIds)),
+        "requiredContradictionCount": len(required_contradictions),
     }
 
 
@@ -341,36 +361,6 @@ def _group_by_key(items: list[dict], key: str) -> dict:
     for item in items:
         grouped.setdefault(str(item.get(key) or "unknown"), []).append(item)
     return grouped
-
-
-def pressure_state(pressure: int) -> str:
-    if pressure >= 70:
-        return "broken"
-    if pressure >= 30:
-        return "pressed"
-    return "normal"
-
-
-def emotional_state(pressure: int) -> str:
-    if pressure >= 70:
-        return "breakdown"
-    if pressure >= 45:
-        return "shocked"
-    if pressure >= 30:
-        return "defensive"
-    if pressure >= 15:
-        return "wary"
-    return "neutral"
-
-
-def tension_level(pressure: int) -> str:
-    if pressure >= 70:
-        return "critical"
-    if pressure >= 45:
-        return "high"
-    if pressure >= 30:
-        return "medium"
-    return "low"
 
 
 def public_speech_style(character_id: str) -> dict:

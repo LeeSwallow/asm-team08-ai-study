@@ -63,6 +63,15 @@ export type DialogueRuntimeDiagnostics = {
   tensionLevel?: string;
 };
 
+export type GameEventFeedItem = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  createdAt?: string;
+  payload?: Record<string, unknown>;
+};
+
 export type Opening = {
   hook: string;
   objective: string;
@@ -153,6 +162,7 @@ export type NoteEntry = {
   id: string;
   text: string;
   tags: string[];
+  linkedContradictionIds?: string[];
   linkedStatementIds: string[];
   linkedEvidenceIds: string[];
   linkedRecordIds: string[];
@@ -257,6 +267,15 @@ export type ResultView = {
   missedClues: string[];
 };
 
+export type AccusationReadiness = {
+  eligible: boolean;
+  missingRequiredContradictionCount: number;
+  missingRequiredEvidenceCount: number;
+  missingRequiredStatementCount: number;
+  discoveredRequiredContradictionCount: number;
+  requiredContradictionCount: number;
+};
+
 export type GameSessionView = {
   sessionId: string;
   caseId: string;
@@ -275,6 +294,7 @@ export type GameSessionView = {
   unlockedQuestionIds: string[];
   newlyUnlockedIds: string[];
   foundContradictionIds: string[];
+  accusationReadiness?: AccusationReadiness;
   opening: Opening;
   storyline: Storyline;
   currentObjective: CurrentObjective;
@@ -282,6 +302,7 @@ export type GameSessionView = {
   visibleTimeline: TimelineEvent[];
   source?: "api" | "local";
   visualState?: VisualState;
+  latestEvents?: GameEventFeedItem[];
   runtimeDiagnostics?: DialogueRuntimeDiagnostics;
   lastVerdict?: {
     verdict: Verdict;

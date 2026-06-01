@@ -11,6 +11,7 @@ class Settings:
     # OpenAI (fallback)
     openai_api_key: str | None = os.getenv("AI_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     model_name: str = os.getenv("AI_MODEL_NAME", "gpt-4o-mini")
+    tone_model_name: str = os.getenv("AI_TONE_MODEL_NAME", os.getenv("AI_MODEL_NAME", "gpt-4o-mini"))
     # Common
     request_timeout_seconds: float = float(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "8.0"))
 

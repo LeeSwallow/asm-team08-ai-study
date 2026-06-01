@@ -27,6 +27,20 @@ def _safe_short_text(value: object, max_length: int = 120) -> str:
     return text
 
 
+def _strip_outer_dialogue_quotes(text: str) -> str:
+    stripped = text.strip()
+    quote_pairs = (('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』"))
+    changed = True
+    while changed and len(stripped) >= 2:
+        changed = False
+        for left, right in quote_pairs:
+            if stripped.startswith(left) and stripped.endswith(right):
+                stripped = stripped[len(left) : -len(right)].strip()
+                changed = True
+                break
+    return stripped
+
+
 def _knowledge_persona(payload: DialogueRequest) -> str:
     pack = payload.characterKnowledgePack
     if not pack:
@@ -74,14 +88,44 @@ def _has_matched_evidence_refs(payload: DialogueRequest) -> bool:
     return bool(refs.evidenceIds or payload.allowedEventPolicy.relatedEvidenceIds)
 
 
+def _has_matched_contradiction_refs(payload: DialogueRequest) -> bool:
+    refs = payload.allowedStatement.sourceRefs
+    return bool(refs.contradictionIds or payload.allowedEventPolicy.relatedContradictionIds)
+
+
 def _knowledge_prompt_context(payload: DialogueRequest, retrieved_context: object | None = None) -> str:
     pack = payload.characterKnowledgePack
     sections: list[str] = []
+
+    source_facts = getattr(payload.allowedStatement, "sourceFacts", None) or []
+    if isinstance(source_facts, list):
+        safe_facts = [_safe_short_text(item, max_length=120) for item in source_facts[:4]]
+        safe_facts = [item for item in safe_facts if item]
+        if safe_facts:
+            sections.append("Visible source facts: " + " / ".join(safe_facts))
 
     # ── 페르소나 ─────────────────────────────────────────────────────────────
     persona = _knowledge_persona(payload)
     if persona:
         sections.append(f"Persona: {persona}")
+    speech_style = _knowledge_speech_style(payload)
+    overlay = select_persona_overlay(payload)
+    voice_parts = []
+    if speech_style.get("vocabulary"):
+        voice_parts.append("preferred words=" + ", ".join(str(item) for item in speech_style.get("vocabulary", [])[:4]))
+    if overlay:
+        if overlay.tone:
+            voice_parts.append(f"state tone={overlay.tone}")
+        if overlay.voice:
+            voice_parts.append("state behavior=" + _safe_short_text(overlay.voice, max_length=120))
+        if overlay.styleDirectives:
+            voice_parts.append("state directives=" + ", ".join(str(item) for item in overlay.styleDirectives[:4]))
+        if overlay.evasiveness is not None:
+            voice_parts.append(f"evasiveness={overlay.evasiveness}")
+        if overlay.hesitation is not None:
+            voice_parts.append(f"hesitation={overlay.hesitation}")
+    if voice_parts:
+        sections.append("Voice state: " + " / ".join(voice_parts))
 
     # ── KnowledgeRetriever 결과 우선 사용 (질문 관련 이벤트/증거/진술) ────────
     if retrieved_context is not None and not getattr(retrieved_context, "is_empty", lambda: True)():
@@ -139,11 +183,41 @@ def _knowledge_prompt_context(payload: DialogueRequest, retrieved_context: objec
     if not sections:
         return ""
     return (
-        "\n\nCharacterKnowledgePack is BE-curated public context. Use it for voice, pressure continuity, "
-        "and choosing which visible public angle to acknowledge. Do not add factual claims unless they are "
-        "in the allowed statement or stable source refs.\n"
+        "\n\nPublic character context follows. It can shape memory, voice, and pressure continuity, "
+        "but factual claims still come only from the FACT ANCHOR or visible refs.\n"
         + "\n".join(sections)
     )
+
+
+def _interrogation_prompt_context(payload: DialogueRequest) -> str:
+    transition = payload.interrogationTransition or {}
+    snapshot = payload.interrogationState or {}
+    turn = payload.turnInterpretation or {}
+    if not transition and not snapshot and not turn:
+        return ""
+    parts = [
+        f"intent={turn.get('intent') or transition.get('move') or 'unknown'}",
+        f"move={transition.get('move') or 'unknown'}",
+        f"composure={transition.get('composure') or snapshot.get('composure') or 'calm'}",
+        f"disclosure={transition.get('disclosureStage') or snapshot.get('disclosureStage') or 'denial'}",
+    ]
+    if turn.get("mentionedEvidenceIds"):
+        parts.append("mentionedEvidenceIds=" + ",".join(turn.get("mentionedEvidenceIds") or []))
+    if turn.get("matchedTimelineIds"):
+        parts.append("matchedTimelineIds=" + ",".join(turn.get("matchedTimelineIds") or []))
+    if transition.get("decisiveEvidence"):
+        parts.append("decisiveEvidence=true")
+    if transition.get("contradictionIds"):
+        parts.append("visibleContradictionIds=" + ",".join(transition.get("contradictionIds") or []))
+    context = "\n\nInterrogation state for this turn: " + " / ".join(str(part) for part in parts if part)
+    if transition.get("decisiveEvidence"):
+        context += (
+            "\nThe player has just connected a visible evidence item to the suspect's earlier statement. "
+            "Let the suspect react as a pressured person first, then answer from the public facts."
+        )
+    elif transition.get("move") == "repeat_pressure":
+        context += "\nThe player is challenging the previous answer. Keep continuity and do not repeat the exact same sentence."
+    return context
 
 
 def _variant_matches(
@@ -224,97 +298,21 @@ def build_character_agent_input(payload: DialogueRequest) -> CharacterAgentInput
         pressureState=payload.suspect.pressureState,
         emotionalState=payload.suspect.emotionalState,
         tensionScore=payload.suspect.tensionScore if payload.suspect.tensionScore is not None else payload.suspect.pressure,
+        interrogationState=payload.interrogationState,
+        interrogationTransition=payload.interrogationTransition,
         recentDialogue=pack.recentDialogue if pack else [],
     )
 
 
 def render_dialogue_seed(payload: DialogueRequest) -> str:
     base = payload.allowedStatement.text.strip()
-    tone = payload.style.tone
-    act_id = payload.storyline.currentActId if payload.storyline else None
-    visual_emotion = payload.visualState.characterImageState
-    overlay = select_persona_overlay(payload)
-    tension_label = payload.suspect.tensionLevel
-    numeric_tension = _normalized_tension_score(
-        payload.suspect.pressure if payload.suspect.pressure is not None else payload.suspect.tensionScore
-    )
-    speech_style = _knowledge_speech_style(payload)
-    spoken_tic = str(speech_style.get("tic") or speech_style.get("prefix") or "").strip()
-    if spoken_tic and len(spoken_tic) > 24:
-        spoken_tic = ""
-    style_vocab = speech_style.get("vocabulary")
-    if isinstance(style_vocab, list):
-        safe_vocab = [str(item).strip() for item in style_vocab if 0 < len(str(item).strip()) <= 12]
-    else:
-        safe_vocab = []
-    style_word = safe_vocab[0] if safe_vocab else ""
     name = payload.suspect.name.strip()
-    role = (payload.suspect.role or "용의자").strip()
     intent = classify_dialogue_intent(payload.question.text, payload.dialogueMode)
-    if visual_emotion in {"tense", "surprised", "angry", "broken"}:
-        tone = visual_emotion
-    if payload.suspect.emotionalState in {"tense", "surprised", "angry", "broken"}:
-        tone = payload.suspect.emotionalState
-    if overlay and overlay.tone:
-        tone = overlay.tone
-    if tension_label in {"high", "critical"} and tone == "neutral":
-        tone = "tense"
-    if numeric_tension is not None and numeric_tension >= 70 and tone == "neutral":
-        tone = "tense"
-    if act_id in {"first_break", "motive_reveal", "final_accusation"} and payload.suspect.pressureState == "normal":
-        tone = "pressed"
-
-    def say(prefix: str, include_base: bool = True, suffix: str = "") -> str:
-        parts = []
-        if spoken_tic:
-            parts.append(spoken_tic)
-        if style_word and intent not in {"greeting", "unmatched"}:
-            parts.append(style_word)
-        parts.append(prefix)
-        if include_base:
-            parts.append(base)
-        if suffix:
-            parts.append(suffix)
-        return " ".join(part.strip() for part in parts if part.strip())
-
     if intent == "greeting":
-        return say(f"안녕하세요. 저는 {name}입니다. 사건에 대해 제가 공개적으로 말할 수 있는 범위에서만 답하겠습니다.", include_base=False)
+        return f"저는 {name}입니다."
     if intent == "unmatched":
-        return say("그 질문만으로는 제가 확인해 드릴 수 있는 일이 떠오르지 않습니다. 시간, 장소, 또는 특정 단서를 짚어서 다시 물어봐 주세요.", include_base=False)
-    overlay_directives = " ".join(overlay.styleDirectives).lower() if overlay else ""
-    overlay_pressed = bool(overlay and (overlay.tone in {"pressed", "tense", "critical"} or "short" in overlay_directives or "압박" in overlay_directives))
-    if (
-        intent == "pressure"
-        or _recent_dialogue_pressure(payload)
-        or overlay_pressed
-        or tone in {"pressed", "nervous", "tense", "surprised", "angry", "broken"}
-        or payload.suspect.pressureState in {"pressed", "broken"}
-    ):
-        suffix = "방금 말씀드린 범위를 넘겨 단정하라고 하시면 곤란합니다." if _recent_dialogue_pressure(payload) else "다만 같은 말을 반복하라는 식의 질문은 불편하군요."
-        return say("몰아붙여도 지금 제 대답은 달라지지 않습니다.", suffix=suffix)
-    if intent == "location_time":
-        return say("시간대를 묻는 거라면, 제 기억은 이렇게 정리됩니다.", suffix="그 이상은 추측하고 싶지 않습니다.")
-    if intent == "evidence":
-        focus = _question_focus(payload)
-        if focus == "lipstick_wine":
-            if _has_matched_evidence_refs(payload):
-                suffix = "립스틱 자국은 공개된 단서와 대조해 보시죠." if _question_mentions_lipstick_mark(payload) else ""
-                return say("그 와인잔 이야기를 제게 돌리지 마세요. 제가 직접 확인한 건 이 정도입니다.", suffix=suffix)
-            return say("립스틱이나 와인잔 같은 단서는 제 말만으로 단정할 수는 없습니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
-        if focus == "medical":
-            if _has_matched_evidence_refs(payload):
-                return say("의학적으로 단정하려면 공개된 기록부터 맞춰 봐야 합니다. 제가 지금 말할 수 있는 건 여기까지입니다.", suffix="처방이나 복용 약은 공개된 의료 단서와 대조해 보세요.")
-            return say("의학 쪽 단서를 묻는 거라면, 제가 공개적으로 확인할 수 있는 범위는 제한적입니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
-        if focus == "person_relation":
-            return say("다른 사람을 특정하라는 질문이라면, 제가 공개적으로 확인할 수 있는 범위는 제한적입니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
-        return say("그 단서를 묻는 거라면, 제 말만으로 단정할 수는 없습니다. 제가 직접 확인해 드릴 수 있는 말은 이것뿐입니다.")
-    if tone in {"calm_defensive", "defensive"}:
-        return say("솔직히 말하면,") + " 더 보탤 말은 많지 않아요."
-    if overlay and overlay.voice:
-        safe_voice = _safe_short_text(overlay.voice, max_length=32)
-        if safe_voice:
-            return say(f"{safe_voice}. 제 기억은 그래요.")
-    return say("제 기억은 그래요.")
+        return "그 질문에는 바로 답하기 어렵습니다."
+    return base or "제가 공개적으로 말할 수 있는 건 거기까지입니다."
 
 
 class CharacterAgent:
@@ -339,6 +337,7 @@ class CharacterAgent:
             error_type: str | None = None,
         ) -> DraftCharacterReply:
             overlay = agent_input.activePersonaOverlay
+            text = _strip_outer_dialogue_quotes(text)
             refs = payload.allowedStatement.sourceRefs.model_copy()
             intent = agent_input.intent or classify_dialogue_intent(payload.question.text, payload.dialogueMode)
             if intent in {"greeting", "unmatched"}:
@@ -411,7 +410,7 @@ class CharacterAgent:
             )
 
         try:
-            prompt = DIALOGUE_SYSTEM_PROMPT + _knowledge_prompt_context(payload, retrieved_context)
+            prompt = DIALOGUE_SYSTEM_PROMPT + _interrogation_prompt_context(payload) + _knowledge_prompt_context(payload, retrieved_context)
             llm = get_llm()
             text = llm.complete(prompt, seed_text=seed, max_length=payload.style.maxLength)
             # If ChainedLLM silently switched to fallback, report it honestly.

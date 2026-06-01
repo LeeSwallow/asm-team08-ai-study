@@ -13,7 +13,7 @@ from app.infra.session_repository import SessionRepository
 @lru_cache
 def get_case_repository() -> CaseRepository:
     settings = get_settings()
-    return CaseRepository(settings.data_dir / "cases")
+    return CaseRepository(settings.data_dir / "cases", use_database=bool(settings.database_url))
 
 
 @lru_cache

@@ -18,7 +18,8 @@ _ATMOSPHERE_BREAK_PATTERNS = re.compile(
     r"|죄송합니다만, 저는 AI|저는 언어 모델|도움을 드리기|지원해 드리기",
     re.IGNORECASE,
 )
-
+_SCRIPT_DIRECTION_PATTERNS = re.compile(r"\([^)]{1,50}\)|（[^）]{1,50}）|\[[^\]]{1,50}\]")
+_HARD_QUALITY_ISSUES = {"self_third_person", "script_direction", "atmosphere_break"}
 
 def _quality_issues(
     text: str,
@@ -49,6 +50,29 @@ def _quality_issues(
     # 게임 분위기 파괴 표현 감지
     if _ATMOSPHERE_BREAK_PATTERNS.search(text):
         issues.append("atmosphere_break")
+    if _SCRIPT_DIRECTION_PATTERNS.search(text):
+        issues.append("script_direction")
+
+    suspect_name = str(getattr(agent_input, "suspectName", "") or "").strip()
+    if suspect_name:
+        given_name = suspect_name[1:] if len(suspect_name) >= 3 else suspect_name
+        third_person_terms = [suspect_name]
+        if given_name:
+            third_person_terms.extend(
+                [
+                    f"{given_name} 누나",
+                    f"{given_name} 형",
+                    f"{given_name} 씨",
+                    f"{given_name}님",
+                    f"{given_name}은",
+                    f"{given_name}는",
+                    f"{given_name}이",
+                    f"{given_name}가",
+                    f"{given_name}의",
+                ]
+            )
+        if any(term and term in text for term in third_person_terms):
+            issues.append("self_third_person")
 
     return issues
 
@@ -85,6 +109,8 @@ def _build_regen_prompt(
         "seed_verbatim": "LLM이 기본 텍스트를 그대로 반환했습니다. 캐릭터의 목소리로 자연스럽게 다시 표현해야 합니다.",
         "no_style_tic": f"캐릭터의 말투 습관({tic})이 응답에 없습니다. 자연스럽게 포함하세요.",
         "atmosphere_break": "응답이 탐정 누아르 분위기를 벗어났습니다. 용의자 심문 맥락으로 유지하세요.",
+        "self_third_person": "용의자가 자기 자신을 제3자나 가족 호칭으로 불렀습니다. 반드시 1인칭으로 말해야 합니다.",
+        "script_direction": "괄호 지문이나 대본식 행동 묘사가 섞였습니다. 말풍선 대사만 남겨야 합니다.",
     }
     fail_reasons = "\n".join(f"- {issue_map.get(i, i)}" for i in issues)
 
@@ -103,6 +129,11 @@ def _build_regen_prompt(
                 context_lines.append(f"- 관련 진술: {st.get('text', '')[:80]}")
 
     context_block = "\n".join(context_lines) if context_lines else "(없음)"
+    source_facts = getattr(agent_input.allowedStatement, "sourceFacts", None) or []
+    if isinstance(source_facts, list):
+        source_fact_lines = [f"- 공개 사실: {str(item)[:100]}" for item in source_facts[:3] if str(item or "").strip()]
+        if source_fact_lines:
+            context_block = "\n".join([context_block, *source_fact_lines]) if context_block != "(없음)" else "\n".join(source_fact_lines)
     tic_directive = f"말투 습관: {tic}" if tic else ""
     vocab_directive = f"주요 어휘: {vocab_str}" if vocab_str else ""
     style_directives = "\n".join(d for d in [tic_directive, vocab_directive] if d) or "(기본 스타일)"
@@ -114,6 +145,7 @@ def _build_regen_prompt(
 {fail_reasons}
 
 캐릭터 정보:
+- 이름: {getattr(agent_input, "suspectName", None) or "(미지정)"}
 - 페르소나: {base_persona or '(미지정)'}
 - {style_directives}
 - 긴장 수준: {tension}, 압박 상태: {pressure}
@@ -121,11 +153,9 @@ def _build_regen_prompt(
 공개 맥락:
 {context_block}
 
-규칙:
-1. 허용된 사실 외에 새로운 사건 사실을 절대 추가하지 마세요.
-2. 범인, 동기, 흉기, solution 같은 비밀 정보는 절대 언급하지 마세요.
-3. 탐정 누아르 분위기를 유지하세요.
-4. 재시도 {attempt + 1}번째: 더 자연스럽고 캐릭터에 맞게 표현하세요."""
+허용된 공개 사실을 벗어나지 말고, 용의자가 심문 중 직접 말하는 대사로 다시 답하세요.
+자기 이름을 제3자처럼 말하지 말고, 증거 소유자를 공개 사실 없이 새로 만들지 마세요.
+재시도: {attempt + 1}"""
 
     return system, seed_text
 
@@ -208,6 +238,20 @@ class LightRuleCheck:
                     issues = new_issues
 
         # 모든 재생성 시도 후에도 품질 문제 → 최선 버전 반환
+        remaining_issues = _quality_issues(best_checked.finalText, seed_approx, agent_input)
+        if _HARD_QUALITY_ISSUES & set(remaining_issues):
+            fallback_text = _quality_fallback_text(agent_input, seed_approx)
+            fallback_checked = self._security_check(agent_input, fallback_text)
+            fallback_safety = {
+                **fallback_checked.safetyFindings,
+                "regenerated": True,
+                "regenerationAttempts": _MAX_REGEN_ATTEMPTS,
+                "qualityFallback": True,
+                "qualityIssuesResolved": list(_HARD_QUALITY_ISSUES & set(remaining_issues)),
+                "finalTextSource": "quality_fallback_after_regeneration",
+            }
+            return fallback_checked.model_copy(update={"safetyFindings": fallback_safety})
+
         logger.info(
             "light_rule_check regeneration exhausted, using best version",
             extra={
@@ -273,3 +317,20 @@ class LightRuleCheck:
                 extra={"service": "backend", "reason": type(exc).__name__},
             )
             return None
+
+
+def _quality_fallback_text(agent_input: LightRuleCheckInput, seed_text: str) -> str:
+    seed = _SCRIPT_DIRECTION_PATTERNS.sub("", seed_text).strip()
+    seed = re.sub(r"\s{2,}", " ", seed)
+    tone_meta = getattr(agent_input.draft, "tone", {}) or {}
+    style_tone = str(tone_meta.get("styleTone") or "")
+    pressure = str(tone_meta.get("pressureState") or "")
+    if style_tone == "evidence_shock":
+        prefix = "잠깐만요."
+    elif pressure in {"pressed", "broken"}:
+        prefix = "아니요."
+    else:
+        prefix = "그건 아닙니다."
+    if not seed:
+        return f"{prefix} 제가 공개적으로 말할 수 있는 건 거기까지예요."
+    return f"{prefix} {seed}"

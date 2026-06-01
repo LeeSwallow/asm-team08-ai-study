@@ -269,6 +269,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 .stage-character {
   position: absolute;
+  z-index: 2;
   right: 3%;
   bottom: -7%;
   height: 118%;
@@ -277,7 +278,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   object-fit: contain;
   object-position: center bottom;
   filter: drop-shadow(10px 16px 0 rgba(0,0,0,.46)) drop-shadow(0 24px 34px rgba(0,0,0,.84)) contrast(1.08) saturate(1.12);
-  transition: transform .22s ease, filter .22s ease;
+  transition: transform .22s ease, filter .22s ease, opacity .18s ease;
+}
+.reactive-stage .stage-character {
+  right: 0;
+  bottom: -5%;
+  height: 111%;
+  max-width: 58%;
+  object-position: right bottom;
+}
+.reactive-stage.has-dialogue .stage-character {
+  right: -2%;
+  height: 105%;
+  max-width: 54%;
 }
 .tension-high .stage-character, .tension-critical .stage-character { transform: translateX(-6px) scale(1.035); filter: drop-shadow(10px 16px 0 rgba(0,0,0,.46)) drop-shadow(0 26px 38px rgba(97, 12, 16, .72)) contrast(1.13) saturate(1.14); }
 .tension-medium .stage-character { transform: translateX(-3px) scale(1.015); }
@@ -306,7 +319,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   position: absolute;
   z-index: 7;
   left: 18px;
-  bottom: 14px;
+  top: 14px;
   max-width: min(360px, calc(100% - 36px));
   padding: 10px 12px;
   border: 1px solid rgba(255, 100, 93, .38);
@@ -314,6 +327,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   background: rgba(7, 10, 13, .74);
   box-shadow: 0 12px 32px rgba(0,0,0,.28);
 }
+.reactive-stage.is-awaiting-first-turn .interrogation-target-card { top: auto; bottom: 14px; }
 .interrogation-target-card span,
 .interrogation-target-card em {
   display: block;
@@ -332,9 +346,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   position: absolute;
   z-index: 6;
   left: 18px;
-  right: min(270px, 42%);
-  top: 18px;
+  right: auto;
   bottom: 14px;
+  width: min(520px, 56%);
+  max-width: calc(100% - 224px);
+  height: min(54%, 236px);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -342,22 +358,28 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   overflow-y: auto;
   border: 1px solid rgba(141, 117, 87, .28);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(6, 8, 11, .36), rgba(4, 6, 9, .72));
+  background: linear-gradient(180deg, rgba(6, 8, 11, .30), rgba(4, 6, 9, .62));
   box-shadow: 0 18px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.035);
   backdrop-filter: blur(2px);
   scrollbar-width: thin;
+}
+.reactive-stage.is-awaiting-first-turn .scene-dialogue-log.bubble-transcript {
+  left: min(178px, 30%);
+  width: min(430px, 48%);
+  height: auto;
+  max-height: 132px;
 }
 .turn-bubble {
   position: relative;
   display: grid;
   gap: 8px;
-  max-width: min(420px, 92%);
+  max-width: min(560px, 78%);
   margin: 0;
   animation: bubble-in .16s ease-out;
 }
 .turn-bubble > div {
   min-width: 0;
-  padding: 10px 12px;
+  padding: 8px 11px;
   border-radius: 13px;
   box-shadow: 0 12px 24px rgba(0,0,0,.28);
 }
@@ -369,7 +391,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 .turn-bubble strong { font-size: 13px; font-weight: 880; letter-spacing: -.01em; }
 .turn-bubble em { color: rgba(255,255,255,.58); font-size: 10px; font-style: normal; }
-.turn-bubble p { margin: 0; font-size: 14px; line-height: 1.48; word-break: keep-all; }
+.turn-bubble p { margin: 0; font-size: 13px; line-height: 1.42; word-break: keep-all; }
 .turn-bubble img, .turn-avatar {
   width: 34px;
   height: 34px;
@@ -425,7 +447,52 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   background: rgba(18, 16, 15, .78);
   border: 1px dashed rgba(179, 143, 98, .30);
 }
+.gm-event-feed {
+  position: absolute;
+  z-index: 7;
+  top: 92px;
+  left: 18px;
+  width: min(260px, 38%);
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+.reactive-stage.has-dialogue .gm-event-feed {
+  top: 88px;
+  left: auto;
+  right: 18px;
+  width: min(230px, 32%);
+}
+.gm-feed-item {
+  padding: 8px 10px;
+  border: 1px solid rgba(230, 191, 108, .34);
+  border-left: 3px solid #e6bf6c;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(18, 16, 13, .78), rgba(9, 10, 12, .64));
+  box-shadow: 0 12px 22px rgba(0,0,0,.28);
+  backdrop-filter: blur(3px);
+  animation: feed-in-out 5.2s ease-out both;
+}
+.gm-feed-item strong {
+  display: block;
+  color: #ffe2a0;
+  font-size: 11px;
+  font-weight: 900;
+}
+.gm-feed-item p {
+  margin: 3px 0 0;
+  color: #f0e8d9;
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: keep-all;
+}
 @keyframes bubble-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes feed-in-out {
+  0% { opacity: 0; transform: translateY(6px); }
+  8% { opacity: 1; transform: translateY(0); }
+  82% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
 
 .natural-input {
   position: relative;
@@ -458,6 +525,30 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 28px rgba(228,58,54,.16);
 }
 .natural-input p { grid-column: 1; margin: 3px 0 0 2px; color: #7e8791; font-size: 12px; }
+.question-hint {
+  grid-column: 1 / -1;
+  width: fit-content;
+  max-width: min(520px, 100%);
+  color: #8f9aa5;
+  font-size: 12px;
+}
+.question-hint summary {
+  cursor: pointer;
+  user-select: none;
+  color: #b7c0c8;
+  font-weight: 720;
+}
+.question-hint[open] {
+  padding: 7px 9px;
+  border: 1px dashed rgba(230, 191, 108, .30);
+  border-radius: 8px;
+  background: rgba(13, 17, 22, .72);
+}
+.question-hint span {
+  display: block;
+  margin-top: 5px;
+  color: #d0b98f;
+}
 .evidence-present {
   grid-column: 2;
   height: 31px;
@@ -695,10 +786,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .scene-dialogue-log.bubble-transcript {
     left: 8px;
     right: 8px;
-    top: 72px;
     bottom: 8px;
+    height: min(42%, 220px);
     padding: 8px;
   }
+  .gm-event-feed {
+    top: 72px;
+    left: 8px;
+    width: min(300px, 62%);
+  }
+  .gm-feed-item p { font-size: 11px; }
   .tension-meter {
     left: 8px;
     right: auto;
@@ -824,6 +921,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .note-actions, .note-edit-form div { display: flex; gap: 8px; margin-top: 9px; }
 .note-actions button, .note-edit-form button { min-height: 32px; padding: 0 12px; border: 1px solid rgba(116,132,150,.44); border-radius: 8px; background: rgba(11,16,22,.86); color: #e8edf2; font-weight: 760; }
 .empty-copy { border: 1px dashed rgba(230,191,108,.28); border-radius: 12px; padding: 12px; color: #aeb8c3; }
+.ready-copy { border: 1px solid rgba(106, 230, 164, .35); border-radius: 8px; padding: 12px; color: #c8f2d9; background: rgba(35, 100, 68, .18); }
 .contradiction-builder { display: grid; align-content: start; gap: 10px; }
 .selection-summary { display: grid; gap: 5px; border: 1px solid rgba(228,58,54,.44); border-radius: 12px; padding: 10px; background: rgba(81,13,15,.24); }
 .selection-summary b { color: #ff514b; }
