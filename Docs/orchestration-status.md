@@ -2515,3 +2515,87 @@ Routed AI `[CROSS-FEEDBACK]` high contract/documentation to DOCS, BE, and `orche
 - Continue monitoring and stay silent if no new blockers or state changes appear.
 - If commit is requested, inspect diffs carefully, split into atomic Conventional Commits, and commit only validated rollback-friendly milestones.
 - Keep browser/Playwright dogfood disabled unless re-approved; continue using build/curl/Docker health/logs.
+
+## 2026-06-01T18:11:49+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- `DOCS:1.1`: idle/completed. Docs bounded-generative-autonomy clarification remains processed; current visible prompt asks for recent commit summary and is unrelated to runtime blockers.
+- `BE:1.1`: idle/completed. BE report remains that public forbidden-key/value scan, malicious accusation rejection/no-persistence/no-SSE, and BE-owned contradiction proposal distinction are resolved; no new BE blocker visible.
+- `AI:1.1`: idle/completed. AI report remains that the study-entry AI proposedEvents blocker is fixed with `47 passed, 1 warning`, Docker `ai/backend` refresh, direct AI and FE-proxy smoke showing `NOTE_CONTRADICTION_CANDIDATE_ADDED` / `proposedEventsCount=1`, and safety not blocked/repaired.
+- `FE:1.1`: idle/completed. FE report remains diagnostics/sourceRefs sanitizer fixed, `npm run smoke:public-diagnostics`, `npm run build`, frontend Docker rebuild/recreate, curl `/`, proxy health, and compose status passed.
+- `Reviewer:1.1`: idle/completed. FE independent re-review PASS under no-browser/no-additional-command scope using already-inspected evidence; no new reviewer blocker.
+- `orchest:1.1`: idle/completed. Recent interaction confirmed local Docker deployment is up and latest runtime changes are reflected.
+
+### Feedback detected / routed
+- No new unhandled `[CROSS-FEEDBACK]` or `[ORCH-FEEDBACK]` blocker detected this tick.
+- No prompt sent to panes; all visible panes are idle/completed and no routing was required.
+
+### Validations / repo-state actions run by ORCH this tick
+- Captured all target panes with `tmux capture-pane`.
+- Rechecked Docker Compose status: `detective_agent-ai-1` and `detective_agent-backend-1` are running/healthy; `detective_agent-frontend-1` is running on port 8080.
+- Rechecked health endpoints:
+  - `GET http://127.0.0.1:8080/` => 200 and current frontend bundle `/assets/index-BHgIC3nW.js` is served.
+  - `GET http://127.0.0.1:8080/api/v1/health` => 200.
+  - `GET http://127.0.0.1:8000/api/v1/ready` => 200 with AI ok, provider `openai`, model `gpt-4o-mini`, `serviceDegraded=false`, `fallbackConfigured=false`.
+  - `GET http://127.0.0.1:8001/health` => 200 with provider `openai`, configured, `serviceDegraded=false`, `fallbackConfigured=false`.
+- Rechecked root `git status --short` before status-file edit: clean output. No commit made by cron.
+
+### Active blockers and commit impact
+- Current runtime/global gate status from ORCH perspective: **PASS**.
+- AI current gate: PASS; timeline/GM context retriever remains a next quality milestone, not a blocker.
+- BE final accusation/public leak gate: PASS based on prior independent/runtime validation and no new BE runtime changes this tick.
+- FE no-mock/public diagnostics gate: PASS from independent reviewer and FE validation summary.
+- Docker refresh: satisfied for affected services; current local deployment health remains PASS.
+- Remaining non-runtime commit step: none newly detected by this tick; root working tree was clean before this status append.
+
+### Docker refresh requirements
+- No new runtime code changed by ORCH this tick; no additional Docker refresh required.
+- Future runtime edits must rebuild/recreate affected services and rerun health/smoke validation.
+
+### Next actions
+- Continue monitoring and stay silent if no new blockers or state changes appear.
+- If new implementation or commit work is requested, inspect diffs carefully, split into atomic Conventional Commits, and commit only validated rollback-friendly milestones.
+- Keep browser/Playwright dogfood disabled unless re-approved; continue using build/curl/Docker health/logs.
+
+
+## 2026-06-01T18:20:06+09:00 recurring ORCH tick 760707cea361
+
+### Pane states
+- `DOCS:1.1`: idle/completed. Docs bounded-generative-autonomy clarification remains processed; no new docs/runtime blocker visible.
+- `BE:1.1`: idle/completed. BE report remains that forwarding/proposal distinction is expected; current final-accusation leak regression was rechecked by ORCH this tick.
+- `AI:1.1`: idle/completed. AI report remains that study-entry AI proposedEvents blocker is fixed with `47 passed, 1 warning`, Docker `ai/backend` refresh, direct AI and FE-proxy smoke showing `NOTE_CONTRADICTION_CANDIDATE_ADDED` / `proposedEventsCount=1`, and safety not blocked/repaired.
+- `FE:1.1`: idle/completed. FE report remains diagnostics/sourceRefs sanitizer fixed, `npm run smoke:public-diagnostics`, `npm run build`, frontend Docker rebuild/recreate, curl `/`, proxy health, and compose status passed.
+- `Reviewer:1.1`: idle/completed. FE independent re-review PASS under no-browser/no-additional-command scope using already-inspected evidence; no new reviewer blocker.
+- `orchest:1.1`: idle/completed. Recent interaction confirmed local Docker deployment is up and latest runtime changes are reflected.
+
+### Feedback detected / routed
+- No new unhandled `[CROSS-FEEDBACK]` or `[ORCH-FEEDBACK]` blocker detected this tick.
+- No prompt sent to panes; visible panes are idle/completed and no routing was required.
+
+### Validations / repo-state actions run by ORCH this tick
+- Captured all target panes with `tmux capture-pane`.
+- Rechecked Docker Compose status: `detective_agent-ai-1` and `detective_agent-backend-1` are running/healthy; `detective_agent-frontend-1` is running on port 8080.
+- Rechecked health endpoints:
+  - `GET http://127.0.0.1:8080/` => 200 and current frontend bundle `/assets/index-BHgIC3nW.js` is served.
+  - `GET http://127.0.0.1:8080/api/v1/health` => 200.
+  - `GET http://127.0.0.1:8000/api/v1/ready` => 200 with AI ok, provider `openai`, model `gpt-4o-mini`, `serviceDegraded=false`, `fallbackConfigured=false`.
+  - `GET http://127.0.0.1:8001/health` => 200 with provider `openai`, configured, `serviceDegraded=false`, `fallbackConfigured=false`.
+- Rechecked BE final-accusation/no-progress regressions: `python -m pytest -q tests/test_api_smoke.py::test_accusation_forbidden_user_text_does_not_persist_or_emit_sse tests/test_api_smoke.py::test_malicious_ai_answer_or_event_forbidden_ref_is_rejected_without_progress` => `2 passed, 1 warning`.
+- Root `git status --short` before this status append still showed only `Docs/orchestration-status.md` modified from orchestration status updates. No commit made by cron.
+
+### Active blockers and commit impact
+- Current runtime/global gate status from ORCH perspective: **PASS**.
+- AI current gate: PASS; timeline/GM context retriever remains a next quality milestone, not a blocker.
+- BE final accusation/public leak gate: PASS; targeted no-persist/no-SSE regression rechecked this tick.
+- FE no-mock/public diagnostics gate: PASS from independent reviewer and FE validation summary.
+- Docker refresh: satisfied for affected services; current local deployment health remains PASS.
+- Remaining non-runtime commit step: no new commit-ready action taken by cron; commit only if explicitly requested and after reviewing staged diffs.
+
+### Docker refresh requirements
+- No new runtime code changed by ORCH this tick; no additional Docker refresh required.
+- Future runtime edits must rebuild/recreate affected services and rerun health/smoke validation.
+
+### Next actions
+- Continue monitoring and stay silent if no new blockers or state changes appear.
+- If new implementation or commit work is requested, inspect diffs carefully, split into atomic Conventional Commits, and commit only validated rollback-friendly milestones.
+- Keep browser/Playwright dogfood disabled unless re-approved; continue using build/curl/Docker health/logs.
