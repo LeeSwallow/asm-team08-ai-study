@@ -2,11 +2,12 @@ type AppHeaderProps = {
   onOpenCaseFile: () => void;
   onOpenEvidence: () => void;
   onOpenNotes: () => void;
+  onOpenRelations: () => void;
   onOpenAccusation: () => void;
   onOpenSettings: () => void;
 };
 
-export function AppHeader({ onOpenCaseFile, onOpenEvidence, onOpenNotes, onOpenAccusation, onOpenSettings }: AppHeaderProps) {
+export function AppHeader({ onOpenCaseFile, onOpenEvidence, onOpenNotes, onOpenRelations, onOpenAccusation, onOpenSettings }: AppHeaderProps) {
   return (
     <header className="app-header">
       <div className="brand">
@@ -17,6 +18,7 @@ export function AppHeader({ onOpenCaseFile, onOpenEvidence, onOpenNotes, onOpenA
         <button type="button" onClick={onOpenCaseFile}>▣ 사건 파일</button>
         <button type="button" onClick={onOpenEvidence}>▤ 증거 목록</button>
         <button type="button" onClick={onOpenNotes}>▥ 메모</button>
+        <button type="button" onClick={onOpenRelations}>◎ 관계도</button>
         <button type="button" onClick={onOpenAccusation}>⚑ 최종 고발</button>
         <button type="button" aria-label="설정" onClick={onOpenSettings}>⚙</button>
       </nav>

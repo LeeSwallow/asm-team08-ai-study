@@ -184,7 +184,7 @@ export function InterrogationStage({
             <span>{questionHint}</span>
           </details>
         ) : null}
-        <button type="button" className="evidence-present" onClick={onPresentEvidence} disabled={busy}>▰ 증거 제시</button>
+        <button type="button" className="evidence-present" onClick={onPresentEvidence} disabled={busy}>▰ 증거 목록</button>
       </form>
     </section>
   );

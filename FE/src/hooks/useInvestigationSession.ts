@@ -22,10 +22,9 @@ export function useInvestigationSession() {
   const [selectedStatementIds, setSelectedStatementIds] = useState<string[]>([]);
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [autoStarted, setAutoStarted] = useState(false);
   const [statusMessage, setStatusMessage] = useState("사건 파일을 불러오는 중입니다.");
   const [eventFeed, setEventFeed] = useState<GameEventFeedItem[]>([]);
-  const [activeDrawer, setActiveDrawer] = useState<"case" | "evidence" | "notes" | "contradiction" | "relations" | "accusation" | "settings" | null>(null);
+  const [activeDrawer, setActiveDrawer] = useState<"case" | "evidence" | "notes" | "relations" | "accusation" | "settings" | null>(null);
   const [inspectedEvidenceId, setInspectedEvidenceId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -33,6 +32,10 @@ export function useInvestigationSession() {
   const [accusationSuspectId, setAccusationSuspectId] = useState("");
   const [accusationMotive, setAccusationMotive] = useState("");
   const [accusationMethod, setAccusationMethod] = useState("");
+  const [resumableSessionId, setResumableSessionId] = useState<string | null>(() => {
+    const storedSessionId = loadStoredSessionId();
+    return storedSessionId && !storedSessionId.startsWith("mock_") ? storedSessionId : null;
+  });
 
   function appendFeedEvents(items: GameEventFeedItem[]) {
     if (items.length === 0) return;
@@ -69,42 +72,6 @@ export function useInvestigationSession() {
   }, []);
 
   useEffect(() => {
-    const storedSessionId = loadStoredSessionId();
-    if (!storedSessionId || storedSessionId.startsWith("mock_")) return;
-
-    const done = createActionTimer({ component: "InvestigationSession", action: "resume_session", sessionId: storedSessionId });
-    getSession(storedSessionId, null)
-      .then((restored) => {
-        setSession(restored);
-        setStatusMessage("서버 세션을 복구했습니다.");
-        done({ level: "info", caseId: restored.caseId });
-      })
-      .catch((error: unknown) => {
-        setSession(null);
-        clearStoredSession();
-        setStatusMessage("서버 세션 복구 실패: 저장된 API 세션 화면을 표시하지 않고 재시도를 기다립니다.");
-        done({ level: "warn", fallbackUsed: false, reason: error instanceof Error ? error.message : "unknown" });
-      });
-  }, []);
-
-  useEffect(() => {
-    if (session || autoStarted || cases.length === 0) return;
-    setAutoStarted(true);
-    const caseId = cases[0]?.id ?? "case_001";
-    const done = createActionTimer({ component: "InvestigationSession", action: "start_session", caseId });
-    createSession(caseId)
-      .then((created) => {
-        setSession(created);
-        setStatusMessage("탐문 대화창을 준비했습니다. 바로 질문을 보낼 수 있습니다.");
-        done({ level: "info", sessionId: created.sessionId, fallbackUsed: created.source === "local" });
-      })
-      .catch((error: unknown) => {
-        setStatusMessage("자동 세션 생성에 실패했습니다. 새로고침 후 다시 시도해주세요.");
-        done({ level: "error", reason: error instanceof Error ? error.message : "unknown" });
-      });
-  }, [autoStarted, cases, session]);
-
-  useEffect(() => {
     if (session) saveStoredSession(session);
   }, [session]);
 
@@ -121,6 +88,60 @@ export function useInvestigationSession() {
   const evidenceTiles = useMemo(() => (session ? buildEvidenceTiles(session) : []), [session?.evidence]);
   const contradictionCandidates = useMemo(() => (session ? buildContradictionCandidates(session) : []), [session?.evidence, session?.statements, session?.selectedSuspectId]);
   const questionHint = useMemo(() => (session ? nextQuestionHint(session) : undefined), [session?.questions, session?.selectedSuspectId]);
+
+  async function startCase(caseId: string) {
+    if (busy) return;
+    const caseFile = cases.find((item) => item.id === caseId);
+    setBusy(true);
+    setStatusMessage(`${caseFile?.title ?? caseId} 세션을 생성하는 중입니다.`);
+    clearStoredSession();
+    const done = createActionTimer({ component: "ScenarioSelect", action: "start_session", caseId });
+    try {
+      const created = await createSession(caseId);
+      setSession(created);
+      setResumableSessionId(created.sessionId);
+      setSelectedEvidenceIds([]);
+      setSelectedStatementIds([]);
+      setInspectedEvidenceId(null);
+      setActiveDrawer(null);
+      setEventFeed([]);
+      setDraftQuestion("");
+      setDraftNote("");
+      setEditingNoteId(null);
+      setEditingNoteText("");
+      setAccusationSuspectId("");
+      setAccusationMotive("");
+      setAccusationMethod("");
+      setStatusMessage("탐문 대화창을 준비했습니다. 바로 질문을 보낼 수 있습니다.");
+      done({ level: "info", sessionId: created.sessionId, fallbackUsed: created.source === "local" });
+    } catch (error) {
+      setStatusMessage("세션 생성에 실패했습니다. BE /api/v1/sessions 계약과 caseId를 확인해야 합니다.");
+      done({ level: "error", reason: error instanceof Error ? error.message : "unknown" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resumeStoredSession() {
+    if (busy || !resumableSessionId) return;
+    setBusy(true);
+    setStatusMessage("이전 서버 세션을 복구하는 중입니다.");
+    const done = createActionTimer({ component: "ScenarioSelect", action: "resume_session", sessionId: resumableSessionId });
+    try {
+      const restored = await getSession(resumableSessionId, null);
+      setSession(restored);
+      setStatusMessage("서버 세션을 복구했습니다.");
+      done({ level: "info", caseId: restored.caseId });
+    } catch (error) {
+      setSession(null);
+      setResumableSessionId(null);
+      clearStoredSession();
+      setStatusMessage("이전 세션 복구 실패: 사건 파일을 선택해 새 세션을 시작하세요.");
+      done({ level: "warn", fallbackUsed: false, reason: error instanceof Error ? error.message : "unknown" });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submitQuestion() {
     if (!session || busy || session.remainingQuestions <= 0) return;
@@ -185,8 +206,8 @@ export function useInvestigationSession() {
 
   function selectStatement(statementId: string) {
     setSelectedStatementIds((current) => (current.includes(statementId) ? current.filter((item) => item !== statementId) : [statementId]));
-    setActiveDrawer("contradiction");
-    if (session) logEvent({ component: "ContradictionDrawer", action: "select_statement", sessionId: session.sessionId, caseId: session.caseId, eventId: statementId });
+    setActiveDrawer("notes");
+    if (session) logEvent({ component: "NotesDrawer", action: "select_statement", sessionId: session.sessionId, caseId: session.caseId, eventId: statementId });
   }
 
   function selectContradiction(statementId: string, evidenceId: string) {
@@ -199,12 +220,12 @@ export function useInvestigationSession() {
     if (!session || busy) return;
     if (!session.selectedSuspectId) {
       setStatusMessage("모순 제시는 명시적으로 선택된 용의자가 있어야 합니다.");
-      setActiveDrawer("contradiction");
+      setActiveDrawer("evidence");
       return;
     }
     if (selectedStatementIds.length === 0 || selectedEvidenceIds.length === 0) {
       setStatusMessage("모순 제시는 증언 1개와 증거 1개 이상을 선택해야 합니다.");
-      setActiveDrawer("contradiction");
+      setActiveDrawer("evidence");
       return;
     }
     setBusy(true);
@@ -376,14 +397,16 @@ export function useInvestigationSession() {
     if (!confirmed) return;
     clearStoredSession();
     setSession(null);
-    setAutoStarted(false);
-    setStatusMessage("진행 상태를 초기화했습니다. 새 탐문 세션을 준비합니다.");
+    setResumableSessionId(null);
+    setStatusMessage("진행 상태를 초기화했습니다. 시작할 사건 파일을 선택하세요.");
     logEvent({ component: "AppHeader", action: "reset_session", sessionId: session?.sessionId, caseId: session?.caseId });
   }
 
+  const currentCase = session ? cases.find((item) => item.id === session.caseId) : cases[0];
+
   return {
     cases,
-    currentCase: cases[0],
+    currentCase,
     session,
     selectedSuspect,
     latestAnswer,
@@ -402,9 +425,12 @@ export function useInvestigationSession() {
     accusationMotive,
     accusationMethod,
     busy,
+    resumableSessionId,
     statusMessage,
     eventFeed,
     remainingQuestions: session?.remainingQuestions ?? QUESTION_LIMIT,
+    startCase,
+    resumeStoredSession,
     setDraftQuestion,
     submitQuestion,
     selectSuspect,
