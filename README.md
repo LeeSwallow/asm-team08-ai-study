@@ -166,7 +166,7 @@ flowchart TB
 
 ## Docker 실행 화면
 
-Docker Compose로 실행한 메인 페이지입니다.
+Docker Compose로 실행한 메인 페이지입니다. 스크린샷은 1440x1100 viewport의 깨끗한 브라우저 프로필에서 캡처했습니다.
 
 ![Detective Agent main page](Docs/images/main-page.png)
 
