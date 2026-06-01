@@ -39,9 +39,17 @@ export function useInvestigationSession() {
     setEventFeed((current) => {
       const byId = new Map(current.map((item) => [item.id, item]));
       items.forEach((item) => byId.set(item.id, item));
-      return Array.from(byId.values()).slice(-8);
+      return Array.from(byId.values()).slice(-5);
     });
   }
+
+  useEffect(() => {
+    if (eventFeed.length === 0) return;
+    const timeout = window.setTimeout(() => {
+      setEventFeed((current) => current.slice(1));
+    }, 5200);
+    return () => window.clearTimeout(timeout);
+  }, [eventFeed]);
 
   useSessionEvents(session, setSession, (event) => appendFeedEvents([event]));
 
@@ -228,14 +236,15 @@ export function useInvestigationSession() {
     }
     setBusy(true);
     const done = createActionTimer({ component: "AccusationDrawer", action: "submit_accusation", sessionId: session.sessionId, caseId: session.caseId, suspectId: accusationSuspectId });
+    const inferredProof = accusationProofFromNotebook(session, selectedStatementIds, selectedEvidenceIds);
     try {
       const next = await submitAccusation(session, {
         suspectId: accusationSuspectId,
         motive,
         method,
-        evidenceIds: selectedEvidenceIds,
-        statementIds: selectedStatementIds,
-        contradictionIds: session.foundContradictionIds,
+        evidenceIds: inferredProof.evidenceIds,
+        statementIds: inferredProof.statementIds,
+        contradictionIds: inferredProof.contradictionIds,
       });
       setSession(next);
       setActiveDrawer("accusation");
@@ -420,4 +429,33 @@ export function useInvestigationSession() {
     submitFinalAccusation,
     resetGame,
   };
+}
+
+function accusationProofFromNotebook(
+  session: GameSessionView,
+  selectedStatementIds: string[],
+  selectedEvidenceIds: string[],
+) {
+  const contradictionNotes = session.notes.filter((note) =>
+    note.tags.includes("note_contradiction_candidate_added")
+    || (note.linkedStatementIds.length > 0 && note.linkedEvidenceIds.length > 0),
+  );
+  return {
+    statementIds: dedupe([
+      ...selectedStatementIds,
+      ...contradictionNotes.flatMap((note) => note.linkedStatementIds),
+    ]),
+    evidenceIds: dedupe([
+      ...selectedEvidenceIds,
+      ...contradictionNotes.flatMap((note) => note.linkedEvidenceIds),
+    ]),
+    contradictionIds: dedupe([
+      ...session.foundContradictionIds,
+      ...contradictionNotes.flatMap((note) => note.linkedContradictionIds ?? []),
+    ]),
+  };
+}
+
+function dedupe(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
 }

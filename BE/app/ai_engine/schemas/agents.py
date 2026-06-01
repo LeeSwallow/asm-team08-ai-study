@@ -29,6 +29,8 @@ class CharacterAgentInput(FlexibleModel):
     pressureState: str | None = None
     emotionalState: str | None = None
     tensionScore: int | float | None = None
+    interrogationState: dict[str, Any] = Field(default_factory=dict)
+    interrogationTransition: dict[str, Any] = Field(default_factory=dict)
     recentDialogue: list[Any] = Field(default_factory=list)
 
 
@@ -66,6 +68,7 @@ class LightRuleCheckInput(FlexibleModel):
     enforceStatementScope: bool = True
     allowedContextTerms: list[str] = Field(default_factory=list)
     intent: str | None = None
+    suspectName: str | None = None
     # CharacterKnowledgeRetriever 결과 (재생성 품질 개선에 사용, 없으면 기본 동작)
     retrieved_context: Any | None = Field(default=None, exclude=True)
 

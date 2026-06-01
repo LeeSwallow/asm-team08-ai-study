@@ -92,6 +92,9 @@ class DialogueRequest(FlexibleModel):
     dialogueMode: str | None = None
     storyline: StorylineContext | None = None
     characterTimeline: CharacterTimelineContext | None = None
+    turnInterpretation: dict[str, Any] = Field(default_factory=dict)
+    interrogationState: dict[str, Any] = Field(default_factory=dict)
+    interrogationTransition: dict[str, Any] = Field(default_factory=dict)
     revealAllowed: bool = False
 
     @model_validator(mode="before")

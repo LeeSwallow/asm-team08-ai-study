@@ -83,6 +83,9 @@ class Character(BaseModel):
     secret: Optional[str] = None
     motiveCandidate: bool = False
     isCulprit: bool = False
+    speechStyle: Dict[str, Any] = Field(default_factory=dict)
+    publicTimeline: List[Dict[str, Any]] = Field(default_factory=list)
+    personaVariants: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class Evidence(BaseModel):
@@ -197,6 +200,7 @@ class NoteEntry(BaseModel):
     id: str
     text: str
     tags: List[str] = Field(default_factory=list)
+    linkedContradictionIds: List[str] = Field(default_factory=list)
     linkedStatementIds: List[str] = Field(default_factory=list)
     linkedEvidenceIds: List[str] = Field(default_factory=list)
     linkedRecordIds: List[str] = Field(default_factory=list)

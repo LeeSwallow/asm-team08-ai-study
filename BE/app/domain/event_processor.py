@@ -1,7 +1,8 @@
 import logging
 from uuid import uuid4
 
-from app.domain.case_engine import pressure_state, visible_timeline
+from app.domain.case_engine import visible_timeline
+from app.domain.interrogation_state import emotional_state, pressure_state, tension_level
 from app.domain.event_types import EventType, GAME_MASTER_PUBLIC_EVENT_TYPES, NOTE_EVENT_TYPES, SUPPORTED_EVENT_TYPES
 from app.domain.models import Case, EventEntry, NoteEntry, SessionState
 
@@ -203,11 +204,23 @@ class EventProcessor:
         if not set(contradiction.requiredEvidenceIds).issubset(set(session.unlockedEvidenceIds)):
             self._log_rejected_event(session, case, EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value, "required_evidence_not_visible")
             return None
+        required_statement_ids = set(contradiction.requiredStatementIds)
+        required_evidence_ids = set(contradiction.requiredEvidenceIds)
+        already_noted = any(
+            EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value.lower() in set(note.tags)
+            and required_statement_ids.issubset(set(note.linkedStatementIds))
+            and required_evidence_ids.issubset(set(note.linkedEvidenceIds))
+            for note in session.notes
+        )
+        if already_noted:
+            self._log_rejected_event(session, case, EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value, "contradiction_note_already_exists")
+            return None
         note_text = f"모순 후보: {contradiction.title}"
         note = NoteEntry(
             id=f"note_{uuid4().hex}",
             text=note_text,
             tags=[EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value.lower()],
+            linkedContradictionIds=[contradiction.contradictionId],
             linkedStatementIds=list(contradiction.requiredStatementIds),
             linkedEvidenceIds=list(contradiction.requiredEvidenceIds),
         )
@@ -285,28 +298,6 @@ def build_visual_state(session: SessionState, case: Case, suspect_id: str | None
         "tensionLevel": tension_level(pressure),
         "tensionScore": pressure,
     }
-
-
-def emotional_state(pressure: int) -> str:
-    if pressure >= 70:
-        return "breakdown"
-    if pressure >= 45:
-        return "shocked"
-    if pressure >= 30:
-        return "defensive"
-    if pressure >= 15:
-        return "wary"
-    return "neutral"
-
-
-def tension_level(pressure: int) -> str:
-    if pressure >= 70:
-        return "critical"
-    if pressure >= 45:
-        return "high"
-    if pressure >= 30:
-        return "medium"
-    return "low"
 
 
 def _timeline_ids_for_sources(case: Case, session: SessionState, source_ids: list[str]) -> list[str]:

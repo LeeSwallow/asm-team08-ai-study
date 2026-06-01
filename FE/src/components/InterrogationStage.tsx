@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { backgroundAsset, suspectAsset } from "../constants/presentation";
 import type { DialogueLogItem, DialogueRuntimeDiagnostics, GameEventFeedItem, Suspect, VisualState } from "../types";
 
@@ -42,6 +43,8 @@ export function InterrogationStage({
   const emotion = visualAppliesToSelected ? (visualState?.emotionalState ?? selectedSuspect?.emotion ?? "guarded") : (selectedSuspect?.emotion ?? "guarded");
   const pressure = selectedSuspect?.pressure ?? 0;
   const stageBackground = backgroundAsset(visualState?.backgroundId);
+  const stageAsset = suspectAsset(selectedSuspect?.id, expression);
+  const stageMood = `${emotion}-${expression}-${tensionLevel}`;
   const diagnosticTone = runtimeDiagnostics?.source === "local" || runtimeDiagnostics?.fallbackUsed ? "fallback" : "api";
   const diagnosticLabel = (value: string | number | null | undefined, fallback: string) => {
     const missing = value === null || value === undefined || value === "";
@@ -65,7 +68,13 @@ export function InterrogationStage({
     if (item.speaker === "player" || item.speaker === "system" || item.speaker === "rule_engine") return false;
     return item.speaker === selectedSuspect.name;
   };
-  const visibleDialogue = dialogueLog.filter(isActiveSuspectTurn).slice(-8);
+  const visibleDialogue = dialogueLog.filter(isActiveSuspectTurn).slice(-6);
+  const dialogueLogRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = dialogueLogRef.current;
+    if (!node) return;
+    node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+  }, [visibleDialogue.length, selectedSuspect?.id, latestAnswer]);
   const speakerFor = (item: DialogueLogItem) => {
     if (item.speaker === "player") return { kind: "detective", name: "탐정", role: "질문", avatar: "探", suspect: undefined as Suspect | undefined };
     if (item.speaker === "system" || item.speaker === "rule_engine") return { kind: "system", name: "기록", role: item.tag, avatar: "※", suspect: undefined as Suspect | undefined };
@@ -100,10 +109,13 @@ export function InterrogationStage({
       </div>
 
       <div
-        className={`cinematic-stage tension-${tensionLevel} expression-${expression}`}
+        className={`cinematic-stage reactive-stage tension-${tensionLevel} expression-${expression} ${visibleDialogue.length > 0 ? "has-dialogue" : "is-awaiting-first-turn"}`}
+        data-mood={stageMood}
         style={stageBackground ? { backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.12) 48%, rgba(0,0,0,.22)), linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.76)), url(${stageBackground})` } : undefined}
       >
-        <img className="stage-character" src={suspectAsset(selectedSuspect?.id, expression)} alt={`${selectedSuspect?.name ?? "용의자"} ${expression} 표정 만화 일러스트`} />
+        {stageAsset ? (
+          <img key={`${selectedSuspect?.id}-${expression}`} className="stage-character" src={stageAsset} alt={`${selectedSuspect?.name ?? "용의자"} ${expression} 표정 만화 일러스트`} />
+        ) : null}
         <div className="tension-meter" aria-label={`긴장도 ${pressure}% ${tensionLevel}`}>
           <span>긴장도</span>
           <div><i style={{ width: `${Math.min(100, Math.max(0, pressure))}%` }} /></div>
@@ -116,7 +128,7 @@ export function InterrogationStage({
           <em>{selectedSuspect ? selectedSuspect.id : "왼쪽 용의자를 선택해야 질문할 수 있습니다."}</em>
         </div>
         <aside className="gm-event-feed" aria-label="GameMaster 이벤트 피드" aria-live="polite">
-          {eventFeed.slice(-4).map((item) => (
+          {eventFeed.slice(-2).map((item) => (
             <article key={item.id} className={`gm-feed-item ${item.type.toLowerCase()}`}>
               <strong>{item.title}</strong>
               <p>{item.message}</p>
@@ -165,7 +177,13 @@ export function InterrogationStage({
           disabled={busy || remainingQuestions <= 0 || !selectedSuspect}
         />
         <button type="submit" aria-label="질문 보내기" disabled={busy || !draftQuestion.trim() || remainingQuestions <= 0 || !selectedSuspect}>➤</button>
-        <p>{selectedSuspect ? `다음 질문 대상: ${selectedSuspect.name} · 힌트 예시) ${questionHint ? `“${questionHint}”` : "22시 이후에 누군가를 만난 적이 있나요?"}` : "먼저 왼쪽에서 심문할 용의자를 선택하세요. FE는 용의자를 자동 선택하지 않습니다."}</p>
+        <p>{selectedSuspect ? `다음 질문 대상: ${selectedSuspect.name} · 직접 관찰한 단서와 이전 답변을 바탕으로 질문하세요.` : "먼저 왼쪽에서 심문할 용의자를 선택하세요. FE는 용의자를 자동 선택하지 않습니다."}</p>
+        {selectedSuspect && questionHint ? (
+          <details className="question-hint">
+            <summary>막혔을 때만 보기</summary>
+            <span>{questionHint}</span>
+          </details>
+        ) : null}
         <button type="button" className="evidence-present" onClick={onPresentEvidence} disabled={busy}>▰ 증거 제시</button>
       </form>
     </section>

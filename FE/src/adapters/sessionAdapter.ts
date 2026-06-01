@@ -90,6 +90,7 @@ export type BackendSession = {
     id: string;
     text: string;
     tags?: string[];
+    linkedContradictionIds?: string[];
     linkedStatementIds?: string[];
     linkedEvidenceIds?: string[];
     linkedRecordIds?: string[];
@@ -128,6 +129,7 @@ export type BackendSession = {
   newlyUnlockedIds?: string[];
   discoveredContradictionIds?: string[];
   foundContradictionIds?: string[];
+  accusationReadiness?: GameSessionView["accusationReadiness"];
   pressureBySuspect?: Record<string, number>;
   emotionBySuspect?: Record<string, string>;
   expressionBySuspect?: Record<string, string>;
@@ -451,6 +453,7 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     id: item.id,
     text: item.text,
     tags: item.tags ?? [],
+    linkedContradictionIds: item.linkedContradictionIds ?? [],
     linkedStatementIds: item.linkedStatementIds ?? [],
     linkedEvidenceIds: item.linkedEvidenceIds ?? [],
     linkedRecordIds: item.linkedRecordIds ?? [],
@@ -545,6 +548,7 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     unlockedQuestionIds: session.unlockedQuestionIds ?? questions.map((item) => item.id),
     newlyUnlockedIds: session.newlyUnlockedIds ?? [],
     foundContradictionIds,
+    accusationReadiness: session.accusationReadiness,
     opening: session.opening ?? emptyOpening,
     storyline,
     currentObjective: normalizeCurrentObjective(session.currentObjective, currentActId, storyline),

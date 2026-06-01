@@ -70,6 +70,8 @@ export function InvestigationDrawer({
   const evidence = session.evidence.find((item) => item.id === inspectedEvidenceId) ?? session.evidence.find((item) => item.unlocked) ?? session.evidence[0];
   const selectedStatement = session.statements.find((item) => selectedStatementIds.includes(item.id));
   const selectedEvidence = session.evidence.filter((item) => selectedEvidenceIds.includes(item.id));
+  const notebookProof = proofFromNotebook(session);
+  const accusationReady = session.accusationReadiness;
   const activeStatements = session.selectedSuspectId
     ? session.statements.filter((item) => item.unlocked && item.suspectId === session.selectedSuspectId)
     : [];
@@ -211,7 +213,11 @@ export function InvestigationDrawer({
       {mode === "accusation" ? (
         <section className="drawer-scroll final-accusation-sheet">
           <h3>최종 고발</h3>
-          <p className="empty-copy">최종 판정은 BE accusation endpoint 응답만 반영됩니다. 실패 시 로컬 판정은 생성하지 않습니다.</p>
+          <p className={accusationReady?.eligible ? "ready-copy" : "empty-copy"}>
+            {accusationReady?.eligible
+              ? "필수 모순이 사건 수첩에 정리됐습니다. 고발 시 수첩의 증언·증거 링크가 함께 제출됩니다."
+              : `필수 모순 진행: ${accusationReady?.discoveredRequiredContradictionCount ?? 0}/${accusationReady?.requiredContradictionCount ?? 0}`}
+          </p>
           <fieldset>
             <legend>고발 대상</legend>
             {session.suspects.map((suspect) => (
@@ -233,7 +239,9 @@ export function InvestigationDrawer({
           <textarea id="accusation-method" value={accusationMethod} onChange={(event) => onAccusationMethodChange(event.target.value)} placeholder="증거와 증언으로 설명 가능한 방법만 적으세요." />
           <dl className="accusation-context">
             <div><dt>선택 증거</dt><dd>{selectedEvidence.map((item) => item.title).join(", ") || "없음"}</dd></div>
+            <div><dt>수첩 증거</dt><dd>{notebookProof.evidenceIds.join(", ") || "없음"}</dd></div>
             <div><dt>선택 증언</dt><dd>{selectedStatement ? selectedStatement.id : "없음"}</dd></div>
+            <div><dt>수첩 증언</dt><dd>{notebookProof.statementIds.join(", ") || "없음"}</dd></div>
             <div><dt>발견 모순</dt><dd>{session.foundContradictionIds.join(", ") || "없음"}</dd></div>
           </dl>
           {session.result ? (
@@ -311,6 +319,17 @@ function drawerTitle(mode: DrawerMode) {
   if (mode === "relations") return "인물 관계도";
   if (mode === "accusation") return "최종 고발";
   return "모순 제시";
+}
+
+function proofFromNotebook(session: GameSessionView) {
+  const contradictionNotes = session.notes.filter((note) =>
+    note.tags.includes("note_contradiction_candidate_added")
+    || (note.linkedStatementIds.length > 0 && note.linkedEvidenceIds.length > 0),
+  );
+  return {
+    statementIds: Array.from(new Set(contradictionNotes.flatMap((note) => note.linkedStatementIds))),
+    evidenceIds: Array.from(new Set(contradictionNotes.flatMap((note) => note.linkedEvidenceIds))),
+  };
 }
 
 function formatRefs(refs?: Record<string, string[]>) {

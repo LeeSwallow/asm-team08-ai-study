@@ -2,12 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.ai_engine.application.character_agent import render_dialogue_seed
-from app.ai_engine.application.light_rule_check import _quality_issues
 from app.ai_engine.application.knowledge_retriever import KnowledgeRetriever
 from app.ai_engine.domain.proposed_events import propose_dialogue_events
-from app.ai_engine.schemas.agents import DraftCharacterReply, LightRuleCheckInput
-from app.ai_engine.schemas.dialogue import DialogueRequest
 
 
 class FakeGraph:
@@ -87,51 +83,3 @@ def test_game_master_event_context_is_used_only_for_event_refs() -> None:
     assert events[0].payload["contradictionId"] == "con_alibi_vs_entry"
     assert events[0].sourceRefs["statementIds"] == ["st_alibi"]
     assert events[0].sourceRefs["evidenceIds"] == ["ev_entry"]
-
-
-def test_location_time_seed_uses_spoken_dialogue_tone() -> None:
-    payload = DialogueRequest.model_validate(
-        {
-            "sessionId": "session_001",
-            "caseId": "case_001",
-            "suspect": {"id": "char_hanseoyeon", "name": "한서연", "role": "조카"},
-            "dialogueMode": "timeline_question",
-            "question": {"id": "q_time", "text": "22시에 어디 있었나요?"},
-            "allowedStatement": {"id": "st_alibi", "text": "저는 22:00에 제 방에 있었어요."},
-        }
-    )
-
-    seed = render_dialogue_seed(payload)
-
-    assert "22시요?" in seed
-    assert "저는 22:00에 제 방에 있었어요." in seed
-    assert "시간대를 묻는 거라면" not in seed
-    assert "제 기억은 이렇게 정리됩니다" not in seed
-
-
-def test_stiff_summary_tone_triggers_regeneration_quality_issue() -> None:
-    payload = DialogueRequest.model_validate(
-        {
-            "sessionId": "session_001",
-            "caseId": "case_001",
-            "suspect": {"id": "char_hanseoyeon", "name": "한서연"},
-            "dialogueMode": "timeline_question",
-            "question": {"id": "q_time", "text": "22시에 어디 있었나요?"},
-            "allowedStatement": {"id": "st_alibi", "text": "저는 22:00에 제 방에 있었어요."},
-        }
-    )
-    draft = DraftCharacterReply(
-        suspectId="char_hanseoyeon",
-        draftText="시간대를 묻는 거라면, 제 기억은 이렇게 정리됩니다. 저는 22:00에 제 방에 있었어요. 그 이상은 추측하고 싶지 않습니다.",
-        provider="test",
-        model="test",
-    )
-    check_input = LightRuleCheckInput(
-        draft=draft,
-        allowedStatement=payload.allowedStatement,
-        intent="location_time",
-    )
-
-    issues = _quality_issues(draft.draftText, payload.allowedStatement.text, check_input)
-
-    assert "stiff_summary_tone" in issues

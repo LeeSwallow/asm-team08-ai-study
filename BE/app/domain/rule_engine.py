@@ -1,6 +1,7 @@
 from typing import List
 
 from app.domain.case_engine import apply_unlocks
+from app.domain.interrogation_state import pressure_for_stage, stage_from_contradictions
 from app.domain.models import Case, SessionState
 
 
@@ -69,16 +70,20 @@ class RuleEngine:
 
             if statement_match and evidence_match and suspect_match:
                 newly_discovered = contradiction.contradictionId not in session.discoveredContradictionIds
+                pressure_delta = 0
                 if contradiction.contradictionId not in session.discoveredContradictionIds:
                     session.discoveredContradictionIds.append(contradiction.contradictionId)
                     current = session.pressureBySuspect.get(contradiction.relatedCharacterId, 0)
-                    session.pressureBySuspect[contradiction.relatedCharacterId] = current + contradiction.pressureDelta
+                    stage = stage_from_contradictions(case, session, contradiction.relatedCharacterId)
+                    updated = max(current, pressure_for_stage(stage))
+                    session.pressureBySuspect[contradiction.relatedCharacterId] = updated
+                    pressure_delta = updated - current
                 newly_unlocked = apply_unlocks(session, case, contradiction.unlockedIds)
                 return {
                     "verdict": "correct",
                     "contradictionId": contradiction.contradictionId,
                     "reasonCode": contradiction.reasonCode,
-                    "pressureDelta": contradiction.pressureDelta if newly_discovered else 0,
+                    "pressureDelta": pressure_delta,
                     "unlockedIds": newly_unlocked,
                     "newlyDiscovered": newly_discovered,
                     "message": contradiction.message,

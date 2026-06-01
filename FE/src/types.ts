@@ -162,6 +162,7 @@ export type NoteEntry = {
   id: string;
   text: string;
   tags: string[];
+  linkedContradictionIds?: string[];
   linkedStatementIds: string[];
   linkedEvidenceIds: string[];
   linkedRecordIds: string[];
@@ -266,6 +267,15 @@ export type ResultView = {
   missedClues: string[];
 };
 
+export type AccusationReadiness = {
+  eligible: boolean;
+  missingRequiredContradictionCount: number;
+  missingRequiredEvidenceCount: number;
+  missingRequiredStatementCount: number;
+  discoveredRequiredContradictionCount: number;
+  requiredContradictionCount: number;
+};
+
 export type GameSessionView = {
   sessionId: string;
   caseId: string;
@@ -284,6 +294,7 @@ export type GameSessionView = {
   unlockedQuestionIds: string[];
   newlyUnlockedIds: string[];
   foundContradictionIds: string[];
+  accusationReadiness?: AccusationReadiness;
   opening: Opening;
   storyline: Storyline;
   currentObjective: CurrentObjective;

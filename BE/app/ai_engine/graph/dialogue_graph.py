@@ -58,13 +58,33 @@ def validate_scope(state: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _should_enforce_exact_statement_scope(payload: DialogueRequest, *, intent: str, provider_blocked: bool) -> bool:
+    if intent in {"greeting", "unmatched"} or provider_blocked:
+        return False
+    if _has_public_context_ref(payload):
+        return False
+    return not bool(payload.interrogationTransition or payload.turnInterpretation)
+
+
+def _allowed_source_facts(payload: DialogueRequest) -> list[str]:
+    raw = getattr(payload.allowedStatement, "sourceFacts", None) or []
+    if not isinstance(raw, list):
+        return []
+    return [str(item).strip() for item in raw if str(item or "").strip()]
+
+
 def _has_public_context_ref(payload: DialogueRequest) -> bool:
     refs = payload.allowedStatement.sourceRefs
     policy = payload.allowedEventPolicy
     return bool(
-        refs.evidenceIds
+        refs.statementIds
+        or refs.evidenceIds
         or refs.timelineIds
+        or refs.questionIds
         or refs.contradictionIds
+        or _allowed_source_facts(payload)
+        or policy.relatedStatementIds
+        or policy.relatedQuestionIds
         or policy.relatedEvidenceIds
         or policy.relatedTimelineEventIds
         or policy.relatedContradictionIds
@@ -73,6 +93,8 @@ def _has_public_context_ref(payload: DialogueRequest) -> bool:
 
 def _allowed_context_terms(payload: DialogueRequest) -> list[str]:
     terms = set(extract_case_context_terms(payload.allowedStatement.text))
+    for fact in _allowed_source_facts(payload):
+        terms.update(extract_case_context_terms(fact))
     if not _has_public_context_ref(payload):
         return sorted(terms)
 
@@ -179,9 +201,10 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
         allowedEventPolicy=payload.allowedEventPolicy,
         forbiddenRefs=list(getattr(payload.characterKnowledgePack, "forbiddenRefs", []) or []) if payload.characterKnowledgePack else [],
         revealAllowed=payload.revealAllowed,
-        enforceStatementScope=intent not in {"greeting", "unmatched"} and not provider_blocked,
+        enforceStatementScope=_should_enforce_exact_statement_scope(payload, intent=intent, provider_blocked=provider_blocked),
         allowedContextTerms=_allowed_context_terms(payload),
         intent=intent,
+        suspectName=payload.suspect.name,
         retrieved_context=state.get("character_context"),
     )
     checked = LightRuleCheck().run(check_input)
