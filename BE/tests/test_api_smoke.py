@@ -1155,6 +1155,300 @@ def test_storyline_public_payload_and_objective_progression(tmp_path, monkeypatc
     assert "상속" in progressed["currentObjective"]
 
 
+def test_accusation_backend_forbidden_in_missing_ids_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
+    """Blocker 1 follow-up: 백엔드 파생 필드(missingEvidenceIds 등)에 금지어 토큰이 있으면
+    session 저장 및 SSE 이벤트 없이 503이 반환되어야 한다."""
+    from app.domain import rule_engine as re_mod
+
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+    original_phase = session["phase"]
+
+    original_judge = re_mod.RuleEngine.judge_accusation
+
+    def poisoned_missing_ids(self, sess, case, **kwargs):
+        result = original_judge(self, sess, case, **kwargs)
+        # 케이스 ID에 금지어가 포함된 상황 시뮬레이션
+        result["missingEvidenceIds"] = ["ev_culprit_weapon"]
+        sess.accusation = result
+        return result
+
+    monkeypatch.setattr(re_mod.RuleEngine, "judge_accusation", poisoned_missing_ids)
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/accusation",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "motive": "상속 갈등",
+            "method": "서재 침입",
+            "evidenceIds": [],
+            "contradictionIds": [],
+            "statementIds": [],
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "ACCUSATION_RESULT_FORBIDDEN_REF"
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    assert loaded["phase"] == original_phase
+    assert loaded["accusation"] is None
+    assert _forbidden_token_hits(loaded) == []
+    assert client.get(f"/api/v1/sessions/{session_id}/events?once=true").text == ""
+
+
+def test_accusation_backend_derived_forbidden_result_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
+    """Blocker 1: rule_engine이 solution.endings에서 금지어가 포함된 message를 반환해도
+    session_repo.save() 이전에 검증이 되어야 하며, session/SSE에 아무것도 남지 않아야 한다."""
+    from app.domain import rule_engine as re_mod
+
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+    original_phase = session["phase"]
+    original_accusation = session["accusation"]
+
+    original_judge = re_mod.RuleEngine.judge_accusation
+
+    def poisoned_judge(self, sess, case, **kwargs):
+        result = original_judge(self, sess, case, **kwargs)
+        result["message"] = "culprit revealed: secret solution ending"
+        sess.accusation = result
+        return result
+
+    monkeypatch.setattr(re_mod.RuleEngine, "judge_accusation", poisoned_judge)
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/accusation",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "motive": "상속 갈등",
+            "method": "서재 침입",
+            "evidenceIds": [],
+            "contradictionIds": [],
+            "statementIds": [],
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "ACCUSATION_RESULT_FORBIDDEN_REF"
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    assert loaded["phase"] == original_phase
+    assert loaded["accusation"] == original_accusation
+    assert _forbidden_token_hits(loaded) == []
+    assert client.get(f"/api/v1/sessions/{session_id}/events?once=true").text == ""
+
+
+def test_note_create_forbidden_tag_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
+    """Blocker 2 follow-up: 노트 생성 시 tags에 금지어가 있으면 저장 및 SSE 없이 400 반환."""
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/notes",
+        json={"text": "정상적인 텍스트", "tags": ["secret", "investigation"]},
+    )
+
+    assert response.status_code == 400
+    assert "NOTE_TEXT_FORBIDDEN_REF" in response.json()["detail"]
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    assert loaded["notes"] == []
+    assert _forbidden_token_hits(loaded) == []
+    assert "event: NOTE_CREATED" not in client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+
+
+def test_note_update_forbidden_tag_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
+    """Blocker 2 follow-up: 노트 수정 시 tags에 금지어가 있으면 노트 뮤테이션 없이 400 반환.
+    NOTE_UPDATED SSE 이벤트 없고 공개 페이로드에 금지어 없어야 한다."""
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/notes",
+        json={"text": "정상적인 노트", "tags": ["investigation"]},
+    ).json()
+    note_id = created["note"]["id"]
+    original_tags = created["note"]["tags"]
+
+    response = client.put(
+        f"/api/v1/sessions/{session_id}/notes/{note_id}",
+        json={"tags": ["secret"]},
+    )
+
+    assert response.status_code == 400
+    assert "NOTE_TEXT_FORBIDDEN_REF" in response.json()["detail"]
+
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    surviving_note = next((n for n in loaded["notes"] if n["id"] == note_id), None)
+    assert surviving_note is not None
+    assert surviving_note["tags"] == original_tags
+    assert _forbidden_token_hits(loaded) == []
+    events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+    assert "event: NOTE_UPDATED" not in events_body
+    assert "secret" not in events_body
+
+
+def test_note_forbidden_text_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
+    """Blocker 2: 금지어가 포함된 노트 텍스트는 session 저장 및 SSE 이벤트 추가 전에 거부되어야 한다."""
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/notes",
+        json={"text": "secret culprit note text", "tags": []},
+    )
+
+    assert response.status_code == 400
+    assert "NOTE_TEXT_FORBIDDEN_REF" in response.json()["detail"]
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    assert loaded["notes"] == []
+    assert _forbidden_token_hits(loaded) == []
+    assert "event: NOTE_CREATED" not in client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+
+
+def test_note_update_forbidden_text_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
+    """Blocker 2 update: 노트 수정 시에도 금지어 텍스트는 저장 전에 거부되어야 한다.
+    SSE에 NOTE_UPDATED 이벤트가 없어야 하고 공개 페이로드에 금지어가 없어야 한다."""
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/notes",
+        json={"text": "정상적인 노트 텍스트", "tags": []},
+    ).json()
+    note_id = created["note"]["id"]
+    original_text = created["note"]["text"]
+
+    response = client.put(
+        f"/api/v1/sessions/{session_id}/notes/{note_id}",
+        json={"text": "secret update text"},
+    )
+
+    assert response.status_code == 400
+    assert "NOTE_TEXT_FORBIDDEN_REF" in response.json()["detail"]
+
+    # Verify text not persisted
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    surviving_note = next((n for n in loaded["notes"] if n["id"] == note_id), None)
+    assert surviving_note is not None
+    assert surviving_note["text"] == original_text
+
+    # Verify no NOTE_UPDATED event in SSE and no forbidden text in public payload
+    events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+    assert "event: NOTE_UPDATED" not in events_body
+    assert "secret" not in events_body
+    assert _forbidden_token_hits(loaded) == []
+
+
+def test_chained_llm_primary_failure_flows_through_character_agent_to_response_metadata(tmp_path, monkeypatch):
+    """Blocker 3 follow-up: ChainedLLM primary 실패가 CharacterAgent → LocalAIClient → dialogue route
+    전체 경로를 통해 흘러서 FE/BE 응답 메타데이터에 fallbackUsed=True, provider=fallback 프로바이더가
+    정직하게 노출되어야 한다. degraded는 False여야 한다 (fallback이 유효한 응답을 반환했으므로)."""
+    import app.ai_engine.application.character_agent as ca_mod
+    from app.ai_engine.core.llm import ChainedLLM
+    from app.infra.local_ai_client import LocalAIClient
+
+    class FailingUpstage:
+        provider_name = "upstage"
+        def complete(self, *args, **kwargs):
+            raise RuntimeError("upstage_connection_error")
+
+    class WorkingOpenAI:
+        provider_name = "openai"
+        def complete(self, prompt, *, seed_text, max_length=220):
+            return seed_text[:max_length]
+
+    chained = ChainedLLM(primary=FailingUpstage(), fallback=WorkingOpenAI())
+
+    # Use real LocalAIClient with mocked LLM chain (not ContractTestAIClient)
+    data_dir = tmp_path / "data"
+    if data_dir.exists():
+        shutil.rmtree(data_dir)
+    shutil.copytree(Path("data/cases"), data_dir / "cases")
+    monkeypatch.setenv("BE_DATA_DIR", str(data_dir))
+    get_settings.cache_clear()
+    deps.get_case_repository.cache_clear()
+    deps.get_session_repository.cache_clear()
+    if hasattr(deps, "get_event_repository"):
+        deps.get_event_repository.cache_clear()
+
+    monkeypatch.setattr(deps, "get_ai_client", lambda: LocalAIClient())
+    # Patch get_llm and llm_status as imported names inside character_agent module
+    monkeypatch.setattr(ca_mod, "get_llm", lambda: chained)
+    monkeypatch.setattr(ca_mod, "llm_status", lambda: {
+        "provider": "upstage",
+        "model": "solar-pro",
+        "configured": True,
+        "serviceDegraded": False,
+        "fallbackConfigured": True,
+        "timeoutMs": 8000,
+    })
+
+    client = TestClient(app)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "22시 이후 어디에 있었나요?"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    dr = payload["dialogueResult"]
+    # Fallback was used — must be reported honestly at both top-level and dialogueResult
+    assert payload["fallbackUsed"] is True
+    assert payload["provider"] == "openai"
+    assert dr["fallbackUsed"] is True
+    assert dr["provider"] == "openai"
+    # fallback succeeded → NOT degraded in public safety (OpenAI returned a valid answer)
+    assert dr["safety"]["degraded"] is False
+    # fallback_used=True → blocked=True in public safety (internal blockedReason was set)
+    assert dr["safety"]["blocked"] is True
+    assert dr["safety"]["fallbackUsed"] is True
+    # answer must be non-empty (fallback OpenAI produced the seed text)
+    assert payload["answer"]
+
+
+def test_chained_llm_fallback_tracks_used_provider(tmp_path, monkeypatch):
+    """Blocker 3: ChainedLLM이 primary 실패 시 fallback을 사용하면
+    used_fallback_on_last_call=True 및 fallback_reason이 기록되어야 한다."""
+    from app.ai_engine.core.llm import ChainedLLM
+
+    class FailingPrimary:
+        provider_name = "upstage"
+        def complete(self, *args, **kwargs):
+            raise RuntimeError("upstage_unreachable")
+
+    class WorkingFallback:
+        provider_name = "openai"
+        def complete(self, prompt, *, seed_text, max_length=220):
+            return seed_text[:max_length]
+
+    chained = ChainedLLM(primary=FailingPrimary(), fallback=WorkingFallback())
+    result = chained.complete("prompt", seed_text="fallback answer")
+
+    assert result == "fallback answer"
+    assert chained.used_fallback_on_last_call is True
+    assert "RuntimeError" in chained.fallback_reason_on_last_call
+
+    # primary 성공 시 fallback 플래그는 초기화되어야 한다.
+    class WorkingPrimary:
+        provider_name = "upstage"
+        def complete(self, prompt, *, seed_text, max_length=220):
+            return "primary answer"
+
+    chained2 = ChainedLLM(primary=WorkingPrimary(), fallback=WorkingFallback())
+    result2 = chained2.complete("prompt", seed_text="seed")
+    assert result2 == "primary answer"
+    assert chained2.used_fallback_on_last_call is False
+    assert chained2.fallback_reason_on_last_call is None
+
+
 def _all_keys(value):
     keys = set()
     if isinstance(value, dict):
