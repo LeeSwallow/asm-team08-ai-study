@@ -5,6 +5,7 @@ from typing import Any
 
 from app.ai_engine.application.character_agent import CharacterAgent, build_character_agent_input, render_dialogue_seed
 from app.ai_engine.application.game_master_agent import GameMasterAgent
+from app.ai_engine.application.knowledge_retriever import RetrievedContext, get_knowledge_retriever
 from app.ai_engine.application.light_rule_check import LightRuleCheck
 from app.ai_engine.core.guard import extract_case_context_terms, normalize_text
 from app.ai_engine.core.observability import AiLogContext, emit_ai_node_log, now_ms
@@ -104,11 +105,36 @@ def _event_policy_has_public_contradiction_context(payload: DialogueRequest) -> 
     return bool(policy.relatedContradictionIds and (policy.relatedEvidenceIds or policy.relatedTimelineEventIds))
 
 
+def retrieve_context(state: dict[str, Any]) -> dict[str, Any]:
+    started_at = now_ms()
+    payload: DialogueRequest = state["payload"]
+    pack = payload.characterKnowledgePack
+    unlocked_statement_ids = list(getattr(pack, "unlockedStatementIds", []) or []) if pack else []
+    unlocked_evidence_ids = list(getattr(pack, "unlockedEvidenceIds", []) or []) if pack else []
+    discovered_contradiction_ids = list(getattr(pack, "discoveredContradictionIds", []) or []) if pack else []
+    retrieved = get_knowledge_retriever().retrieve(
+        case_id=payload.caseId,
+        suspect_id=payload.suspect.id,
+        question_text=payload.question.text,
+        allowed_statement_text=payload.allowedStatement.text,
+        unlocked_statement_ids=unlocked_statement_ids,
+        unlocked_evidence_ids=unlocked_evidence_ids,
+        discovered_contradiction_ids=discovered_contradiction_ids,
+    )
+    emit_ai_node_log(
+        _context(payload),
+        node="KnowledgeRetriever",
+        started_at=started_at,
+    )
+    return {"retrieved_context": retrieved}
+
+
 def generate_response(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
+    retrieved: RetrievedContext | None = state.get("retrieved_context")
     agent_input = build_character_agent_input(payload)
-    result = CharacterAgent().run(agent_input)
+    result = CharacterAgent().run(agent_input, retrieved_context=retrieved)
     emit_ai_node_log(
         _context(payload),
         node="CharacterAgent",
@@ -150,6 +176,7 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
         enforceStatementScope=intent not in {"greeting", "unmatched"} and not provider_blocked,
         allowedContextTerms=_allowed_context_terms(payload),
         intent=intent,
+        retrieved_context=state.get("retrieved_context"),
     )
     checked = LightRuleCheck().run(check_input)
     safety = checked.safetyFindings
@@ -344,6 +371,7 @@ def run_dialogue_graph(payload: DialogueRequest) -> DialogueResponse:
         [
             ("load_context", load_context),
             ("validate_scope", validate_scope),
+            ("KnowledgeRetriever", retrieve_context),
             ("CharacterAgent", generate_response),
             ("LightRuleCheck", guard_response),
             ("GameMasterAgent", propose_events),

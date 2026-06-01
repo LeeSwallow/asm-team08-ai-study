@@ -645,7 +645,7 @@ def test_dialogue_routes_korean_typo_medication_and_lipstick_queries_with_diagno
     assert lipstick["runtimeDiagnostics"]["matchedQuestionId"] == "q_choiyuna_wine"
     assert lipstick["runtimeDiagnostics"]["aiIntent"] == "evidence_question"
     assert lipstick["runtimeDiagnostics"]["proposedEventsCount"] == lipstick["dialogueResult"]["proposedEventsCount"]
-    assert lipstick["runtimeDiagnostics"]["matchedRefs"]["evidenceIds"] == ["ev_wine_glass"]
+    assert "ev_wine_glass" in lipstick["runtimeDiagnostics"]["matchedRefs"]["evidenceIds"]
     assert lipstick["runtimeDiagnostics"]["reason"] == "matched_public_question"
     assert lipstick["runtimeDiagnostics"]["safety"]["fallbackUsed"] is False
 

@@ -74,31 +74,76 @@ def _has_matched_evidence_refs(payload: DialogueRequest) -> bool:
     return bool(refs.evidenceIds or payload.allowedEventPolicy.relatedEvidenceIds)
 
 
-def _knowledge_prompt_context(payload: DialogueRequest) -> str:
+def _knowledge_prompt_context(payload: DialogueRequest, retrieved_context: object | None = None) -> str:
     pack = payload.characterKnowledgePack
-    if not pack:
-        return ""
     sections: list[str] = []
+
+    # ── 페르소나 ─────────────────────────────────────────────────────────────
     persona = _knowledge_persona(payload)
     if persona:
         sections.append(f"Persona: {persona}")
-    for label, snippets in (
-        ("Visible timeline", pack.visibleTimeline[:4]),
-        ("Alibi", pack.alibiSnippets[:3]),
-        ("Evidence", pack.evidenceSnippets[:3]),
-        ("Relationships", pack.relationshipSnippets[:3]),
-    ):
-        values = [_safe_short_text(snippet.text, max_length=120) for snippet in snippets]
-        values = [value for value in values if value]
-        if values:
-            sections.append(f"{label}: " + " / ".join(values))
-    recent = [_safe_short_text(item.text, max_length=80) for item in pack.recentDialogue[-4:]]
-    recent = [item for item in recent if item]
-    if recent:
-        sections.append("Recent dialogue: " + " / ".join(recent))
+
+    # ── KnowledgeRetriever 결과 우선 사용 (질문 관련 이벤트/증거/진술) ────────
+    if retrieved_context is not None and not getattr(retrieved_context, "is_empty", lambda: True)():
+        rc = retrieved_context
+        if getattr(rc, "matched_timeline_events", None):
+            timeline_texts = [
+                _safe_short_text(f"{ev.get('time', '')} {ev.get('title', '')} {ev.get('description', '')}", max_length=100)
+                for ev in rc.matched_timeline_events[:4]
+            ]
+            timeline_texts = [t for t in timeline_texts if t]
+            if timeline_texts:
+                sections.append("Relevant timeline: " + " / ".join(timeline_texts))
+        if getattr(rc, "matched_evidence", None):
+            ev_texts = [
+                _safe_short_text(f"{ev.get('name', '')} — {ev.get('description', '')}", max_length=100)
+                for ev in rc.matched_evidence[:3]
+            ]
+            ev_texts = [t for t in ev_texts if t]
+            if ev_texts:
+                sections.append("Matched evidence: " + " / ".join(ev_texts))
+        if getattr(rc, "matched_statements", None):
+            st_texts = [
+                _safe_short_text(st.get("text", ""), max_length=120)
+                for st in rc.matched_statements[:2]
+            ]
+            st_texts = [t for t in st_texts if t]
+            if st_texts:
+                sections.append("Related statements: " + " / ".join(st_texts))
+        if getattr(rc, "alibi_summary", None):
+            sections.append(f"Alibi summary: {_safe_short_text(rc.alibi_summary, max_length=100)}")
+    elif pack:
+        # ── KnowledgeRetriever 없을 때 기존 방식 (pack.visibleTimeline[:4]) ──
+        for label, snippets in (
+            ("Visible timeline", pack.visibleTimeline[:4]),
+            ("Alibi", pack.alibiSnippets[:3]),
+            ("Evidence", pack.evidenceSnippets[:3]),
+        ):
+            values = [_safe_short_text(snippet.text, max_length=120) for snippet in snippets]
+            values = [value for value in values if value]
+            if values:
+                sections.append(f"{label}: " + " / ".join(values))
+
+    # ── 관계 및 최근 대화 (항상 pack에서) ─────────────────────────────────────
+    if pack:
+        rel_snippets = pack.relationshipSnippets[:3]
+        rel_values = [_safe_short_text(s.text, max_length=120) for s in rel_snippets]
+        rel_values = [v for v in rel_values if v]
+        if rel_values:
+            sections.append("Relationships: " + " / ".join(rel_values))
+        recent = [_safe_short_text(item.text, max_length=80) for item in pack.recentDialogue[-4:]]
+        recent = [item for item in recent if item]
+        if recent:
+            sections.append("Recent dialogue: " + " / ".join(recent))
+
     if not sections:
         return ""
-    return "\n\nCharacterKnowledgePack is BE-curated public context. Use it for voice, pressure continuity, and choosing which visible public angle to acknowledge. Do not add factual claims unless they are in the allowed statement or stable source refs.\n" + "\n".join(sections)
+    return (
+        "\n\nCharacterKnowledgePack is BE-curated public context. Use it for voice, pressure continuity, "
+        "and choosing which visible public angle to acknowledge. Do not add factual claims unless they are "
+        "in the allowed statement or stable source refs.\n"
+        + "\n".join(sections)
+    )
 
 
 def _variant_matches(
@@ -273,7 +318,11 @@ def render_dialogue_seed(payload: DialogueRequest) -> str:
 
 
 class CharacterAgent:
-    def run(self, agent_input: CharacterAgentInput) -> DraftCharacterReply:
+    def run(
+        self,
+        agent_input: CharacterAgentInput,
+        retrieved_context: object | None = None,
+    ) -> DraftCharacterReply:
         payload = agent_input.payload
         seed = render_dialogue_seed(payload)
         status = llm_status()
@@ -362,7 +411,7 @@ class CharacterAgent:
             )
 
         try:
-            prompt = DIALOGUE_SYSTEM_PROMPT + _knowledge_prompt_context(payload)
+            prompt = DIALOGUE_SYSTEM_PROMPT + _knowledge_prompt_context(payload, retrieved_context)
             llm = get_llm()
             text = llm.complete(prompt, seed_text=seed, max_length=payload.style.maxLength)
             # If ChainedLLM silently switched to fallback, report it honestly.
@@ -387,5 +436,8 @@ class CharacterAgent:
             )
 
 
-def run_character_agent(payload: DialogueRequest) -> DraftCharacterReply:
-    return CharacterAgent().run(build_character_agent_input(payload))
+def run_character_agent(
+    payload: DialogueRequest,
+    retrieved_context: object | None = None,
+) -> DraftCharacterReply:
+    return CharacterAgent().run(build_character_agent_input(payload), retrieved_context)

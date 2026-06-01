@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     debug_tools_enabled: bool = False
     cors_origins: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # Neo4j (케이스 지식 그래프)
+    neo4j_uri: str | None = None
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "detective_secret"
+
+    # PostgreSQL (세션/이벤트 상태)
+    database_url: str | None = None
+
     class Config:
         env_prefix = "BE_"
 
