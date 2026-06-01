@@ -1,0 +1,62 @@
+# Detective Agent root repository ignores
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# Node / frontend
+node_modules/
+.pnpm-store/
+.yarn/
+.cache/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+FE/vite.config.js
+FE/vite.config.d.ts
+FE/target/
+
+# Runtime data / local databases
+BE/.sessions/
+BE/data/sessions/
+BE/*.db
+BE/*.sqlite*
+*.log
+logs/
+tmp/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+.secret/
+.secret/**
+
+# Local orchestration / agent state
+.hermes/
+.agents/
+.codex/
+
+# Tooling
+.playwright/

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local runtime data
+BE/data/sessions/
+
+# Git/editor
+.git/
+.gitignore
+.DS_Store
+*.log

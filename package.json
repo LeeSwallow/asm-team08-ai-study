@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build": "npm --prefix FE run build",
+    "dev": "npm --prefix FE run dev",
+    "install:fe": "npm --prefix FE install"
+  }
+}
