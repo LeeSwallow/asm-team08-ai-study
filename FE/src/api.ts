@@ -1,10 +1,22 @@
-import type { AccusationPayload, CaseSummary, GameSessionView } from "./types";
+import type { AccusationPayload, CaseSummary, GameSessionView, NoteEntry } from "./types";
 import { askMockQuestion, submitMockAccusation, submitMockContradiction } from "./mockData";
 import { normalizeCase, normalizeSession, type BackendCase, type BackendSession } from "./adapters/sessionAdapter";
 import { logEvent } from "./utils/observability";
 import { sanitizePublicDiagnosticValue } from "./utils/publicDiagnostics";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
+export type BookmarkTarget = "dialogue" | "statement" | "evidence" | "record" | "relation";
+
+export type NotesListResponse = {
+  sessionId: string;
+  caseId: string;
+  notes: NoteEntry[];
+  notebook?: unknown;
+  lastEventId?: string;
+};
+
+export type SessionAssistantResponse = Record<string, unknown>;
 
 export function sessionEventsUrl(sessionId: string, lastEventId?: string) {
   const query = lastEventId ? `?lastEventId=${encodeURIComponent(lastEventId)}` : "";
@@ -105,12 +117,13 @@ export async function askQuestion(
   session: GameSessionView,
   suspectId: string,
   questionText: string,
+  questionId?: string,
 ): Promise<GameSessionView> {
   try {
     return normalizeSession(
       await request<BackendSession>(`/api/v1/sessions/${session.sessionId}/dialogue`, {
         method: "POST",
-        body: JSON.stringify({ suspectId, message: questionText }),
+        body: JSON.stringify({ suspectId, message: questionText, questionId }),
       }),
     );
   } catch (error) {
@@ -145,6 +158,10 @@ export async function submitContradiction(
   }
 }
 
+export async function listNotes(session: GameSessionView): Promise<NotesListResponse> {
+  return request<NotesListResponse>(`/api/v1/sessions/${session.sessionId}/notes`);
+}
+
 export async function createNote(
   session: GameSessionView,
   text: string,
@@ -164,6 +181,39 @@ export async function createNote(
       }),
     }),
   );
+}
+
+export async function createBookmark(
+  session: GameSessionView,
+  targetType: BookmarkTarget,
+  targetId: string,
+  note?: string,
+): Promise<GameSessionView> {
+  return normalizeSession(
+    await request<BackendSession>(`/api/v1/sessions/${session.sessionId}/bookmarks`, {
+      method: "POST",
+      body: JSON.stringify({ targetType, targetId, note }),
+    }),
+  );
+}
+
+export async function summarizeNotes(session: GameSessionView, note = ""): Promise<SessionAssistantResponse> {
+  return request<SessionAssistantResponse>(`/api/v1/sessions/${session.sessionId}/notes/summary`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export async function getSessionSummary(session: GameSessionView): Promise<SessionAssistantResponse> {
+  return request<SessionAssistantResponse>(`/api/v1/sessions/${session.sessionId}/summary`);
+}
+
+export async function getSessionHint(session: GameSessionView): Promise<SessionAssistantResponse> {
+  return request<SessionAssistantResponse>(`/api/v1/sessions/${session.sessionId}/hint`);
+}
+
+export async function getSessionEnding(session: GameSessionView): Promise<SessionAssistantResponse> {
+  return request<SessionAssistantResponse>(`/api/v1/sessions/${session.sessionId}/ending`);
 }
 
 export async function deleteNote(session: GameSessionView, noteId: string): Promise<GameSessionView> {

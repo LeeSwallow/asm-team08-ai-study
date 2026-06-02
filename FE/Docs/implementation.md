@@ -72,6 +72,11 @@ type GameSessionView = {
 | 대화 입력 | `POST /api/v1/sessions/{sessionId}/dialogue` | `suspectId`, `message` | 갱신된 세션 상태, 답변, applied event IDs, visualState |
 | 이벤트 구독 | `GET /api/v1/sessions/{sessionId}/events` | `Last-Event-ID` optional | SSE: note/evidence/timeline/tension/visual 이벤트 |
 | 모순 제기 | `POST /api/v1/sessions/{sessionId}/dialogue` | 선택한 진술/증거를 공개 텍스트로 조합한 자연어 모순 발화 | 판정 결과와 갱신 상태 |
+| 노트 조회 | `GET /api/v1/sessions/{sessionId}/notes` | 없음 | notes, notebook, lastEventId |
+| 노트 생성/수정/삭제 | `POST /api/v1/sessions/{sessionId}/notes`, `PUT/DELETE /api/v1/sessions/{sessionId}/notes/{noteId}` | note payload | 갱신된 세션 상태 |
+| 북마크 생성 | `POST /api/v1/sessions/{sessionId}/bookmarks` | `targetType`, `targetId`, optional note | 갱신된 세션 상태 |
+| 노트 요약 | `POST /api/v1/sessions/{sessionId}/notes/summary` | note text | AI/로컬 요약 응답 |
+| 힌트/요약/엔딩 보조 | `GET /api/v1/sessions/{sessionId}/hint`, `/summary`, `/ending` | 없음 | AI/로컬 보조 응답 |
 | 최종 지목 | `POST /api/v1/sessions/{sessionId}/accusation` | 범인, 동기, 수단, 근거 ID | 엔딩 결과 |
 
 ## Docker/API 설정
