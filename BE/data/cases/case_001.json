@@ -311,8 +311,8 @@
       "foundAt": "서재 금고 옆",
       "timeWindow": "불명",
       "reliability": 0.85,
-      "initiallyVisible": false,
-      "unlockCondition": "con_room_claim_vs_entry_log"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_phone_call",
@@ -323,8 +323,8 @@
       "foundAt": "피해자 휴대폰",
       "timeWindow": "21:55",
       "reliability": 0.9,
-      "initiallyVisible": false,
-      "unlockCondition": "q_choiyuna_last_call"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_medicine_box",
@@ -335,8 +335,8 @@
       "foundAt": "피해자 침실",
       "timeWindow": "21:30",
       "reliability": 0.75,
-      "initiallyVisible": false,
-      "unlockCondition": "q_parkmingyu_medicine"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_storm_blackout",
@@ -347,8 +347,8 @@
       "foundAt": "관리실 로그",
       "timeWindow": "22:05~22:07",
       "reliability": 0.88,
-      "initiallyVisible": false,
-      "unlockCondition": "q_yoonjaeho_blackout"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_ring_near_victim",
@@ -359,8 +359,8 @@
       "foundAt": "서재 피해자 주변",
       "timeWindow": "22:00~22:10",
       "reliability": 0.9,
-      "initiallyVisible": false,
-      "unlockCondition": "con_room_claim_vs_entry_log"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_lipstick_tube",
@@ -371,8 +371,8 @@
       "foundAt": "서재 쓰레기통",
       "timeWindow": "불명",
       "reliability": 0.7,
-      "initiallyVisible": false,
-      "unlockCondition": "q_choiyuna_wine"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_window_bolt",
@@ -394,8 +394,8 @@
       "foundAt": "저택 CCTV 시스템",
       "timeWindow": "22:05~22:07",
       "reliability": 0.75,
-      "initiallyVisible": false,
-      "unlockCondition": "con_watch_time_manipulated"
+      "initiallyVisible": true,
+      "unlockCondition": null
     }
   ],
   "records": [

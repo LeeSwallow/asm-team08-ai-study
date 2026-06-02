@@ -1,0 +1,881 @@
+{
+  "caseId": "case_003",
+  "sceneId": "scene_003",
+  "title": "얼룩무늬 밴드의 비밀",
+  "summary": "헬렌 스토너는 언니 줄리아가 2년 전 잠긴 방에서 '얼룩무늬 밴드'라는 말을 남기고 죽은 뒤, 자신도 같은 휘파람을 듣기 시작했다고 홈즈에게 의뢰한다. 플레이어는 밀실 구조, 유산 동기, 가짜 개보수, 동물 조련 단서를 교차검증해 숨겨진 트릭을 밝혀야 한다.",
+  "victimId": "victim_julia_stoner",
+  "victimName": "줄리아 스토너",
+  "incidentTime": "2년 전 결혼 2주 전 심야; 현재 헬렌의 결혼 전야에 반복",
+  "incidentLocation": "영국 서리 주 스토크 모란 저택 서쪽 날개 침실",
+  "questionLimit": 12,
+  "opening": {
+    "hook": "새벽의 베이커가 221B, 검은 베일을 쓴 헬렌이 떨리는 목소리로 말한다. '언니가 죽던 밤의 휘파람이 어젯밤 다시 들렸어요.'",
+    "objective": "줄리아의 사망 원인과 헬렌을 노리는 동일한 트릭을 규명하고 최종 범인을 지목한다.",
+    "rules": [
+      "기본 질문 기회는 12회다.",
+      "AI는 대화와 proposedEvents만 제안하고 Backend가 해금, 상태, 결론을 확정한다.",
+      "모순 제기는 진술 ID와 증거/기록 ID 조합으로 판정된다.",
+      "로일롯에게 부적절한 증거를 제시하면 Intimidation Penalty로 질문 2회가 추가 차감된다."
+    ],
+    "victoryCondition": "지참금 동기, 환기구-벨줄-고정침대 경로, 금고-우유-채찍의 동물 조련 단서를 연결해 살해 수법과 책임자를 제출한다."
+  },
+  "storyline": {
+    "publicPremise": "줄리아는 잠긴 방에서 외상과 독극물 흔적 없이 사망했고 마지막 말은 '얼룩무늬 밴드'였다. 현재 헬렌은 같은 방으로 옮겨진 뒤 밤중 휘파람을 듣고 있다. 외부 침입은 불가능하지만 저택 내부에는 이상한 벨줄, 환기구, 폭력적인 의붓아버지, 얼룩무늬 스카프를 두른 집시들이 있다.",
+    "acts": [],
+    "timeline": [
+      {
+        "timelineId": "tl_will_motive",
+        "time": "수년 전",
+        "title": "유산 조건",
+        "description": "자매가 결혼하면 로일롯은 지참금을 지급해야 한다.",
+        "sourceType": "record",
+        "sourceId": "rec_mothers_will",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_julia_engaged",
+        "time": "2년 전",
+        "title": "줄리아의 결혼 예정",
+        "description": "줄리아는 결혼 2주 전 사망했다.",
+        "sourceType": "statement",
+        "sourceId": "st_helen_julia_engagement",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_repairs",
+        "time": "줄리아 사망 직전",
+        "title": "침실 개보수",
+        "description": "가짜 벨줄과 환기구 공사가 로일롯 지시로 이루어졌다.",
+        "sourceType": "statement",
+        "sourceId": "st_housekeeper_repairs",
+        "hidden": false,
+        "unlockCondition": "contradiction:con_bellpull_age.accepted"
+      },
+      {
+        "timelineId": "tl_death_night",
+        "time": "2년 전 심야",
+        "title": "마지막 외침",
+        "description": "줄리아는 휘파람 뒤 쓰러지며 '얼룩무늬 밴드'라고 말했다.",
+        "sourceType": "record",
+        "sourceId": "rec_coroner_report",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_helen_shift",
+        "time": "현재 며칠 전",
+        "title": "헬렌의 방 이동",
+        "description": "헬렌은 수리 핑계로 언니의 방과 같은 위험 구조에 놓였다.",
+        "sourceType": "statement",
+        "sourceId": "st_helen_room_shift",
+        "hidden": false,
+        "unlockCondition": "question:q_helen_room_shift.answered"
+      },
+      {
+        "timelineId": "tl_route_inference",
+        "time": "수사 중",
+        "title": "내부 경로",
+        "description": "환기구, 벨줄, 침대가 작은 생물의 공격 경로를 만든다.",
+        "sourceType": "inference",
+        "sourceId": "con_sealed_room_internal_route",
+        "hidden": false,
+        "unlockCondition": "contradiction:con_sealed_room_internal_route.accepted"
+      }
+    ],
+    "cluePaths": [],
+    "currentObjectiveRules": []
+  },
+  "suspects": [
+    {
+      "characterId": "char_grimesby_roylott",
+      "name": "그림즈비 로일롯 박사",
+      "role": "의붓아버지",
+      "publicProfile": "인도 체류 경력이 있는 폭력적인 의사. 저택과 헬렌을 통제하며 딸들의 결혼 문제에 과민하다.",
+      "secret": "지참금을 막기 위해 줄리아를 살해했고 헬렌에게 같은 수법을 반복하려 한다. 금고에 늪살무사를 숨겼다.",
+      "motiveCandidate": true,
+      "isCulprit": true,
+      "speechStyle": {
+        "register": "위압적 존댓말과 명령형",
+        "baseTone": "분노와 조롱",
+        "vocabulary": [
+          "내 집",
+          "참견",
+          "사업 서류",
+          "인도",
+          "힘"
+        ],
+        "avoid": [
+          "정답 도구명",
+          "살해",
+          "지참금 범행"
+        ],
+        "low": {
+          "tone": "비웃음",
+          "sample": "런던식 추리로 내 집을 재단하지 마시오."
+        },
+        "medium": {
+          "tone": "차가운 협박",
+          "sample": "그 방은 밀실이었고, 그게 전부입니다."
+        },
+        "high": {
+          "tone": "노골적 위협",
+          "sample": "더 캐묻는다면 그 쇠막대기처럼 구부려 놓겠소."
+        },
+        "critical": {
+          "tone": "궁지의 격노",
+          "sample": "금고 이야기는 그만하시오. 내 방에 손댄 자는 후회합니다."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "수년 전",
+          "location": "",
+          "claimedAction": "유산 조건"
+        },
+        {
+          "time": "줄리아 사망 직전",
+          "location": "",
+          "claimedAction": "침실 개보수"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_helen_stoner",
+      "name": "헬렌 스토너",
+      "role": "의뢰인/현재 표적",
+      "publicProfile": "공포로 조기 노화된 여성. 언니의 죽음과 같은 소리를 들었다고 말한다.",
+      "secret": "로일롯에게 폭행당한 손목 멍을 숨기며, 현재 두 번째 표적이다.",
+      "motiveCandidate": false,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "정중하고 떨리는 존댓말",
+        "baseTone": "불안과 절박함",
+        "vocabulary": [
+          "언니",
+          "휘파람",
+          "그 방",
+          "손목",
+          "결혼"
+        ],
+        "avoid": [
+          "확정 범인",
+          "살해 수단 단정"
+        ],
+        "low": {
+          "tone": "조심스러움",
+          "sample": "그 소리는 꿈이 아니었습니다."
+        },
+        "medium": {
+          "tone": "불안한 회상",
+          "sample": "언니도 결혼을 앞두고 같은 소리를 들었습니다."
+        },
+        "high": {
+          "tone": "고백",
+          "sample": "이 멍은 넘어져 생긴 게 아닙니다."
+        },
+        "critical": {
+          "tone": "생존 공포",
+          "sample": "오늘 밤 그 방에 있으면 저도 죽을 겁니다."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "2년 전",
+          "location": "",
+          "claimedAction": "줄리아의 결혼 예정"
+        },
+        {
+          "time": "현재 며칠 전",
+          "location": "",
+          "claimedAction": "헬렌의 방 이동"
+        },
+        {
+          "time": "2년 전 심야",
+          "location": "",
+          "claimedAction": "마지막 외침"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_housekeeper",
+      "name": "저택 가정부",
+      "role": "내부 목격자",
+      "publicProfile": "기억이 흐릿하지만 방 공사와 벨줄의 새로움을 알고 있는 고용인.",
+      "secret": "벨줄과 환기구가 줄리아 사망 직전 설치됐음을 알고 있으나 로일롯을 두려워한다.",
+      "motiveCandidate": false,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "소박한 존댓말",
+        "baseTone": "혼란과 두려움",
+        "vocabulary": [
+          "공사",
+          "벨줄",
+          "박사님",
+          "먼지"
+        ],
+        "avoid": [
+          "범행 단정",
+          "동물의 정체"
+        ],
+        "low": {
+          "tone": "흐릿함",
+          "sample": "그 줄은 오래전부터 있었던 것 같기도 합니다."
+        },
+        "medium": {
+          "tone": "기억 회복",
+          "sample": "아니요, 그 줄만 유난히 새것 같았습니다."
+        },
+        "high": {
+          "tone": "겁먹음",
+          "sample": "공사는 아가씨가 죽기 얼마 전 박사님 지시였습니다."
+        },
+        "critical": {
+          "tone": "양심 고백",
+          "sample": "그 줄은 종으로 이어지지 않았습니다."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "줄리아 사망 직전",
+          "location": "",
+          "claimedAction": "침실 개보수"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_gypsy_camp",
+      "name": "방랑하는 집시들",
+      "role": "거짓 단서",
+      "publicProfile": "부지에 머무는 외부인들. 얼룩무늬 스카프 때문에 쉽게 의심받는다.",
+      "secret": "살인과 무관하며 '얼룩무늬 밴드'를 오해하게 하는 미끼다.",
+      "motiveCandidate": true,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "짧고 방어적인 말투",
+        "baseTone": "억울함과 냉소",
+        "vocabulary": [
+          "스카프",
+          "캠프",
+          "편견",
+          "허락"
+        ],
+        "avoid": [
+          "금고",
+          "살해 자백"
+        ],
+        "low": {
+          "tone": "무심함",
+          "sample": "우리는 천을 두를 뿐입니다."
+        },
+        "medium": {
+          "tone": "짜증",
+          "sample": "무늬가 같다고 범인이 됩니까?"
+        },
+        "high": {
+          "tone": "항의",
+          "sample": "그 방에는 들어간 적도 없습니다."
+        },
+        "critical": {
+          "tone": "억울함",
+          "sample": "누군가 우리 이름 뒤에 숨었습니다."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "2년 전 심야",
+          "location": "",
+          "claimedAction": "마지막 외침"
+        }
+      ],
+      "personaVariants": []
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "ev_mothers_will",
+      "name": "어머니의 유서",
+      "type": "record",
+      "description": "수입 감소와 결혼 지참금 지급 의무를 보이는 기록.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_fake_bell_pull",
+      "name": "가짜 벨줄",
+      "type": "physical",
+      "description": "침대 옆에 있지만 종과 연결되지 않은 새 줄.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_ventilator",
+      "name": "환기구",
+      "type": "physical",
+      "description": "외부가 아니라 로일롯 방과 피해자 방 사이에 난 작은 구멍.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_fixed_bed",
+      "name": "고정된 침대",
+      "type": "physical",
+      "description": "바닥에 고정되어 벨줄과 환기구 아래에서 움직일 수 없는 침대.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_milk_saucer",
+      "name": "우유 접시",
+      "type": "physical",
+      "description": "고양이가 없는 집의 금고 위 작은 우유 접시.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_looped_whip",
+      "name": "가죽 채찍",
+      "type": "physical",
+      "description": "끝이 고리처럼 묶인 개 채찍.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_iron_safe",
+      "name": "철제 금고",
+      "type": "physical",
+      "description": "서류 보관함이라는 주장과 달리 금속성 마찰음이 들리는 금고.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_fireplace_poker",
+      "name": "벽난로 부중",
+      "type": "physical",
+      "description": "로일롯이 힘을 과시하며 구부린 쇠막대기.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_coroner_report",
+      "name": "검시관의 보고서",
+      "type": "record",
+      "description": "외상과 검출 가능한 독극물 흔적 없이 사인 불명으로 남은 보고서.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_gypsy_scarves",
+      "name": "집시들의 얼룩무늬 스카프",
+      "type": "observation",
+      "description": "부지의 집시들이 두른 얼룩무늬 천.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    }
+  ],
+  "records": [
+    {
+      "recordId": "rec_mothers_will",
+      "name": "어머니의 유서",
+      "description": "결혼 시 지참금 지급과 수입 감소를 보여 준다.",
+      "timeWindow": null,
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "recordId": "rec_coroner_report",
+      "name": "줄리아 검시 보고서",
+      "description": "외상과 독극물 흔적 없음, 사인 불명.",
+      "timeWindow": null,
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "recordId": "rec_room_seal",
+      "name": "밀실 점검 기록",
+      "description": "문, 창문, 굴뚝으로 사람은 침입할 수 없다.",
+      "timeWindow": null,
+      "initiallyVisible": false,
+      "unlockCondition": null
+    }
+  ],
+  "relations": [
+    {
+      "relationshipId": "ctl_relation_roylott_helen",
+      "characterId": "char_helen_stoner",
+      "description": "의붓아버지와 딸",
+      "conflict": "경제적 착취와 폭력 통제",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "relationshipId": "ctl_relation_roylott_julia",
+      "characterId": "char_grimesby_roylott",
+      "description": "의붓아버지와 사망한 딸",
+      "conflict": "첫 번째 표적",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "relationshipId": "ctl_relation_roylott_gypsy",
+      "characterId": "char_gypsy_camp",
+      "description": "부지 체류 허락",
+      "conflict": "의심 전가용 방패",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    }
+  ],
+  "statements": [
+    {
+      "statementId": "st_helen_whistle",
+      "characterId": "char_helen_stoner",
+      "questionText": "q_helen_whistle",
+      "text": "어젯밤 언니가 죽기 전 들었다던 낮은 휘파람을 저도 들었습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_helen_whistle"
+    },
+    {
+      "statementId": "st_helen_julia_engagement",
+      "characterId": "char_helen_stoner",
+      "questionText": "관련 질문",
+      "text": "줄리아는 결혼을 2주 앞두고 죽었습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "statementId": "st_helen_room_shift",
+      "characterId": "char_helen_stoner",
+      "questionText": "q_helen_room_shift",
+      "text": "수리 때문에 언니가 쓰던 방으로 옮겨졌습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_helen_room_shift.answered"
+    },
+    {
+      "statementId": "st_roylott_natural_death",
+      "characterId": "char_grimesby_roylott",
+      "questionText": "q_roylott_sealed_room",
+      "text": "줄리아의 방은 완벽한 밀실이었으니 자연사다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_roylott_sealed_room.answered"
+    },
+    {
+      "statementId": "st_roylott_safe_documents",
+      "characterId": "char_grimesby_roylott",
+      "questionText": "q_roylott_safe_contents",
+      "text": "금고 안에는 오직 사업 서류만 있다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_roylott_safe_contents.answered"
+    },
+    {
+      "statementId": "st_roylott_no_motive",
+      "characterId": "char_grimesby_roylott",
+      "questionText": "q_roylott_motive",
+      "text": "딸들의 결혼은 내 재정과 아무 상관이 없다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_roylott_motive.answered"
+    },
+    {
+      "statementId": "st_housekeeper_bellpull_old",
+      "characterId": "char_housekeeper",
+      "questionText": "q_housekeeper_bellpull_age",
+      "text": "그 벨줄은 오래전부터 있었던 물건일 겁니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_housekeeper_bellpull_age.answered"
+    },
+    {
+      "statementId": "st_housekeeper_repairs",
+      "characterId": "char_housekeeper",
+      "questionText": "q_housekeeper_repairs",
+      "text": "그 공사는 줄리아 아가씨가 죽기 얼마 전 박사님 지시로 했습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "contradiction:con_bellpull_age.accepted"
+    },
+    {
+      "statementId": "st_gypsy_scarves",
+      "characterId": "char_gypsy_camp",
+      "questionText": "q_gypsy_scarves",
+      "text": "우리는 얼룩무늬 스카프를 두르지만 그 방에는 들어간 적이 없습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_gypsy_scarves.answered"
+    },
+    {
+      "statementId": "st_holmes_gypsy_hypothesis",
+      "characterId": "char_holmes_inference",
+      "questionText": "q_holmes_speckled_band_hypothesis",
+      "text": "범인은 캠프를 치고 있는 집시들 중 하나일 것이다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_holmes_speckled_band_hypothesis.answered"
+    },
+    {
+      "statementId": "st_roylott_threat",
+      "characterId": "char_grimesby_roylott",
+      "questionText": "q_roylott_threat",
+      "text": "내 일에 참견하지 마라!",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "question:q_roylott_threat.answered"
+    }
+  ],
+  "questions": [
+    {
+      "questionId": "q_helen_whistle",
+      "characterId": "char_helen_stoner",
+      "text": "어젯밤 들은 소리를 자세히 말해 주십시오.",
+      "answer": "어젯밤 언니가 죽기 전 들었다던 낮은 휘파람을 저도 들었습니다.",
+      "unlocksStatementIds": [
+        "st_helen_whistle"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_helen_room_shift",
+      "characterId": "char_helen_stoner",
+      "text": "왜 언니가 쓰던 방으로 옮겨졌습니까?",
+      "answer": "수리 때문에 언니가 쓰던 방으로 옮겨졌습니다.",
+      "unlocksStatementIds": [
+        "st_helen_room_shift"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_roylott_motive",
+      "characterId": "char_grimesby_roylott",
+      "text": "딸들의 결혼과 유산 지급은 박사님의 재정에 어떤 영향을 줍니까?",
+      "answer": "딸들의 결혼은 내 재정과 아무 상관이 없다.",
+      "unlocksStatementIds": [
+        "st_roylott_no_motive"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_roylott_sealed_room",
+      "characterId": "char_grimesby_roylott",
+      "text": "줄리아의 방이 밀실이었다는 점을 어떻게 설명하십니까?",
+      "answer": "줄리아의 방은 완벽한 밀실이었으니 자연사다.",
+      "unlocksStatementIds": [
+        "st_roylott_natural_death"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_roylott_safe_contents",
+      "characterId": "char_grimesby_roylott",
+      "text": "금고 안에는 무엇이 들어 있습니까?",
+      "answer": "금고 안에는 오직 사업 서류만 있다.",
+      "unlocksStatementIds": [
+        "st_roylott_safe_documents"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_roylott_india_animals",
+      "characterId": "char_grimesby_roylott",
+      "text": "인도에서 데려온 동물들은 어떻게 관리합니까?",
+      "answer": "확인 가능한 진술이 아직 없습니다.",
+      "unlocksStatementIds": [],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_roylott_threat",
+      "characterId": "char_grimesby_roylott",
+      "text": "수사 방해와 위협에 대해 해명하십시오.",
+      "answer": "내 일에 참견하지 마라!",
+      "unlocksStatementIds": [
+        "st_roylott_threat"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_housekeeper_repairs",
+      "characterId": "char_housekeeper",
+      "text": "줄리아가 죽기 전후 방 공사가 있었습니까?",
+      "answer": "그 공사는 줄리아 아가씨가 죽기 얼마 전 박사님 지시로 했습니다.",
+      "unlocksStatementIds": [
+        "st_housekeeper_repairs"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_fake_bell_pull"
+      ],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_housekeeper_bellpull_age",
+      "characterId": "char_housekeeper",
+      "text": "벨줄은 언제부터 있었습니까?",
+      "answer": "그 벨줄은 오래전부터 있었던 물건일 겁니다.",
+      "unlocksStatementIds": [
+        "st_housekeeper_bellpull_old"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_gypsy_scarves",
+      "characterId": "char_gypsy_camp",
+      "text": "얼룩무늬 스카프와 줄리아의 마지막 말은 관련이 있습니까?",
+      "answer": "우리는 얼룩무늬 스카프를 두르지만 그 방에는 들어간 적이 없습니다.",
+      "unlocksStatementIds": [
+        "st_gypsy_scarves"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_gypsy_scarves"
+      ],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_holmes_speckled_band_hypothesis",
+      "characterId": "char_holmes_inference",
+      "text": "얼룩무늬 밴드가 집시를 뜻한다고 봐도 됩니까?",
+      "answer": "범인은 캠프를 치고 있는 집시들 중 하나일 것이다.",
+      "unlocksStatementIds": [
+        "st_holmes_gypsy_hypothesis"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_roylott_final_pressure",
+      "characterId": "char_grimesby_roylott",
+      "text": "환기구, 벨줄, 침대, 금고가 모두 같은 계획의 일부라는 점을 부인합니까?",
+      "answer": "확인 가능한 진술이 아직 없습니다.",
+      "unlocksStatementIds": [],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    }
+  ],
+  "contradictions": [
+    {
+      "contradictionId": "con_sealed_room_internal_route",
+      "title": "con_sealed_room_internal_route",
+      "relatedCharacterId": "char_grimesby_roylott",
+      "requiredStatementIds": [
+        "st_roylott_natural_death"
+      ],
+      "requiredEvidenceIds": [
+        "ev_ventilator",
+        "ev_fake_bell_pull"
+      ],
+      "severity": "core",
+      "pressureDelta": 1,
+      "reasonCode": "외부 침입은 없어도 박사의 방에서 피해자 방으로 작은 생물을 보낼 내부 통로가 있다.",
+      "message": "외부 침입은 없어도 박사의 방에서 피해자 방으로 작은 생물을 보낼 내부 통로가 있다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_safe_documents_animal_tools",
+      "title": "con_safe_documents_animal_tools",
+      "relatedCharacterId": "char_grimesby_roylott",
+      "requiredStatementIds": [
+        "st_roylott_safe_documents"
+      ],
+      "requiredEvidenceIds": [
+        "ev_milk_saucer",
+        "ev_looped_whip"
+      ],
+      "severity": "major",
+      "pressureDelta": 1,
+      "reasonCode": "사업 서류 금고 근처에 동물 먹이와 조련 도구가 있는 것은 부자연스럽다.",
+      "message": "사업 서류 금고 근처에 동물 먹이와 조련 도구가 있는 것은 부자연스럽다.",
+      "unlockedIds": [
+        "ev_iron_safe"
+      ]
+    },
+    {
+      "contradictionId": "con_bellpull_age",
+      "title": "con_bellpull_age",
+      "relatedCharacterId": "char_housekeeper",
+      "requiredStatementIds": [
+        "st_housekeeper_bellpull_old"
+      ],
+      "requiredEvidenceIds": [
+        "ev_fake_bell_pull"
+      ],
+      "severity": "core",
+      "pressureDelta": 1,
+      "reasonCode": "벨줄은 새것이고 종과 연결되지 않아 오래된 설비라는 진술을 반박한다.",
+      "message": "벨줄은 새것이고 종과 연결되지 않아 오래된 설비라는 진술을 반박한다.",
+      "unlockedIds": [
+        "st_housekeeper_repairs"
+      ]
+    },
+    {
+      "contradictionId": "con_gypsy_insufficient_link",
+      "title": "con_gypsy_insufficient_link",
+      "relatedCharacterId": "char_gypsy_camp",
+      "requiredStatementIds": [
+        "st_holmes_gypsy_hypothesis"
+      ],
+      "requiredEvidenceIds": [
+        "ev_gypsy_scarves"
+      ],
+      "severity": "major",
+      "pressureDelta": 0,
+      "reasonCode": "얼룩무늬라는 단어만으로는 밀실 구조와 사인 불명을 설명하지 못한다.",
+      "message": "얼룩무늬라는 단어만으로는 밀실 구조와 사인 불명을 설명하지 못한다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_motive_denial",
+      "title": "con_motive_denial",
+      "relatedCharacterId": "char_grimesby_roylott",
+      "requiredStatementIds": [
+        "st_roylott_no_motive"
+      ],
+      "requiredEvidenceIds": [
+        "ev_mothers_will"
+      ],
+      "severity": "core",
+      "pressureDelta": 1,
+      "reasonCode": "결혼 지참금 지급은 로일롯의 감소한 수입을 직접 위협한다.",
+      "message": "결혼 지참금 지급은 로일롯의 감소한 수입을 직접 위협한다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_intimidation_wrong_evidence",
+      "title": "con_intimidation_wrong_evidence",
+      "relatedCharacterId": "char_grimesby_roylott",
+      "requiredStatementIds": [
+        "st_roylott_threat"
+      ],
+      "requiredEvidenceIds": [
+        "ev_coroner_report"
+      ],
+      "severity": "major",
+      "pressureDelta": 0,
+      "reasonCode": "위협 상황에 검시 보고서만 제시하면 폭력 행위와 직접 충돌하지 않아 압박에 말려든다.",
+      "message": "위협 상황에 검시 보고서만 제시하면 폭력 행위와 직접 충돌하지 않아 압박에 말려든다.",
+      "unlockedIds": []
+    }
+  ],
+  "solution": {
+    "culpritId": "char_grimesby_roylott",
+    "motive": "헬렌과 줄리아가 결혼하면 지참금을 지급해야 하므로 로일롯은 재정 파탄을 피하려 했다.",
+    "method": "로일롯은 철제 금고에 늪살무사를 숨기고 밤마다 환기구로 보냈다. 뱀은 가짜 벨줄을 타고 고정 침대의 피해자에게 내려갔고, 로일롯은 휘파람과 우유로 뱀을 회수했다. '얼룩무늬 밴드'는 집시 스카프가 아니라 뱀의 노란 바탕과 갈색 반점을 뜻한다.",
+    "requiredContradictionIds": [
+      "con_motive_denial",
+      "con_sealed_room_internal_route",
+      "con_safe_documents_animal_tools",
+      "con_gypsy_insufficient_link"
+    ],
+    "requiredEvidenceIds": [
+      "ev_mothers_will",
+      "ev_fake_bell_pull",
+      "ev_ventilator",
+      "ev_fixed_bed",
+      "ev_milk_saucer",
+      "ev_looped_whip",
+      "ev_iron_safe",
+      "ev_coroner_report"
+    ],
+    "requiredStatementIds": [
+      "st_roylott_natural_death",
+      "st_roylott_safe_documents",
+      "st_roylott_no_motive",
+      "st_housekeeper_repairs",
+      "st_helen_whistle"
+    ],
+    "endings": {
+      "correct": "덫은 주인에게 돌아간다: 홈즈가 지팡이로 뱀을 몰아내자 뱀은 환기구를 통해 로일롯 방으로 돌아가 그를 물어 죽인다. 헬렌은 구조된다.",
+      "partial": "동기는 보였으나 수법은 어둠 속: 로일롯을 의심하지만 내부 경로와 동물 수단을 입증하지 못해 보호가 지연된다.",
+      "wrong": "두 번째 차가운 침대: 질문을 소진하거나 증거 없이 결론을 내리면 헬렌은 언니처럼 죽은 채 발견된다."
+    }
+  }
+}

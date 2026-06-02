@@ -21,6 +21,10 @@ GENERIC_CASE_TOKENS = {
     "발견됐다",
     "있다",
     "없다",
+    "있어",
+    "있어요",
+    "있지만",
+    "아닌",
 }
 
 
@@ -72,14 +76,27 @@ def evidence_mention_score(player_message: str, evidence: object) -> int:
     compact_name = normalize_text(name).replace(" ", "")
     if compact_name and compact_name in compact_message:
         score += 5
-    name_score = len(text_tokens(message) & meaningful_tokens(name)) * 3
-    description_score = len(text_tokens(message) & meaningful_tokens(description)) * 2
+    name_overlap = text_tokens(message) & meaningful_tokens(name)
+    description_overlap = text_tokens(message) & meaningful_tokens(description)
+    name_score = len(name_overlap) * 3
+    description_score = len(description_overlap) * 2
     score += name_score
     score += description_score
+    for token in name_overlap | description_overlap:
+        if token and token in compact_message:
+            score += 2
     if name_score or description_score:
         score += len(text_tokens(message) & meaningful_tokens(found_at)) * 1
     return score
 
 
 def evidence_is_mentioned(player_message: str, evidence: object) -> bool:
-    return evidence_mention_score(player_message, evidence) >= 2
+    message = normalize_text(player_message)
+    compact_message = message.replace(" ", "")
+    compact_name = normalize_text(str(getattr(evidence, "name", "") or "")).replace(" ", "")
+    if compact_name and compact_name in compact_message:
+        return True
+    overlap = text_tokens(message) & meaningful_tokens(
+        f"{getattr(evidence, 'name', '')} {getattr(evidence, 'description', '')}"
+    )
+    return len(overlap) >= 2 and evidence_mention_score(player_message, evidence) >= 5

@@ -10,6 +10,8 @@ from app.core.config import get_settings
 from app.domain.event_processor import EventProcessor
 from app.domain.event_types import EventType
 from app.infra.case_repository import CaseRepository
+from app.infra.case_orm import CaseRecord
+from app.infra.db import Base, ensure_schema, get_engine, get_session_factory
 from app.domain.case_engine import initial_session_state
 from app.main import app
 
@@ -60,13 +62,35 @@ class ContractTestAIClient:
         return {"ok": True, "status": "ok", "provider": "contract-test-ai"}
 
 
+def _seed_case_database(tmp_path, monkeypatch):
+    monkeypatch.setenv("BE_DATABASE_URL", f"sqlite:///{tmp_path / 'cases.db'}")
+    get_settings.cache_clear()
+    get_engine.cache_clear()
+    get_session_factory.cache_clear()
+    ensure_schema.cache_clear()
+    deps.get_case_repository.cache_clear()
+
+    engine = get_engine()
+    session_factory = get_session_factory()
+    assert engine is not None
+    assert session_factory is not None
+
+    Base.metadata.create_all(engine)
+    with session_factory() as db:
+        for path in sorted((Path("data/cases")).glob("*.json")):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            db.merge(CaseRecord(case_id=str(payload["caseId"]), payload=payload))
+        db.commit()
+
+
 def _client(tmp_path, monkeypatch, debug_tools: bool = False):
     data_dir = tmp_path / "data"
     if data_dir.exists():
         shutil.rmtree(data_dir)
-    shutil.copytree(Path("data/cases"), data_dir / "cases")
+    data_dir.mkdir(parents=True)
     monkeypatch.setenv("BE_DATA_DIR", str(data_dir))
     monkeypatch.setenv("BE_DEBUG_TOOLS_ENABLED", "true" if debug_tools else "false")
+    _seed_case_database(tmp_path, monkeypatch)
     get_settings.cache_clear()
     deps.get_case_repository.cache_clear()
     deps.get_session_repository.cache_clear()
@@ -108,12 +132,17 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     assert repeated["questionResult"]["repeated"] is True
     assert repeated["questionResult"]["askCount"] == 2
 
-    correct = client.post(
+    removed = client.post(
         f"/api/v1/sessions/{session_id}/contradictions",
+        json={"suspectId": "char_hanseoyeon", "statementIds": ["st_hanseoyeon_room_2200"], "evidenceIds": ["ev_study_entry_log"]},
+    )
+    assert removed.status_code == 404
+
+    correct = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
         json={
             "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": ["ev_study_entry_log"],
+            "message": "22시에 방에 있었다는 진술은 서재 출입 기록의 22:02 카드키 기록과 모순입니다.",
         },
     ).json()
     result = correct["contradictionResult"]
@@ -127,22 +156,14 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     assert loaded["discoveredContradictionIds"] == ["con_room_claim_vs_entry_log"]
 
     partial = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
-        json={
-            "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_no_reason"],
-            "evidenceIds": [],
-        },
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "상속 문제는 없었다는 진술만으로 모순인가요?"},
     ).json()
-    assert partial["contradictionResult"]["verdict"] == "partial"
+    assert partial["contradictionResult"] is None
 
     client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
-        json={
-            "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_no_reason"],
-            "evidenceIds": ["ev_torn_will"],
-        },
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "상속 문제는 없었다는 말은 찢어진 유언장 내용과 모순입니다."},
     )
     accusation = client.post(
         f"/api/v1/sessions/{session_id}/accusation",
@@ -156,8 +177,9 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
         },
     ).json()
     assert accusation["accusationResult"]["verdict"] == "correct"
+    assert accusation["accusationResult"]["correct"] is True
     assert "culpritCorrect" not in accusation["accusationResult"]
-    assert "suspectMatch" in accusation["accusationResult"]
+    assert "suspectMatch" not in accusation["accusationResult"]
     assert accusation["accusationResult"]["submittedMotive"] == "상속 비율 변경 때문에 피해자와 갈등했다."
     assert accusation["accusation"]["submittedMethod"] == "서재에 들어간 뒤 정전 시간을 이용해 현장을 조작했다."
     assert "culpritCorrect" not in accusation["accusation"]
@@ -167,9 +189,11 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     assert "event: ACCUSATION_RESOLVED" in events_body
     assert "culpritCorrect" not in events_body
 
-    saved_path = tmp_path / "data" / "sessions" / f"{session_id}.json"
-    assert json.loads(saved_path.read_text(encoding="utf-8"))["phase"] == "solved"
-    assert json.loads(saved_path.read_text(encoding="utf-8"))["accusation"]["submittedMotive"]
+    saved_session = deps.get_session_repository().get(session_id)
+    assert saved_session is not None
+    assert saved_session.phase == "solved"
+    assert saved_session.accusation is not None
+    assert saved_session.accusation["submittedMotive"]
 
 
 def test_investigation_read_models_include_case_file_notebook_and_contradiction_details(tmp_path, monkeypatch):
@@ -196,11 +220,10 @@ def test_investigation_read_models_include_case_file_notebook_and_contradiction_
     assert note["notebook"]["notes"][-1]["text"] == "서재 출입 기록과 알리바이를 비교한다."
 
     correct = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
+        f"/api/v1/sessions/{session_id}/dialogue",
         json={
             "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": ["ev_study_entry_log"],
+            "message": "22시에 방에 있었다는 진술은 서재 출입 기록의 22:02 카드키 기록과 모순입니다.",
         },
     ).json()
     discovered = correct["contradictions"]["discovered"][0]
@@ -212,7 +235,6 @@ def test_investigation_read_models_include_case_file_notebook_and_contradiction_
 
     events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert "event: NOTE_CONTRADICTION_CANDIDATE_ADDED" in events_body
-    assert "event: EVIDENCE_UNLOCKED" in events_body
     assert "event: TENSION_CHANGED" in events_body
     assert "con_room_claim_vs_entry_log" in events_body
 
@@ -268,7 +290,7 @@ def test_natural_dialogue_contradictions_create_notebook_proof_and_readiness(tmp
         },
     ).json()
     assert accusation["accusationResult"]["verdict"] == "correct"
-    assert accusation["accusationResult"]["proofComplete"] is True
+    assert accusation["accusationResult"]["correct"] is True
 
 
 def test_tension_policy_only_changes_on_new_validated_contradiction(tmp_path, monkeypatch):
@@ -285,30 +307,28 @@ def test_tension_policy_only_changes_on_new_validated_contradiction(tmp_path, mo
     assert "event: TENSION_CHANGED" not in events_after_unlock
 
     first = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
+        f"/api/v1/sessions/{session_id}/dialogue",
         json={
             "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": ["ev_study_entry_log"],
+            "message": "22시에 방에 있었다는 진술은 서재 출입 기록의 22:02 카드키 기록과 모순입니다.",
         },
     ).json()
     assert first["contradictionResult"]["verdict"] == "correct"
     assert first["contradictionResult"]["newlyDiscovered"] is True
-    assert first["contradictionResult"]["pressureDelta"] == 42
-    assert first["pressureBySuspect"]["char_hanseoyeon"] == 42
+    assert first["contradictionResult"]["pressureDelta"] == 62
+    assert first["pressureBySuspect"]["char_hanseoyeon"] == 62
 
     duplicate = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
+        f"/api/v1/sessions/{session_id}/dialogue",
         json={
             "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": ["ev_study_entry_log"],
+            "message": "다시 말하지만 방에 있었다는 진술은 서재 출입 기록과 모순입니다.",
         },
     ).json()
     assert duplicate["contradictionResult"]["verdict"] == "correct"
     assert duplicate["contradictionResult"]["newlyDiscovered"] is False
     assert duplicate["contradictionResult"]["pressureDelta"] == 0
-    assert duplicate["pressureBySuspect"]["char_hanseoyeon"] == 42
+    assert duplicate["pressureBySuspect"]["char_hanseoyeon"] == 62
 
     events = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert events.count("event: TENSION_CHANGED") == 1
@@ -320,17 +340,11 @@ def test_partial_or_unlock_flow_does_not_raise_tension(tmp_path, monkeypatch):
     session_id = session["sessionId"]
 
     partial = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
-        json={
-            "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": [],
-        },
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "방에 있었다는 진술만으로 모순인가요?"},
     ).json()
 
-    assert partial["contradictionResult"]["verdict"] == "partial"
-    assert partial["contradictionResult"]["newlyDiscovered"] is False
-    assert partial["pressureBySuspect"]["char_hanseoyeon"] == 0
+    assert partial["contradictionResult"] is None
     events = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert "event: TENSION_CHANGED" not in events
 
@@ -416,7 +430,6 @@ def test_debug_endpoints_are_dev_gated_and_emit_public_session_updates(tmp_path,
 
     events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert "event: TENSION_CHANGED" in events_body
-    assert "event: EVIDENCE_UNLOCKED" in events_body
     assert "event: NOTE_CREATED" in events_body
     assert "event: DEBUG_SESSION_UPDATED" in events_body
     serialized = json.dumps(unlocked, ensure_ascii=False)
@@ -429,16 +442,6 @@ def test_notes_bookmarks_hint_summary_and_wrong_combo(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
     session_id = session["sessionId"]
-
-    wrong = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
-        json={
-            "suspectId": "char_parkmingyu",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": ["ev_wine_glass"],
-        },
-    ).json()
-    assert wrong["contradictionResult"]["verdict"] == "wrong"
 
     note = client.post(
         f"/api/v1/sessions/{session_id}/notes",
@@ -699,7 +702,7 @@ def test_dialogue_routes_korean_typo_medication_and_lipstick_queries_with_diagno
     assert lipstick["runtimeDiagnostics"]["matchedQuestionId"] == "q_choiyuna_wine"
     assert lipstick["runtimeDiagnostics"]["aiIntent"] == "evidence_question"
     assert lipstick["runtimeDiagnostics"]["proposedEventsCount"] == lipstick["dialogueResult"]["proposedEventsCount"]
-    assert "ev_wine_glass" in lipstick["runtimeDiagnostics"]["matchedRefs"]["evidenceIds"]
+    assert lipstick["runtimeDiagnostics"]["matchedRefs"]["evidenceIds"] == ["ev_lipstick_tube"]
     assert lipstick["runtimeDiagnostics"]["reason"] == "matched_public_question"
     assert lipstick["runtimeDiagnostics"]["safety"]["fallbackUsed"] is False
 
@@ -869,9 +872,10 @@ def test_dialogue_evidence_question_policy_includes_visible_contradiction_path(t
     assert refs["contradictionIds"] == ["con_room_claim_vs_entry_log"]
     assert refs["evidenceIds"] == ["ev_study_entry_log"]
     assert refs["statementIds"] == ["st_hanseoyeon_room_2200"]
-    assert payload["dialogueResult"]["appliedEventsCount"] == 2
+    assert payload["dialogueResult"]["appliedEventsCount"] == 3
     events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert "event: NOTE_CONTRADICTION_CANDIDATE_ADDED" in events_body
+    assert "event: TENSION_CHANGED" in events_body
     assert "event: NOTE_FACT_ADDED" not in events_body
 
 
@@ -1063,9 +1067,8 @@ def test_event_processor_rejects_hidden_or_unknown_unlocks(tmp_path, monkeypatch
 
 
 def test_event_processor_validates_contradiction_candidate_notes_by_visible_ids(tmp_path, monkeypatch):
-    data_dir = tmp_path / "data"
-    shutil.copytree(Path("data/cases"), data_dir / "cases")
-    case = CaseRepository(data_dir / "cases").get_case("case_001")
+    _seed_case_database(tmp_path, monkeypatch)
+    case = CaseRepository().get_case("case_001")
     assert case is not None
     session = initial_session_state(case, "sess_event_processor_unit")
 
@@ -1079,7 +1082,7 @@ def test_event_processor_validates_contradiction_candidate_notes_by_visible_ids(
         proposed_events=[
             {
                 "type": EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value,
-                "payload": {"contradictionId": "con_inheritance_motive"},
+                "payload": {"contradictionId": "con_ring_vs_no_entry"},
             }
         ],
         allow_implicit_note=False,
@@ -1187,11 +1190,10 @@ def test_storyline_public_payload_and_objective_progression(tmp_path, monkeypatc
         json={"questionId": "q_hanseoyeon_alibi", "suspectId": "char_hanseoyeon"},
     )
     progressed = client.post(
-        f"/api/v1/sessions/{session_id}/contradictions",
+        f"/api/v1/sessions/{session_id}/dialogue",
         json={
             "suspectId": "char_hanseoyeon",
-            "statementIds": ["st_hanseoyeon_room_2200"],
-            "evidenceIds": ["ev_study_entry_log"],
+            "message": "22시에 방에 있었다는 진술은 서재 출입 기록의 22:02 카드키 기록과 모순입니다.",
         },
     ).json()
     assert progressed["contradictionResult"]["verdict"] in {"correct", "partial"}
@@ -1199,16 +1201,13 @@ def test_storyline_public_payload_and_objective_progression(tmp_path, monkeypatc
     assert "상속" in progressed["currentObjective"]
 
 
-def test_accusation_backend_forbidden_in_missing_ids_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
-    """Blocker 1 follow-up: 백엔드 파생 필드(missingEvidenceIds 등)에 금지어 토큰이 있으면
-    session 저장 및 SSE 이벤트 없이 503이 반환되어야 한다."""
+def test_accusation_result_uses_simple_public_allowlist(tmp_path, monkeypatch):
+    """Backend-derived diagnostic fields must not be persisted or emitted in the public accusation result."""
     from app.domain import rule_engine as re_mod
 
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
     session_id = session["sessionId"]
-    original_phase = session["phase"]
-
     original_judge = re_mod.RuleEngine.judge_accusation
 
     def poisoned_missing_ids(self, sess, case, **kwargs):
@@ -1232,13 +1231,74 @@ def test_accusation_backend_forbidden_in_missing_ids_does_not_persist_or_emit_ss
         },
     )
 
-    assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "ACCUSATION_RESULT_FORBIDDEN_REF"
+    assert response.status_code == 200
+    payload = response.json()
+    assert "missingEvidenceIds" not in payload["accusationResult"]
+    assert "missingEvidenceIds" not in payload["accusation"]
     loaded = client.get(f"/api/v1/sessions/{session_id}").json()
-    assert loaded["phase"] == original_phase
-    assert loaded["accusation"] is None
+    assert loaded["accusation"] is not None
+    assert "missingEvidenceIds" not in loaded["accusation"]
     assert _forbidden_token_hits(loaded) == []
-    assert client.get(f"/api/v1/sessions/{session_id}/events?once=true").text == ""
+    events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+    assert "ev_culprit_weapon" not in events_body
+
+
+def test_case_002_session_and_dialogue_contradiction_flow(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_002"}).json()
+    session_id = session["sessionId"]
+
+    assert session["caseId"] == "case_002"
+    assert session["caseFile"]["title"] == "시체와 온천"
+    assert len(session["evidence"]) == 18
+
+    asked = client.post(
+        f"/api/v1/sessions/{session_id}/questions",
+        json={"questionId": "q_alibi_hoseon", "suspectId": "char_lim_hoseon"},
+    ).json()
+    assert "st_hoseon_lobby_claim" in asked["newlyUnlockedIds"]
+
+    judged = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_lim_hoseon",
+            "message": "로비에 있었다는 말은 남탕 문틀의 젖은 실밥, 임호선의 찢긴 대여 유카타, 로비 전화기 주변의 마른 바닥과 모순입니다.",
+        },
+    ).json()
+
+    result = judged["contradictionResult"]
+    assert result["verdict"] == "correct"
+    assert result["contradictionId"] == "con_hoseon_bath_access"
+    assert "con_hoseon_bath_access" in judged["discoveredContradictionIds"]
+
+
+def test_case_003_session_and_dialogue_contradiction_flow(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_003"}).json()
+    session_id = session["sessionId"]
+
+    assert session["caseId"] == "case_003"
+    assert session["caseFile"]["title"] == "얼룩무늬 밴드의 비밀"
+    assert len(session["evidence"]) == 10
+
+    asked = client.post(
+        f"/api/v1/sessions/{session_id}/questions",
+        json={"questionId": "q_roylott_sealed_room", "suspectId": "char_grimesby_roylott"},
+    ).json()
+    assert "st_roylott_natural_death" in asked["newlyUnlockedIds"]
+
+    judged = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_grimesby_roylott",
+            "message": "자연사라는 말은 환기구와 가짜 벨줄이 내부 통로라는 점과 모순입니다.",
+        },
+    ).json()
+
+    result = judged["contradictionResult"]
+    assert result["verdict"] == "correct"
+    assert result["contradictionId"] == "con_sealed_room_internal_route"
+    assert "con_sealed_room_internal_route" in judged["discoveredContradictionIds"]
 
 
 def test_accusation_backend_derived_forbidden_result_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
@@ -1412,8 +1472,9 @@ def test_chained_llm_primary_failure_flows_through_character_agent_to_response_m
     data_dir = tmp_path / "data"
     if data_dir.exists():
         shutil.rmtree(data_dir)
-    shutil.copytree(Path("data/cases"), data_dir / "cases")
+    data_dir.mkdir(parents=True)
     monkeypatch.setenv("BE_DATA_DIR", str(data_dir))
+    _seed_case_database(tmp_path, monkeypatch)
     get_settings.cache_clear()
     deps.get_case_repository.cache_clear()
     deps.get_session_repository.cache_clear()

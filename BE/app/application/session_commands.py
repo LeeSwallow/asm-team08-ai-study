@@ -8,23 +8,21 @@ from uuid import uuid4
 from app.core.errors import bad_request, not_found, service_unavailable
 from app.core.leak_guard import assert_no_forbidden_refs
 from app.core.observability import RequestContext
+from app.application.ports import AIClientPort, CaseRepositoryPort, SessionRepositoryPort
 from app.domain.case_engine import apply_unlocks, initial_session_state, pressure_state
 from app.domain.event_processor import target_is_visible
 from app.domain.models import BookmarkEntry, Case, DialogueEntry, NoteEntry, SessionState
 from app.domain.rule_engine import RuleEngine
-from app.infra.local_ai_client import LocalAIClient as AIClient
-from app.infra.case_repository import CaseRepository
-from app.infra.session_repository import SessionRepository
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class SessionCommands:
-    case_repo: CaseRepository
-    session_repo: SessionRepository
+    case_repo: CaseRepositoryPort
+    session_repo: SessionRepositoryPort
     rule_engine: RuleEngine
-    ai_client: AIClient
+    ai_client: AIClientPort
 
     def create_session(self, case_id: str) -> tuple[SessionState, Case]:
         case = self.case_repo.get_case(case_id)
@@ -195,17 +193,20 @@ class SessionCommands:
             motive=motive,
             method=method,
         )
+        result = {
+            "verdict": result.get("verdict"),
+            "correct": bool(result.get("correct")),
+            "submittedMotive": result.get("submittedMotive"),
+            "submittedMethod": result.get("submittedMethod"),
+            "message": result.get("message"),
+        }
 
         # Validate ALL public accusation fields that will appear in SSE/response
-        # BEFORE any persistence. This covers backend-derived data (message,
-        # missingEvidenceIds, missingContradictionIds, missingStatementIds)
-        # that could contain forbidden tokens from case JSON.
+        # BEFORE any persistence.
         accusation_public_fields = {
             "verdict": result.get("verdict"),
+            "correct": result.get("correct"),
             "message": result.get("message"),
-            "missingEvidenceIds": result.get("missingEvidenceIds", []),
-            "missingContradictionIds": result.get("missingContradictionIds", []),
-            "missingStatementIds": result.get("missingStatementIds", []),
         }
         try:
             assert_no_forbidden_refs(accusation_public_fields, surface="accusation_public_result")
@@ -222,6 +223,7 @@ class SessionCommands:
                 "ACCUSATION_RESULT_FORBIDDEN_REF",
                 {"degradedReason": str(exc).split(":", 2)[0], "fallbackUsed": False},
             )
+        session.accusation = result
 
         session.dialogueLog.append(
             DialogueEntry(

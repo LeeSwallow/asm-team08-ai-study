@@ -86,6 +86,8 @@ class RuleEngine:
                     "pressureDelta": pressure_delta,
                     "unlockedIds": newly_unlocked,
                     "newlyDiscovered": newly_discovered,
+                    "statementIds": list(contradiction.requiredStatementIds),
+                    "evidenceIds": list(contradiction.requiredEvidenceIds),
                     "message": contradiction.message,
                 }
 
@@ -104,6 +106,8 @@ class RuleEngine:
                 "pressureDelta": 0,
                 "unlockedIds": [],
                 "newlyDiscovered": False,
+                "statementIds": list(submitted_statements),
+                "evidenceIds": list(submitted_evidence),
                 "message": "방향은 맞지만 필요한 진술과 증거가 모두 연결되지 않았습니다.",
             }
 
@@ -115,6 +119,8 @@ class RuleEngine:
                 "pressureDelta": 0,
                 "unlockedIds": [],
                 "newlyDiscovered": False,
+                "statementIds": list(submitted_statements),
+                "evidenceIds": list(submitted_evidence),
                 "message": "관련 인물은 맞지만 제시한 근거만으로는 모순을 입증하기 어렵습니다.",
             }
 
@@ -125,6 +131,8 @@ class RuleEngine:
             "pressureDelta": 0,
             "unlockedIds": [],
             "newlyDiscovered": False,
+            "statementIds": list(submitted_statements),
+            "evidenceIds": list(submitted_evidence),
             "message": "제시한 조합에서는 판정 가능한 모순을 찾지 못했습니다.",
         }
 
@@ -165,13 +173,9 @@ class RuleEngine:
 
         result = {
             "verdict": verdict,
-            "suspectMatch": suspect_match,
-            "proofComplete": proof_complete,
+            "correct": verdict == "correct",
             "submittedMotive": motive,
             "submittedMethod": method,
-            "missingEvidenceIds": sorted(required_evidence.difference(evidence_ids)),
-            "missingContradictionIds": sorted(required_contradictions.difference(contradiction_ids)),
-            "missingStatementIds": sorted(required_statements.difference(statement_ids)),
             "message": message,
         }
         session.accusation = result

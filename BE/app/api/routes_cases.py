@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_case_repository
+from app.application.ports import CaseRepositoryPort
 from app.core.errors import not_found
-from app.infra.case_repository import CaseRepository
 from app.domain.case_engine import public_case_file, public_opening, public_storyline, visible_timeline
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
 
 @router.get("")
-def list_cases(case_repo: CaseRepository = Depends(get_case_repository)):
+def list_cases(case_repo: CaseRepositoryPort = Depends(get_case_repository)):
     return [
         {
             "caseId": case.caseId,
@@ -27,7 +27,7 @@ def list_cases(case_repo: CaseRepository = Depends(get_case_repository)):
 
 
 @router.get("/{case_id}")
-def get_case(case_id: str, case_repo: CaseRepository = Depends(get_case_repository)):
+def get_case(case_id: str, case_repo: CaseRepositoryPort = Depends(get_case_repository)):
     case = case_repo.get_case(case_id)
     if case is None:
         raise not_found("Case not found")

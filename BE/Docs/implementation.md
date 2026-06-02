@@ -58,7 +58,6 @@ BE/
 | `GET` | `/api/v1/sessions/{session_id}` | 세션 상태 조회 | P0 |
 | `POST` | `/api/v1/sessions/{session_id}/dialogue` | 자연어 대화 입력 및 답변 생성 | P0 |
 | `POST` | `/api/v1/sessions/{session_id}/questions` | 기존 질문 ID 기반 호환 API. `questionId`를 받거나, FE 이전 구현 호환을 위해 `{ suspectId, questionText }` free-text payload를 `/dialogue`와 동일한 처리 흐름으로 라우팅한다. 신규 FE는 `/dialogue` 사용 권장. | P0 |
-| `POST` | `/api/v1/sessions/{session_id}/contradictions` | 모순 제기 판정 | P0 |
 | `POST` | `/api/v1/sessions/{session_id}/accusation` | 최종 범인 지목 | P0 |
 | `POST` | `/api/v1/sessions/{session_id}/notes` | 추리 노트 저장 | P1 |
 | `POST` | `/api/v1/sessions/{session_id}/bookmarks` | 대화/진술/증거/기록 북마크 | P1 |
@@ -105,7 +104,7 @@ BE/
 
 ## FE 연동 응답 계약
 
-세션 조회/갱신 API는 동일한 기본 payload를 반환한다. FE는 `remainingQuestions` 또는 `remainingDialogues`, `phase`, `caseFile`, `notebook`, `contradictions`, `relationMap`, `suspects[].pressureState`, `suspects[].tensionLevel`, `suspects[].emotionalState`, `suspects[].speechStyle`, `suspects[].publicTimeline`, `dialogueLog`, `evidence`, `records`, `relations`, `statements`, `notes`, `bookmarks`, `discoveredContradictionIds`, `currentObjective`, `currentActId`, `visibleTimeline`, `visualState`, `lastEventId`를 상태에 반영한다. `caseFile`은 사건 파일 패널용 공개 사건 개요/목표/타임라인이고, `notebook`은 메모/북마크/증거 상세/진술 by suspect/질문 by suspect/모순/관계도 read model을 묶은 조사 노트북 view이다. `contradictions`는 `{ discoveredIds, discovered, candidates }` 형태의 공개 모순 상세이며 FE가 ID만으로 재구성하지 않도록 `title`, `suspectId`, `statementIds`, `evidenceIds`, `severity`, `reasonCode`, `displayText`, `submitEligible`을 제공한다. `relationMap`은 `{ centerCharacterId, nodes, edges }` 형태이며 edge는 `relationshipId`, `sourceCharacterId`, `targetCharacterId`, `label`, `description`, `conflict`, `unlocked`, `unlockState`, `evidenceRefs`, `statementRefs`, `recordRefs`를 제공한다. locked edge는 안정 ID와 source/target만 공개하고 conflict/private detail은 빈 값/placeholder로 마스킹한다.
+세션 조회/갱신 API는 동일한 기본 payload를 반환한다. FE는 `remainingQuestions` 또는 `remainingDialogues`, `phase`, `caseFile`, `notebook`, `contradictions`, `relationMap`, `suspects[].pressureState`, `suspects[].tensionLevel`, `suspects[].emotionalState`, `suspects[].speechStyle`, `suspects[].publicTimeline`, `dialogueLog`, `evidence`, `records`, `relations`, `statements`, `notes`, `bookmarks`, `discoveredContradictionIds`, `currentObjective`, `currentActId`, `visibleTimeline`, `visualState`, `lastEventId`를 상태에 반영한다. `caseFile`은 사건 파일 패널용 공개 사건 개요/목표/타임라인이고, `notebook`은 메모/북마크/증거 상세/진술 by suspect/질문 by suspect/모순/관계도 read model을 묶은 조사 노트북 view이다. `contradictions`는 `{ discoveredIds, discovered, candidates }` 형태의 공개 모순 상세이며 FE가 ID만으로 재구성하지 않도록 `title`, `suspectId`, `statementIds`, `evidenceIds`, `severity`, `reasonCode`, `displayText`, `submitEligible`을 제공한다. 모순 판정은 별도 `/contradictions` API가 아니라 `/dialogue`에서 플레이어 발화가 공개 진술/증거 조합으로 매핑될 때 BE Rule Engine이 결정적으로 수행하며, 응답의 `dialogueResult.contradictionResult`와 SSE로 반영한다. `relationMap`은 `{ centerCharacterId, nodes, edges }` 형태이며 edge는 `relationshipId`, `sourceCharacterId`, `targetCharacterId`, `label`, `description`, `conflict`, `unlocked`, `unlockState`, `evidenceRefs`, `statementRefs`, `recordRefs`를 제공한다. locked edge는 안정 ID와 source/target만 공개하고 conflict/private detail은 빈 값/placeholder로 마스킹한다.
 
 메모 API는 `GET /sessions/{sessionId}/notes`, `POST /sessions/{sessionId}/notes`, `PUT /sessions/{sessionId}/notes/{noteId}`, `DELETE /sessions/{sessionId}/notes/{noteId}`를 지원한다. 생성/수정/삭제 응답은 갱신된 세션 payload와 `notebook.notes`를 포함하고, SSE에는 `NOTE_CREATED`, `NOTE_UPDATED`, `NOTE_DELETED`가 기록되어 FE가 local-only state 없이 재조회/반영할 수 있다. note link 대상은 현재 세션에서 visible한 statement/evidence/record만 허용한다.
 
@@ -155,9 +154,9 @@ BE/
 }
 ```
 
-모순 API는 기본 payload에 `contradictionResult`를 추가한다. `correct`는 첫 발견일 때만 압박 수치를 올리고 `TENSION_CHANGED`를 SSE로 발행할 수 있으며, `unlockedIds`를 통해 새 진술/질문/증거/기록/관계를 공개한다. 중복 `correct`, `partial`, `insufficient`, `wrong`은 압박 수치를 올리지 않는다. 응답의 `newlyDiscovered`와 `pressureDelta`로 idempotent tension 적용 여부를 확인할 수 있다.
+모순 판정은 대화 API의 일부다. BE는 플레이어 발화에서 공개된 진술/증거/타임라인 참조를 매핑한 뒤 Rule Engine에 제출한다. 신규 `correct`일 때만 압박 수치를 올리고 `TENSION_CHANGED`를 SSE로 발행할 수 있으며, `unlockedIds`를 통해 새 진술/질문/기록/관계를 공개한다. 중복 `correct`, `partial`, `insufficient`, `wrong`은 압박 수치를 올리지 않는다. 응답의 `dialogueResult.contradictionResult.newlyDiscovered`와 `pressureDelta`로 idempotent tension 적용 여부를 확인할 수 있다.
 
-최종 지목 API는 기본 payload에 `accusationResult`를 추가한다. FE는 플레이어가 작성한 `motive`, `method` 텍스트를 함께 보낼 수 있다. 이 텍스트는 세션, 엔딩, 응답에 `submittedMotive`, `submittedMethod`로 보존하지만, 정답 판정은 기존처럼 범인 ID와 `requiredContradictionIds`, `requiredEvidenceIds`, `requiredStatementIds` 포함 여부만으로 평가한다.
+최종 지목 API는 기본 payload에 단순한 `accusationResult`를 추가한다. FE는 플레이어가 작성한 `motive`, `method` 텍스트를 함께 보낼 수 있다. 이 텍스트는 `submittedMotive`, `submittedMethod`로 보존하지만, 정답 판정은 기존처럼 범인 ID와 `requiredContradictionIds`, `requiredEvidenceIds`, `requiredStatementIds` 포함 여부만으로 평가한다. 공개 결과는 `{ verdict, correct, message, submittedMotive, submittedMethod }`만 제공하고, 누락 ID 목록 같은 디버그성 상세는 응답에 싣지 않는다.
 
 ```json
 {

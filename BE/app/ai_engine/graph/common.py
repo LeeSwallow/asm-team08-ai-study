@@ -42,8 +42,13 @@ def run_langgraph_or_pipeline(initial_state: dict[str, Any], nodes: list[tuple[s
     try:
         class WorkflowState(TypedDict, total=False):
             payload: Any
+            knowledge_retriever: Any
             result: Any
             text: str
+            character_context: Any
+            event_context: Any
+            retrieved_context: Any
+            dialogue_director_plan: Any
             character_input: Any
             draft_reply: Any
             rule_check_input: Any

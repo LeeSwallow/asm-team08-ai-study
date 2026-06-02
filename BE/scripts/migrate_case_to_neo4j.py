@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-case_001.json → Neo4j 마이그레이션 스크립트
+PostgreSQL cases table → Neo4j 마이그레이션 스크립트
 
 사용법:
   cd BE
-  BE_NEO4J_URI=bolt://localhost:7687 python scripts/migrate_case_to_neo4j.py
+  BE_DATABASE_URL=postgresql://... BE_NEO4J_URI=bolt://localhost:7687 python scripts/migrate_case_to_neo4j.py
 
 또는 docker 환경에서:
   docker compose exec backend python scripts/migrate_case_to_neo4j.py
@@ -16,23 +16,28 @@ import json
 import logging
 import os
 import sys
-from pathlib import Path
+from typing import Any
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "cases"
 NEO4J_URI = os.getenv("BE_NEO4J_URI") or os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("BE_NEO4J_USER") or os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("BE_NEO4J_PASSWORD") or os.getenv("NEO4J_PASSWORD", "detective_secret")
 
 
-def _load_case(case_id: str) -> dict:
-    path = DATA_DIR / f"{case_id}.json"
-    if not path.exists():
-        raise FileNotFoundError(f"케이스 파일 없음: {path}")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+def _load_cases_from_database() -> list[dict]:
+    from app.infra.case_orm import CaseRecord
+    from app.infra.db import ensure_schema, get_session_factory
+
+    if not ensure_schema():
+        raise RuntimeError("BE_DATABASE_URL is required to load cases")
+    session_factory = get_session_factory()
+    if session_factory is None:
+        raise RuntimeError("database session factory is not configured")
+    with session_factory() as db:
+        records = db.query(CaseRecord).order_by(CaseRecord.case_id).all()
+        return [record.payload for record in records]
 
 
 def _run_migration(driver: Any, case: dict) -> None:  # noqa: ANN001
@@ -414,9 +419,9 @@ def main() -> None:
         logger.error("neo4j 패키지가 설치되지 않았습니다. pip install neo4j")
         sys.exit(1)
 
-    case_files = sorted(DATA_DIR.glob("*.json"))
-    if not case_files:
-        logger.error("케이스 파일이 없습니다: %s", DATA_DIR)
+    cases = _load_cases_from_database()
+    if not cases:
+        logger.error("PostgreSQL cases 테이블에 케이스가 없습니다")
         sys.exit(1)
 
     logger.info("Neo4j URI: %s", NEO4J_URI)
@@ -424,10 +429,9 @@ def main() -> None:
     try:
         driver.verify_connectivity()
         logger.info("Neo4j 연결 확인")
-        for path in case_files:
-            case_id = path.stem
+        for case in cases:
+            case_id = case.get("caseId", "unknown")
             try:
-                case = _load_case(case_id)
                 _run_migration(driver, case)
             except Exception as exc:
                 logger.error("케이스 %s 마이그레이션 실패: %s", case_id, exc, exc_info=True)

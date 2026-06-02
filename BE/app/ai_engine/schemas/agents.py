@@ -31,6 +31,7 @@ class CharacterAgentInput(FlexibleModel):
     tensionScore: int | float | None = None
     interrogationState: dict[str, Any] = Field(default_factory=dict)
     interrogationTransition: dict[str, Any] = Field(default_factory=dict)
+    dialogueDirectorPlan: "DialogueDirectorPlan | None" = None
     recentDialogue: list[Any] = Field(default_factory=list)
 
 
@@ -56,6 +57,21 @@ class DraftCharacterReply(FlexibleModel):
     providerConfigured: bool | None = None
 
 
+class DialogueDirectorInput(FlexibleModel):
+    payload: DialogueRequest
+    retrieved_context: Any | None = Field(default=None, exclude=True)
+
+
+class DialogueDirectorPlan(FlexibleModel):
+    strategy: str = "answer_public_fact"
+    seedText: str | None = None
+    allowedAdmissionLevel: str = "public_fact_only"
+    styleDirectives: list[str] = Field(default_factory=list)
+    forbiddenClaims: list[str] = Field(default_factory=list)
+    focusTerms: list[str] = Field(default_factory=list)
+    reason: str | None = None
+
+
 class LightRuleCheckInput(FlexibleModel):
     requestId: str | None = None
     correlationId: str | None = None
@@ -69,6 +85,7 @@ class LightRuleCheckInput(FlexibleModel):
     allowedContextTerms: list[str] = Field(default_factory=list)
     intent: str | None = None
     suspectName: str | None = None
+    dialogueDirectorPlan: DialogueDirectorPlan | None = None
     # CharacterKnowledgeRetriever 결과 (재생성 품질 개선에 사용, 없으면 기본 동작)
     retrieved_context: Any | None = Field(default=None, exclude=True)
 
