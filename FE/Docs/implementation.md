@@ -71,7 +71,7 @@ type GameSessionView = {
 | 세션 조회 | `GET /api/v1/sessions/{sessionId}` | 없음 | 세션 상태 |
 | 대화 입력 | `POST /api/v1/sessions/{sessionId}/dialogue` | `suspectId`, `message` | 갱신된 세션 상태, 답변, applied event IDs, visualState |
 | 이벤트 구독 | `GET /api/v1/sessions/{sessionId}/events` | `Last-Event-ID` optional | SSE: note/evidence/timeline/tension/visual 이벤트 |
-| 모순 제기 | `POST /api/v1/sessions/{sessionId}/contradictions` | 진술/증거 ID 목록 | 판정 결과와 갱신 상태 |
+| 모순 제기 | `POST /api/v1/sessions/{sessionId}/dialogue` | 선택한 진술/증거를 공개 텍스트로 조합한 자연어 모순 발화 | 판정 결과와 갱신 상태 |
 | 최종 지목 | `POST /api/v1/sessions/{sessionId}/accusation` | 범인, 동기, 수단, 근거 ID | 엔딩 결과 |
 
 ## Docker/API 설정

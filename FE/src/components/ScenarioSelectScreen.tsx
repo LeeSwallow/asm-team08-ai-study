@@ -1,9 +1,6 @@
 import { useMemo, useState } from "react";
+import { caseCoverAsset } from "../constants/presentation";
 import type { CaseSummary } from "../types";
-
-const CASE_COVER_IMAGES: Record<string, string> = {
-  case_001: "/assets/case_001_cover.png",
-};
 
 type ScenarioSelectScreenProps = {
   cases: CaseSummary[];
@@ -52,11 +49,12 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
           <div className="scenario-list">
             {cases.map((caseFile, index) => {
               const selected = selectedCase?.id === caseFile.id;
+              const coverAsset = caseCoverAsset(caseFile.id, caseFile.sceneId);
               return (
               <article className={`scenario-card ${selected ? "selected" : ""}`} key={caseFile.id}>
                 <div className="case-stamp" aria-hidden="true">
-                  {CASE_COVER_IMAGES[caseFile.id] ? (
-                    <img src={CASE_COVER_IMAGES[caseFile.id]} alt="" />
+                  {coverAsset ? (
+                    <img src={coverAsset} alt="" />
                   ) : (
                     <>CASE {String(index + 1).padStart(2, "0")}</>
                   )}

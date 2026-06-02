@@ -23,6 +23,7 @@ import type {
   Verdict,
   VisualState,
 } from "../types";
+import { defaultBackgroundIdForCase } from "../constants/presentation";
 import { sanitizePublicDiagnosticValue, sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
 const emptyOpening: Opening = {
@@ -522,6 +523,7 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
   const visualState: VisualState = {
     ...(session.visualState ?? {}),
     suspectId: session.visualState?.suspectId ?? selectedSuspectId ?? undefined,
+    backgroundId: session.visualState?.backgroundId ?? defaultBackgroundIdForCase(session.caseId),
     expression: session.visualState?.expression ?? selectedSuspect?.expression ?? "neutral",
     emotionalState: session.visualState?.emotionalState ?? session.dialogueResult?.emotionalState ?? selectedSuspect?.emotion,
     tensionLevel: session.visualState?.tensionLevel ?? session.dialogueResult?.tensionLevel,

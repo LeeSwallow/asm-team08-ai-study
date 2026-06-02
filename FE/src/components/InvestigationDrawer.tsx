@@ -1,4 +1,4 @@
-import { evidenceAsset, lockedEvidenceAssetPath } from "../constants/presentation";
+import { evidenceAsset, lockedEvidenceAssetPath, suspectAsset } from "../constants/presentation";
 import type { GameSessionView, RelationMapEdge, RelationMapNode, Suspect } from "../types";
 import { sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
@@ -268,7 +268,7 @@ function RelationMapView({ session }: { session: GameSessionView }) {
           const edge = edgeForSuspect(edges, suspect.id);
           return (
             <article key={suspect.id} className={`relation-node clean-node ${edge?.unlocked ? "unlocked" : "locked"}`} style={{ left: `${pos.x}%`, top: `${pos.y}%` }}>
-              <img src={`/assets/char_${suspect.id.replace("char_", "")}_neutral.png`} alt="" />
+              <img src={suspectAsset(suspect.id, suspect.expression)} alt="" />
               <strong>{suspect.name}</strong>
               <span>{edge?.unlocked ? edge.label || edge.conflict : "관계 단서 잠김"}</span>
             </article>
