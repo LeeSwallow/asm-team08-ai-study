@@ -1,1 +1,0 @@
-"""AI assistant service package."""
