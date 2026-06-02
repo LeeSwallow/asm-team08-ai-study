@@ -1,0 +1,1170 @@
+{
+  "caseId": "case_002",
+  "sceneId": "scene_002",
+  "title": "시체와 온천",
+  "summary": "폭설로 고립된 외딴 온천 여관의 남탕 노천탕에서 이정명이라는 이름으로 체크인했지만 실제 신원은 불명인 남성이 알몸의 시체로 발견된다. 미사용 소음기 권총, 피 묻은 조경석, 찢긴 유카타 실밥, 삭제된 메시지와 조직 녹음이 서로 다른 범죄 흐름을 가리킨다. 플레이어는 12문 안에 다섯 용의자의 진술과 증거를 교차 검증해, 피해자가 누구를 노렸는지와 누가 그를 잘못 보고 죽였는지 밝혀야 한다.",
+  "victimId": "victim_lee_jeongmyeong",
+  "victimName": "이정명이라는 이름으로 체크인한 신원 불명의 남성",
+  "incidentTime": "19:15경",
+  "incidentLocation": "설월장 남탕 노천탕",
+  "questionLimit": 12,
+  "opening": {
+    "hook": "눈보라가 창호지를 때리는 밤, 남탕 노천탕 수면 위로 작은 체구의 중년 남자가 엎드린 채 떠올랐다. 후두부에서는 피가 번지고, 탕 가장자리에는 럭비공만 한 조경석이 놓여 있다. 그의 탈의 바구니 안에서는 아직 한 발도 쏘지 않은 소음기 달린 권총이 발견된다.",
+    "objective": "경찰이 도착하기 전까지 공개된 소지품, 목격담, 시간표를 조합해 진범과 살해 방법, 그리고 피해자의 실제 표적을 추론한다.",
+    "rules": [
+      "질문은 최대 12회다.",
+      "각 용의자는 거짓말, 회피, 부분 진실을 섞어 말한다.",
+      "AI 대사는 공개 진술과 공개 증거만 말할 수 있으며, 최종 상태 변경은 백엔드가 검증한다.",
+      "피해자의 실제 신원과 각 인물의 완전한 비밀은 플레이 중 직접 공개되지 않고 증거 조합으로만 추론된다."
+    ],
+    "victoryCondition": "임호선을 범인으로 지목하고, 남탕 접근 물증, 권총 사전 인지, 청부 취소 정황, 피해자의 권주리 표적 가능성을 공개 단서로 설명한다."
+  },
+  "storyline": {
+    "publicPremise": "폭설로 고립된 설월장 온천 여관에서, 이정명이라는 이름으로 체크인했지만 실제 신원은 불명인 남성이 남탕 노천탕에서 사망했다. 사인은 후두부 둔기 가격으로 보이며, 탈의 바구니에는 사용되지 않은 소음기 권총이 있었다. 경찰은 몇 시간 뒤에야 도착할 수 있어, 투숙객과 출입자 다섯 명이 소지품을 공개하고 서로의 알리바이를 검증한다.",
+    "acts": [],
+    "timeline": [
+      {
+        "timelineId": "tl_isolation_start",
+        "time": "17:00",
+        "title": "폭설로 고립 시작",
+        "description": "도로가 눈에 막혀 설월장 밖으로 나가거나 들어오기 어려워진다.",
+        "sourceType": "record",
+        "sourceId": "rec_innkeeper_call_log",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_victim_checkin",
+        "time": "17:40",
+        "title": "이정명 명의 체크인",
+        "description": "신원 확인이 충분하지 않은 남성이 이정명이라는 이름으로 체크인한다.",
+        "sourceType": "record",
+        "sourceId": "rec_guest_register",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_bath_corridor_crossing",
+        "time": "19:05-19:12",
+        "title": "노천탕 복도 엇갈림",
+        "description": "권주리는 여탕 쪽에서 젖은 유카타 자락을 끌며 남탕 방향에서 빠져나오는 남자를 보았다고 말한다.",
+        "sourceType": "statement",
+        "sourceId": "st_juri_saw_wet_corridor",
+        "hidden": false,
+        "unlockCondition": "q_alibi_juri"
+      },
+      {
+        "timelineId": "tl_hoseon_claimed_lobby",
+        "time": "19:05-19:25",
+        "title": "임호선의 로비 주장",
+        "description": "임호선은 사건 전후 내내 로비 전화기 근처에서 원고 독촉 전화를 기다렸다고 주장한다.",
+        "sourceType": "statement",
+        "sourceId": "st_hoseon_lobby_claim",
+        "hidden": false,
+        "unlockCondition": "q_alibi_hoseon"
+      },
+      {
+        "timelineId": "tl_murder_window",
+        "time": "19:15경",
+        "title": "후두부 둔기 가격",
+        "description": "피해자는 남탕 노천탕 가장자리에서 둔기로 머리를 맞고 수면에 엎드린 채 방치된 것으로 추정된다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_bloodied_stone",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_body_found",
+        "time": "19:45-20:00",
+        "title": "시체 발견과 권총 확인",
+        "description": "시체가 발견되고 피해자의 탈의 바구니에서 사용 흔적 없는 소음기 권총이 나온다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_silenced_pistol",
+        "hidden": false,
+        "unlockCondition": null
+      },
+      {
+        "timelineId": "tl_police_delayed",
+        "time": "20:05",
+        "title": "경찰 도착 지연",
+        "description": "여관 주인이 신고하지만 폭설 때문에 경찰 도착까지 몇 시간이 걸린다는 답변을 받는다.",
+        "sourceType": "record",
+        "sourceId": "rec_innkeeper_call_log",
+        "hidden": false,
+        "unlockCondition": null
+      }
+    ],
+    "cluePaths": [],
+    "currentObjectiveRules": []
+  },
+  "suspects": [
+    {
+      "characterId": "char_gyeong_daesu",
+      "name": "경대수",
+      "role": "미스터리 소설가",
+      "publicProfile": "32세. 설월장에 2년째 장기 투숙하며 원고를 쓰는 중견 작가. 예민하고 피곤한 얼굴로, 온천 거리와 극장에 자주 드나든다는 소문이 있다.",
+      "secret": "오연희와 불화 중이며 권주리와 내연 관계다. 현금 300만 원은 마리화나 구입과 도피성 생활 자금이다. 자신이 청부 대상이었다는 사실은 모른다.",
+      "motiveCandidate": true,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "반말과 존댓말이 섞인 문학적 냉소",
+        "baseTone": "피로하고 방어적",
+        "vocabulary": [
+          "원고",
+          "마감",
+          "소재",
+          "인간 군상",
+          "우연"
+        ],
+        "avoid": [
+          "직접적인 애정 고백",
+          "돈 출처 자백"
+        ],
+        "low": {
+          "tone": "비꼬는 농담",
+          "sample": "작가가 온천에 오래 있으면 다 범인입니까?"
+        },
+        "medium": {
+          "tone": "짜증 섞인 회피",
+          "sample": "성냥 하나로 사람을 재단하진 맙시다."
+        },
+        "high": {
+          "tone": "불륜을 숨기려는 초조함",
+          "sample": "권주리 씨 얘기는 사건하고 상관없습니다."
+        },
+        "critical": {
+          "tone": "무너진 체념",
+          "sample": "그래요, 내가 엉망인 남편인 건 맞습니다. 하지만 살인은 아닙니다."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "17:00",
+          "location": "",
+          "claimedAction": "폭설로 고립 시작"
+        },
+        {
+          "time": "19:05-19:12",
+          "location": "",
+          "claimedAction": "노천탕 복도 엇갈림"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_lim_hoseon",
+      "name": "임호선",
+      "role": "출판사 편집자",
+      "publicProfile": "32세. 경대수의 어릴 적 친구이자 담당 편집자. 싹싹하고 협조적인 태도로 조사를 정리하려 하지만, 휴대폰과 옷매무새에 신경을 많이 쓴다.",
+      "secret": "오연희와 불륜 관계이며 사채 빚 때문에 경대수 살해 청부 계획에 동의했다. 그러나 친구를 죽이지 못해 계획을 취소하려 했고, 남탕에서 피해자를 경대수를 죽이러 온 킬러로 오인해 돌로 살해했다.",
+      "motiveCandidate": true,
+      "isCulprit": true,
+      "speechStyle": {
+        "register": "정중한 직장인 말투",
+        "baseTone": "협조적이지만 계산적",
+        "vocabulary": [
+          "확인",
+          "절차",
+          "원고",
+          "오해",
+          "정리"
+        ],
+        "avoid": [
+          "청부",
+          "소음기",
+          "오연희 이름 직접 언급"
+        ],
+        "low": {
+          "tone": "차분한 진행자",
+          "sample": "우선 모두가 본 것부터 정리하는 게 좋겠습니다."
+        },
+        "medium": {
+          "tone": "논리적 반박",
+          "sample": "저는 로비에 있었습니다. 물기 같은 건 온천에서 흔하죠."
+        },
+        "high": {
+          "tone": "말실수를 덮는 조급함",
+          "sample": "그 권총, 아니 그런 물건이 있었다면 누구라도 놀랐겠죠."
+        },
+        "critical": {
+          "tone": "죄책감과 생존 본능의 충돌",
+          "sample": "취소하려고 했습니다. 늦었다고 생각했을 뿐이에요."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "19:05-19:25",
+          "location": "",
+          "claimedAction": "임호선의 로비 주장"
+        },
+        {
+          "time": "19:15경",
+          "location": "",
+          "claimedAction": "후두부 둔기 가격"
+        },
+        {
+          "time": "19:45-20:00",
+          "location": "",
+          "claimedAction": "시체 발견과 권총 확인"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_woo_suyeon",
+      "name": "우수연",
+      "role": "온천 전문 문필가",
+      "publicProfile": "24세. 전국 온천을 취재하는 라이터. 물 성분과 탕 구조에 밝고, 카메라와 메모를 늘 들고 다닌다. 날카로운 나이프 때문에 의심을 산다.",
+      "secret": "조직과 당국의 연결 및 마약 거래를 추적하기 위해 잠입한 수사관이다. 공개적으로는 살인 청부 업자처럼 보이도록 위장 중이며, 경대수를 감시한 사진은 청부 흐름 추적용이다.",
+      "motiveCandidate": true,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "짧고 건조한 존댓말",
+        "baseTone": "관찰자적 거리감",
+        "vocabulary": [
+          "수온",
+          "동선",
+          "취재",
+          "구조",
+          "습기"
+        ],
+        "avoid": [
+          "경찰",
+          "잠입",
+          "수사"
+        ],
+        "low": {
+          "tone": "담담한 설명",
+          "sample": "남탕 입구는 배수 경사가 나빠 물기가 오래 남습니다."
+        },
+        "medium": {
+          "tone": "경계",
+          "sample": "사진은 취재 자료입니다. 누구나 찍힐 수 있어요."
+        },
+        "high": {
+          "tone": "날 선 방어",
+          "sample": "칼이 있다고 돌로 사람을 쳤다는 뜻은 아닙니다."
+        },
+        "critical": {
+          "tone": "통제된 압박",
+          "sample": "제가 숨기는 건 있습니다. 하지만 이 살인의 방식과는 맞지 않습니다."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "19:05-19:12",
+          "location": "",
+          "claimedAction": "노천탕 복도 엇갈림"
+        },
+        {
+          "time": "19:15경",
+          "location": "",
+          "claimedAction": "후두부 둔기 가격"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_kwon_juri",
+      "name": "권주리",
+      "role": "댄서",
+      "publicProfile": "20대 초반. 온천 거리 스트립 극장의 인기 댄서. 눈보라 때문에 우연히 여관에 묶였다고 말하지만, 제주행 항공권을 숨기고 있다.",
+      "secret": "조직 보스와 과거 관계가 있었고, 보스의 분노를 사 표적이 되었다. 제주로 도망치려 했으며 경대수와 내연 관계다.",
+      "motiveCandidate": true,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "가벼운 반말 섞인 존댓말",
+        "baseTone": "능청스럽지만 겁먹음",
+        "vocabulary": [
+          "무대",
+          "손님",
+          "비행기",
+          "눈",
+          "운"
+        ],
+        "avoid": [
+          "보스",
+          "도피",
+          "표적"
+        ],
+        "low": {
+          "tone": "농담으로 넘김",
+          "sample": "제가 온천까지 와서 사람을 때리겠어요? 손목도 아픈데."
+        },
+        "medium": {
+          "tone": "불안한 회피",
+          "sample": "항공권은 그냥 쉬러 가려던 거예요."
+        },
+        "high": {
+          "tone": "공포 노출",
+          "sample": "그 남자들이 저를 찾는다는 말, 농담 아니에요."
+        },
+        "critical": {
+          "tone": "절박한 진실 일부",
+          "sample": "제주행은 도망이었어요. 하지만 그 시체가 누군지는 몰랐어요."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "19:05-19:12",
+          "location": "",
+          "claimedAction": "노천탕 복도 엇갈림"
+        },
+        {
+          "time": "19:45-20:00",
+          "location": "",
+          "claimedAction": "시체 발견과 권총 확인"
+        }
+      ],
+      "personaVariants": []
+    },
+    {
+      "characterId": "char_son_junsik",
+      "name": "손준식",
+      "role": "물수건 납품 업자",
+      "publicProfile": "26세. 설월장에 정기적으로 물수건을 납품하는 업자. 여관 내부 동선을 잘 알고 바깥 사정에도 밝다. 담배와 녹음기 때문에 조직 관련 의심을 받는다.",
+      "secret": "폭력 조직의 조직원이며 여관 주변에서 마리화나를 거래했다. 권주리에게 연정이 있어 그녀를 보호하려 하지만, 남탕 둔기 살해 현장에는 직접 관여하지 않았다.",
+      "motiveCandidate": true,
+      "isCulprit": false,
+      "speechStyle": {
+        "register": "거친 구어체",
+        "baseTone": "퉁명스럽고 보호적",
+        "vocabulary": [
+          "납품",
+          "수건",
+          "형님",
+          "거래",
+          "밖"
+        ],
+        "avoid": [
+          "조직원",
+          "마리화나",
+          "보스 지시"
+        ],
+        "low": {
+          "tone": "투덜거림",
+          "sample": "수건 갖다 준 죄밖에 없습니다."
+        },
+        "medium": {
+          "tone": "성급한 부인",
+          "sample": "그 담배는 제 겁니다. 시체랑은 상관없어요."
+        },
+        "high": {
+          "tone": "권주리 보호",
+          "sample": "주리 씨 이름 함부로 엮지 마쇼."
+        },
+        "critical": {
+          "tone": "조직 축 일부 인정",
+          "sample": "그 목소리, 모르는 목소리는 아닙니다. 하지만 난 남탕에 안 들어갔어요."
+        }
+      },
+      "publicTimeline": [
+        {
+          "time": "17:00",
+          "location": "",
+          "claimedAction": "폭설로 고립 시작"
+        },
+        {
+          "time": "19:45-20:00",
+          "location": "",
+          "claimedAction": "시체 발견과 권총 확인"
+        }
+      ],
+      "personaVariants": []
+    }
+  ],
+  "evidence": [
+    {
+      "evidenceId": "ev_bloodied_stone",
+      "name": "피 묻은 조경석",
+      "type": "physical",
+      "description": "남탕 노천탕 가장자리의 럭비공만 한 돌. 한쪽 모서리에 피와 머리카락이 묻어 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_silenced_pistol",
+      "name": "미사용 소음기 권총",
+      "type": "physical",
+      "description": "피해자의 탈의 바구니에서 발견된 권총. 소음기가 장착되어 있으나 발사 흔적은 없다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_victim_basket_disturbed",
+      "name": "뒤져진 탈의 바구니",
+      "type": "physical",
+      "description": "피해자의 옷은 정리된 듯하지만 바구니 안쪽 종이 깔개가 찢겨 있고 권총 케이스의 잠금 방향이 어긋나 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_mens_door_thread",
+      "name": "남탕 문틀의 젖은 실밥",
+      "type": "trace",
+      "description": "남탕 탈의실 문틀 못에 걸린 검남색 젖은 실밥. 대여 유카타 허리끈 문양과 같은 붉은 점무늬가 보인다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_hoseon_yukata_tear",
+      "name": "임호선의 찢긴 대여 유카타",
+      "type": "physical",
+      "description": "임호선이 급히 갈아입은 마른 유카타 아래에서 발견된 젖은 허리끈. 3번 대여표가 붙어 있고 남탕 문틀 실밥과 무늬가 맞는다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_lobby_dry_floor",
+      "name": "로비 전화기 주변의 마른 바닥",
+      "type": "scene",
+      "description": "로비 전화기 주변 다다미와 슬리퍼 자국은 말라 있다. 사건 시간대 누군가 젖은 유카타로 오래 서 있었다는 흔적이 없다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_pistol_oil_on_hoseon_hand",
+      "name": "임호선 손끝의 총기 기름 냄새",
+      "type": "trace",
+      "description": "소지품 공개 때 임호선 오른손 엄지와 검지에서 금속성 기름 냄새가 났다는 여관 주인의 메모. 호신용 스프레이의 냄새와 다르다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_hoseon_phone_message",
+      "name": "삭제된 대화 뒤의 메시지",
+      "type": "digital",
+      "description": "임호선의 스마트폰에 오연희가 보낸 '이제 와서 쫄지 마! 겁쟁아! 너도 그 인간이랑 똑같아!'라는 메시지만 남아 있다. 이전 대화는 삭제되어 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_bank_statement",
+      "name": "은행 명세표",
+      "type": "document",
+      "description": "임호선 명의 계좌에 사채 이자 입금과 거액 현금 인출 시도가 반복된 기록이 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_daesu_matches",
+      "name": "스트립 극장 성냥",
+      "type": "physical",
+      "description": "경대수의 소지품에서 나온 미사용 성냥. 권주리가 일하는 극장 로고가 찍혀 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_daesu_cash",
+      "name": "현금 300만 원",
+      "type": "physical",
+      "description": "경대수의 가방 속 봉투에 든 현금 300만 원. 사용처를 설명하지 않으려 한다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_suyeon_photo",
+      "name": "경대수 몰래 촬영 사진",
+      "type": "photo",
+      "description": "우수연의 카메라에서 나온 경대수 사진들. 여관 복도와 온천 거리에서 촬영됐다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_suyeon_note",
+      "name": "지역 조직과 당국에 주의 메모",
+      "type": "document",
+      "description": "우수연의 수첩에 갈겨쓴 '지역 조직과 당국에 주의!'라는 문장.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_suyeon_knife",
+      "name": "손때 묻은 나이프",
+      "type": "physical",
+      "description": "우수연의 오래 쓴 날카로운 나이프. 날은 잘 갈려 있으나 피나 온천수 흔적은 없다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_juri_ticket",
+      "name": "제주행 항공권",
+      "type": "document",
+      "description": "권주리 이름의 제주행 항공권. 출발 날짜는 내일 아침이다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_victim_juri_photo_schedule",
+      "name": "피해자 수첩의 권주리 사진과 시간 메모",
+      "type": "document",
+      "description": "피해자 바구니 바닥의 젖은 수첩 조각. 권주리 공연장 홍보 사진, 같은 극장 성냥갑, '제주행 전, 밤 안에 확인'이라는 시간이 적혀 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_junsik_marijuana",
+      "name": "달콤한 냄새의 궐련 세트",
+      "type": "physical",
+      "description": "손준식의 지퍼백 안 담배잎과 두루마리. 일반 담배와 다른 달콤하고 위험한 냄새가 난다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "evidenceId": "ev_junsik_promotion_note",
+      "name": "승진 약속 메모",
+      "type": "document",
+      "description": "손준식의 주머니 메모. '조금만 참아라. 꼭 승진시켜 줄 테니까'라고 적혀 있다.",
+      "foundAt": "사건 기록",
+      "timeWindow": null,
+      "reliability": 0.8,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    }
+  ],
+  "records": [
+    {
+      "recordId": "rec_guest_register",
+      "name": "설월장 숙박부",
+      "description": "17:40, 이정명 명의 1인 체크인. 신분증 확인란은 흐릿한 도장만 남아 있다.",
+      "timeWindow": null,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "recordId": "rec_innkeeper_call_log",
+      "name": "여관 주인 신고 기록",
+      "description": "20:05 신고. 폭설로 현장 도착 지연, 수 시간 소요 예상.",
+      "timeWindow": null,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "recordId": "rec_junsik_recording",
+      "name": "손준식 녹음기 음성",
+      "description": "떨떠름한 남자 목소리: '나를 바보 취급하더라고. 그렇게 예뻐해 줬구만. 처리할 수밖에 없잖나?'",
+      "timeWindow": null,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    },
+    {
+      "recordId": "rec_bath_layout",
+      "name": "노천탕 배치도",
+      "description": "복도 기준 남탕, 혼탕, 여탕 순서. 남탕 탈의실 문틀에서 여탕 방향 복도가 일부 보인다.",
+      "timeWindow": null,
+      "initiallyVisible": true,
+      "unlockCondition": null
+    }
+  ],
+  "relations": [
+    {
+      "relationshipId": "rel_daesu_hoseon_friends",
+      "characterId": "char_lim_hoseon",
+      "description": "어릴 적 친구이자 작가-편집자",
+      "conflict": "호선은 친구를 죽이는 청부 계획에 가담했다가 마음을 바꿨다.",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "relationshipId": "rel_daesu_juri_affair",
+      "characterId": "char_kwon_juri",
+      "description": "온천 거리에서 안면이 있는 사이",
+      "conflict": "내연 관계.",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "relationshipId": "rel_junsik_juri_protective",
+      "characterId": "char_kwon_juri",
+      "description": "납품업자와 극장 댄서",
+      "conflict": "준식은 주리를 보호하고 싶어 한다.",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    },
+    {
+      "relationshipId": "rel_suyeon_junsik_surveillance",
+      "characterId": "char_son_junsik",
+      "description": "취재자와 납품업자",
+      "conflict": "수연은 준식의 조직/마약 축을 추적한다.",
+      "initiallyVisible": false,
+      "unlockCondition": null
+    }
+  ],
+  "statements": [
+    {
+      "statementId": "st_hoseon_lobby_claim",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_alibi_hoseon",
+      "text": "저는 7시쯤부터 로비 전화기 옆에 있었습니다. 대수 원고 때문에 연락을 기다렸어요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_alibi_hoseon"
+    },
+    {
+      "statementId": "st_hoseon_message_claim",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_message_hoseon",
+      "text": "그 메시지는 개인적인 말다툼입니다. 삭제한 건 민망해서였고, 사건과는 상관없습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_message_hoseon"
+    },
+    {
+      "statementId": "st_hoseon_debt_partial_admission",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_debt_hoseon",
+      "text": "빚이 있는 건 맞습니다. 그래서 돈 얘기에 예민했지만, 누굴 죽여서 해결하려 한 건 아닙니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_debt_hoseon"
+    },
+    {
+      "statementId": "st_hoseon_stone_evasion",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_stone_hoseon",
+      "text": "그 돌은 탕 주변에 늘 있던 겁니다. 젖은 손으로 들면 미끄러웠겠죠. 아니, 제가 들어봤다는 뜻은 아닙니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_stone_hoseon"
+    },
+    {
+      "statementId": "st_hoseon_no_weapon_claim",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_weapon_hoseon",
+      "text": "권총이 있었다는 건 시체 발견 뒤에 알았습니다. 전 그 바구니를 만진 적 없습니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_weapon_hoseon"
+    },
+    {
+      "statementId": "st_hoseon_weapon_slip",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_weapon_hoseon",
+      "text": "소음기까지 달린 물건이면 보통 일이 아니잖습니까. ...아니, 발견 때 누가 그렇게 말했을 겁니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_weapon_hoseon"
+    },
+    {
+      "statementId": "st_hoseon_cancel_slip",
+      "characterId": "char_lim_hoseon",
+      "questionText": "q_cancel_hoseon",
+      "text": "사람은 마음을 바꿀 수 있습니다. 이미 시작된 일을 멈춰 달라고 해도... 상대가 듣지 않으면 어떻게 합니까.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_cancel_hoseon"
+    },
+    {
+      "statementId": "st_juri_womens_bath_claim",
+      "characterId": "char_kwon_juri",
+      "questionText": "q_alibi_juri",
+      "text": "저는 여탕 쪽에 있었어요. 눈도 오고 몸도 얼어서 씻으려던 것뿐이에요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_alibi_juri"
+    },
+    {
+      "statementId": "st_juri_saw_wet_corridor",
+      "characterId": "char_kwon_juri",
+      "questionText": "q_alibi_juri",
+      "text": "남탕 쪽에서 누가 급히 나오는 걸 봤어요. 얼굴은 못 봤는데 검남색 허리끈 자락이 젖어서 문틀에 걸렸다 풀렸어요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_alibi_juri"
+    },
+    {
+      "statementId": "st_juri_ticket_claim",
+      "characterId": "char_kwon_juri",
+      "questionText": "q_ticket_juri",
+      "text": "제주행은 휴가가 아니에요. 여기 있으면 누가 저를 찾아낼 것 같아서요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_ticket_juri"
+    },
+    {
+      "statementId": "st_daesu_cash_claim",
+      "characterId": "char_gyeong_daesu",
+      "questionText": "q_cash_daesu",
+      "text": "현금은 취재비입니다. 온천 거리에서 소재를 찾는 데 돈이 들 때도 있죠.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_cash_daesu"
+    },
+    {
+      "statementId": "st_daesu_juri_evasion",
+      "characterId": "char_gyeong_daesu",
+      "questionText": "q_juri_daesu",
+      "text": "권주리 씨는 그냥 아는 사람입니다. 성냥은 극장에 갔던 흔적일 뿐이고요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_juri_daesu"
+    },
+    {
+      "statementId": "st_suyeon_knife_claim",
+      "characterId": "char_woo_suyeon",
+      "questionText": "q_knife_suyeon",
+      "text": "나이프는 취재 장비입니다. 노천탕 돌과는 전혀 다른 물건이고, 피도 온천수도 묻어 있지 않아요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_knife_suyeon"
+    },
+    {
+      "statementId": "st_suyeon_surveillance_claim",
+      "characterId": "char_woo_suyeon",
+      "questionText": "q_photo_suyeon",
+      "text": "사진은 경대수 씨 개인보다 이 여관 주변 동선을 기록한 겁니다. 이상한 거래가 있다는 제보가 있었어요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_photo_suyeon"
+    },
+    {
+      "statementId": "st_junsik_towel_claim",
+      "characterId": "char_son_junsik",
+      "questionText": "q_alibi_junsik",
+      "text": "7시 전후엔 세탁실이랑 뒷문만 오갔습니다. 남탕 안으로 들어갈 이유가 없었어요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_alibi_junsik"
+    },
+    {
+      "statementId": "st_junsik_boss_voice",
+      "characterId": "char_son_junsik",
+      "questionText": "q_recording_junsik",
+      "text": "녹음 속 목소리는... 이 거리에서 힘 있는 사람 목소리랑 닮았습니다. 주리 씨 얘기라면 더 묻지 마세요.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_recording_junsik"
+    },
+    {
+      "statementId": "st_junsik_outsider_hint",
+      "characterId": "char_son_junsik",
+      "questionText": "q_recording_junsik",
+      "text": "그 작은 중년 남자, 우리 쪽 잔챙이는 아닙니다. 밖에서 불러 쓰는 해결사 냄새가 났어요. 이름까지는 모릅니다.",
+      "timeWindow": null,
+      "location": null,
+      "initiallyVisible": false,
+      "unlockCondition": "q_recording_junsik"
+    }
+  ],
+  "questions": [
+    {
+      "questionId": "q_alibi_hoseon",
+      "characterId": "char_lim_hoseon",
+      "text": "사건 전후 어디에 있었습니까?",
+      "answer": "저는 7시쯤부터 로비 전화기 옆에 있었습니다. 대수 원고 때문에 연락을 기다렸어요.",
+      "unlocksStatementIds": [
+        "st_hoseon_lobby_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_message_hoseon",
+      "characterId": "char_lim_hoseon",
+      "text": "휴대폰의 삭제된 대화와 오연희의 메시지는 무엇입니까?",
+      "answer": "그 메시지는 개인적인 말다툼입니다. 삭제한 건 민망해서였고, 사건과는 상관없습니다.",
+      "unlocksStatementIds": [
+        "st_hoseon_message_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": false,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_debt_hoseon",
+      "characterId": "char_lim_hoseon",
+      "text": "은행 명세표의 빚과 현금 압박을 설명하십시오.",
+      "answer": "빚이 있는 건 맞습니다. 그래서 돈 얘기에 예민했지만, 누굴 죽여서 해결하려 한 건 아닙니다.",
+      "unlocksStatementIds": [
+        "st_hoseon_debt_partial_admission"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_stone_hoseon",
+      "characterId": "char_lim_hoseon",
+      "text": "피 묻은 조경석과 남탕 접근 흔적에 대해 설명하십시오.",
+      "answer": "그 돌은 탕 주변에 늘 있던 겁니다. 젖은 손으로 들면 미끄러웠겠죠. 아니, 제가 들어봤다는 뜻은 아닙니다.",
+      "unlocksStatementIds": [
+        "st_hoseon_stone_evasion"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_weapon_hoseon",
+      "characterId": "char_lim_hoseon",
+      "text": "피해자 바구니의 권총과 소음기를 언제 알았습니까?",
+      "answer": "권총이 있었다는 건 시체 발견 뒤에 알았습니다. 전 그 바구니를 만진 적 없습니다. 소음기까지 달린 물건이면 보통 일이 아니잖습니까. ...아니, 발견 때 누가 그렇게 말했을 겁니다.",
+      "unlocksStatementIds": [
+        "st_hoseon_no_weapon_claim",
+        "st_hoseon_weapon_slip"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_cancel_hoseon",
+      "characterId": "char_lim_hoseon",
+      "text": "'이제 와서 쫄지 마'라는 말은 무엇을 멈추려 했다는 뜻입니까?",
+      "answer": "사람은 마음을 바꿀 수 있습니다. 이미 시작된 일을 멈춰 달라고 해도... 상대가 듣지 않으면 어떻게 합니까.",
+      "unlocksStatementIds": [
+        "st_hoseon_cancel_slip"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_alibi_juri",
+      "characterId": "char_kwon_juri",
+      "text": "사건 전후 여탕과 복도에서 무엇을 보았습니까?",
+      "answer": "저는 여탕 쪽에 있었어요. 눈도 오고 몸도 얼어서 씻으려던 것뿐이에요. 남탕 쪽에서 누가 급히 나오는 걸 봤어요. 얼굴은 못 봤는데 검남색 허리끈 자락이 젖어서 문틀에 걸렸다 풀렸어요.",
+      "unlocksStatementIds": [
+        "st_juri_womens_bath_claim",
+        "st_juri_saw_wet_corridor"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_ticket_juri",
+      "characterId": "char_kwon_juri",
+      "text": "내일 아침 제주행 항공권은 왜 준비했습니까?",
+      "answer": "제주행은 휴가가 아니에요. 여기 있으면 누가 저를 찾아낼 것 같아서요.",
+      "unlocksStatementIds": [
+        "st_juri_ticket_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_cash_daesu",
+      "characterId": "char_gyeong_daesu",
+      "text": "현금 300만 원과 극장 성냥의 용도는 무엇입니까?",
+      "answer": "현금은 취재비입니다. 온천 거리에서 소재를 찾는 데 돈이 들 때도 있죠.",
+      "unlocksStatementIds": [
+        "st_daesu_cash_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_juri_daesu",
+      "characterId": "char_gyeong_daesu",
+      "text": "권주리와 어떤 관계입니까?",
+      "answer": "권주리 씨는 그냥 아는 사람입니다. 성냥은 극장에 갔던 흔적일 뿐이고요.",
+      "unlocksStatementIds": [
+        "st_daesu_juri_evasion"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": false,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_alibi_suyeon",
+      "characterId": "char_woo_suyeon",
+      "text": "사건 시간대 온천 주변에서 무엇을 취재했습니까?",
+      "answer": "사진은 경대수 씨 개인보다 이 여관 주변 동선을 기록한 겁니다. 이상한 거래가 있다는 제보가 있었어요.",
+      "unlocksStatementIds": [
+        "st_suyeon_surveillance_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": false,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_knife_suyeon",
+      "characterId": "char_woo_suyeon",
+      "text": "나이프를 왜 가지고 있었습니까?",
+      "answer": "나이프는 취재 장비입니다. 노천탕 돌과는 전혀 다른 물건이고, 피도 온천수도 묻어 있지 않아요.",
+      "unlocksStatementIds": [
+        "st_suyeon_knife_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_photo_suyeon",
+      "characterId": "char_woo_suyeon",
+      "text": "경대수를 몰래 찍은 사진과 조직 메모는 무엇입니까?",
+      "answer": "사진은 경대수 씨 개인보다 이 여관 주변 동선을 기록한 겁니다. 이상한 거래가 있다는 제보가 있었어요.",
+      "unlocksStatementIds": [
+        "st_suyeon_surveillance_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": false,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_alibi_junsik",
+      "characterId": "char_son_junsik",
+      "text": "납품 동선과 사건 시간대 위치를 설명하십시오.",
+      "answer": "7시 전후엔 세탁실이랑 뒷문만 오갔습니다. 남탕 안으로 들어갈 이유가 없었어요.",
+      "unlocksStatementIds": [
+        "st_junsik_towel_claim"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    },
+    {
+      "questionId": "q_recording_junsik",
+      "characterId": "char_son_junsik",
+      "text": "녹음기 속 목소리와 피해자의 수첩 조각은 무엇을 뜻합니까?",
+      "answer": "녹음 속 목소리는... 이 거리에서 힘 있는 사람 목소리랑 닮았습니다. 주리 씨 얘기라면 더 묻지 마세요. 그 작은 중년 남자, 우리 쪽 잔챙이는 아닙니다. 밖에서 불러 쓰는 해결사 냄새가 났어요. 이름까지는 모릅니다.",
+      "unlocksStatementIds": [
+        "st_junsik_boss_voice",
+        "st_junsik_outsider_hint"
+      ],
+      "unlocksEvidenceIds": [],
+      "unlocksRecordIds": [],
+      "unlocksRelationIds": [],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
+    }
+  ],
+  "contradictions": [
+    {
+      "contradictionId": "con_hoseon_bath_access",
+      "title": "로비 알리바이와 남탕 접근 흔적",
+      "relatedCharacterId": "char_lim_hoseon",
+      "requiredStatementIds": [
+        "st_hoseon_lobby_claim"
+      ],
+      "requiredEvidenceIds": [
+        "ev_mens_door_thread",
+        "ev_hoseon_yukata_tear",
+        "ev_lobby_dry_floor"
+      ],
+      "severity": "core",
+      "pressureDelta": 4,
+      "reasonCode": "임호선의 유카타 허리끈과 남탕 문틀 실밥이 물리적으로 맞고, 로비에는 물기가 없어 로비 주장과 충돌한다.",
+      "message": "임호선의 유카타 허리끈과 남탕 문틀 실밥이 물리적으로 맞고, 로비에는 물기가 없어 로비 주장과 충돌한다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_hoseon_weapon_awareness",
+      "title": "권총을 몰랐다는 주장과 사전 인지 흔적",
+      "relatedCharacterId": "char_lim_hoseon",
+      "requiredStatementIds": [
+        "st_hoseon_no_weapon_claim"
+      ],
+      "requiredEvidenceIds": [
+        "ev_silenced_pistol",
+        "ev_victim_basket_disturbed",
+        "ev_pistol_oil_on_hoseon_hand"
+      ],
+      "severity": "core",
+      "pressureDelta": 4,
+      "reasonCode": "임호선은 발견 뒤 알았다고 하지만 총기 기름 흔적과 바구니 교란, 소음기 말실수는 사건 전 권총을 보았음을 시사한다.",
+      "message": "임호선은 발견 뒤 알았다고 하지만 총기 기름 흔적과 바구니 교란, 소음기 말실수는 사건 전 권총을 보았음을 시사한다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_hoseon_cancelled_contract",
+      "title": "개인 다툼이라는 메시지와 청부 취소 정황",
+      "relatedCharacterId": "char_lim_hoseon",
+      "requiredStatementIds": [
+        "st_hoseon_message_claim",
+        "st_hoseon_debt_partial_admission"
+      ],
+      "requiredEvidenceIds": [
+        "ev_hoseon_phone_message",
+        "ev_bank_statement"
+      ],
+      "severity": "core",
+      "pressureDelta": 4,
+      "reasonCode": "삭제된 대화, 겁쟁이라는 압박, 빚, '멈춰 달라'는 말실수는 단순 다툼이 아니라 위험한 의뢰의 취소/보류 정황을 만든다.",
+      "message": "삭제된 대화, 겁쟁이라는 압박, 빚, '멈춰 달라'는 말실수는 단순 다툼이 아니라 위험한 의뢰의 취소/보류 정황을 만든다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_victim_target_misdirection",
+      "title": "피해자의 표적은 경대수였나 권주리였나",
+      "relatedCharacterId": "char_lim_hoseon",
+      "requiredStatementIds": [
+        "st_hoseon_cancel_slip"
+      ],
+      "requiredEvidenceIds": [
+        "ev_victim_juri_photo_schedule",
+        "ev_juri_ticket"
+      ],
+      "severity": "core",
+      "pressureDelta": 4,
+      "reasonCode": "피해자의 수첩과 조직 녹음은 그가 권주리 쪽 위협과 연결된 외부 해결사일 가능성을 강하게 만든다. 임호선은 이를 경대수를 노린 청부로 오인했을 수 있다.",
+      "message": "피해자의 수첩과 조직 녹음은 그가 권주리 쪽 위협과 연결된 외부 해결사일 가능성을 강하게 만든다. 임호선은 이를 경대수를 노린 청부로 오인했을 수 있다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_suyeon_not_blunt_method",
+      "title": "우수연의 칼과 둔기 사인 불일치",
+      "relatedCharacterId": "char_woo_suyeon",
+      "requiredStatementIds": [
+        "st_suyeon_knife_claim"
+      ],
+      "requiredEvidenceIds": [
+        "ev_suyeon_knife",
+        "ev_bloodied_stone"
+      ],
+      "severity": "major",
+      "pressureDelta": 2,
+      "reasonCode": "우수연은 위험한 비밀을 숨기지만 살해 도구는 칼이 아니라 현장의 조경석이다.",
+      "message": "우수연은 위험한 비밀을 숨기지만 살해 도구는 칼이 아니라 현장의 조경석이다.",
+      "unlockedIds": []
+    },
+    {
+      "contradictionId": "con_junsik_organization_not_method",
+      "title": "손준식의 조직 관련성과 직접 살해 방법 분리",
+      "relatedCharacterId": "char_son_junsik",
+      "requiredStatementIds": [
+        "st_junsik_towel_claim",
+        "st_junsik_boss_voice"
+      ],
+      "requiredEvidenceIds": [
+        "ev_junsik_marijuana",
+        "rec_junsik_recording",
+        "ev_bloodied_stone",
+        "ev_hoseon_yukata_tear"
+      ],
+      "severity": "major",
+      "pressureDelta": 2,
+      "reasonCode": "손준식은 조직과 마약 축에 관련되지만 남탕 접근을 특정하는 유카타 물증과 권총 사전 인지 흔적은 임호선 쪽에 있다.",
+      "message": "손준식은 조직과 마약 축에 관련되지만 남탕 접근을 특정하는 유카타 물증과 권총 사전 인지 흔적은 임호선 쪽에 있다.",
+      "unlockedIds": []
+    }
+  ],
+  "solution": {
+    "culpritId": "char_lim_hoseon",
+    "motive": "임호선은 오연희와 함께 경대수 살해 청부에 발을 들였으나 친구를 죽이지 못해 취소하려 했다. 남탕에서 권총을 본 뒤 피해자를 경대수를 죽이러 온 킬러로 오인했고, 취소가 받아들여지지 않는다고 판단해 공포와 죄책감 속에서 선제적으로 살해했다.",
+    "method": "임호선은 남탕 탈의실과 탕가에 접근해 피해자의 바구니와 권총을 확인했다. 피해자가 방심해 돌아선 순간 탕 주변 조경석으로 후두부를 가격했고, 시체를 탕에 띄운 뒤 옷과 바구니를 정리해 발견 시점을 흐렸다.",
+    "requiredContradictionIds": [
+      "con_hoseon_bath_access",
+      "con_hoseon_weapon_awareness",
+      "con_hoseon_cancelled_contract",
+      "con_victim_target_misdirection"
+    ],
+    "requiredEvidenceIds": [
+      "ev_bloodied_stone",
+      "ev_hoseon_yukata_tear",
+      "ev_pistol_oil_on_hoseon_hand",
+      "ev_hoseon_phone_message",
+      "ev_victim_juri_photo_schedule"
+    ],
+    "requiredStatementIds": [
+      "st_juri_saw_wet_corridor",
+      "st_hoseon_weapon_slip",
+      "st_hoseon_cancel_slip",
+      "st_junsik_outsider_hint"
+    ],
+    "endings": {
+      "correct": "플레이어는 임호선의 로비 알리바이를 물증으로 깨고, 권총 사전 인지와 청부 취소 정황을 연결해 오인 살인의 구조를 밝힌다. 경찰 도착 전 증거 보존이 완료된다.",
+      "partial": "임호선을 의심했지만 피해자 표적 흐름을 분리하지 못해 동기 설명이 불완전하다. 경찰은 추가 수사로 권주리 위협 축을 확인한다.",
+      "wrong": "조직 관련 단서만 보고 손준식이나 우수연을 지목하면 남탕 접근 물증과 권총 인지 흔적이 설명되지 않아 사건은 혼선에 빠진다."
+    }
+  }
+}

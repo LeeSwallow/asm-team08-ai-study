@@ -39,7 +39,9 @@ export function InterrogationStage({
   const visualAppliesToSelected = Boolean(
     selectedSuspect && (!visualState?.suspectId || visualState.suspectId === selectedSuspect.id),
   );
-  const expression = visualAppliesToSelected ? (visualState?.expression ?? selectedSuspect?.expression ?? "neutral") : (selectedSuspect?.expression ?? "neutral");
+  const expression = visualAppliesToSelected
+    ? (visualState?.characterImageState ?? visualState?.expression ?? selectedSuspect?.expression ?? "neutral")
+    : (selectedSuspect?.expression ?? "neutral");
   const emotion = visualAppliesToSelected ? (visualState?.emotionalState ?? selectedSuspect?.emotion ?? "guarded") : (selectedSuspect?.emotion ?? "guarded");
   const pressure = selectedSuspect?.pressure ?? 0;
   const stageBackground = backgroundAsset(visualState?.backgroundId);

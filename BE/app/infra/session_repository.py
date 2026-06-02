@@ -1,35 +1,45 @@
+from __future__ import annotations
+
 from datetime import datetime
-from pathlib import Path
-from typing import List
 
 from app.domain.models import SessionState
+from app.infra.db import get_session_factory
+from app.infra.state_orm import SessionRecord
 
 
 class SessionRepository:
-    def __init__(self, sessions_dir: Path):
-        self.sessions_dir = sessions_dir
-        self.sessions_dir.mkdir(parents=True, exist_ok=True)
-
     def get(self, session_id: str) -> SessionState | None:
-        path = self._path(session_id)
-        if not path.exists():
+        session_factory = get_session_factory()
+        if session_factory is None:
             return None
-        raw = path.read_text(encoding="utf-8")
-        if hasattr(SessionState, "model_validate_json"):
-            return SessionState.model_validate_json(raw)
-        return SessionState.parse_raw(raw)
+        with session_factory() as db:
+            record = db.get(SessionRecord, session_id)
+            return self._validate(record.payload) if record is not None else None
 
     def save(self, session: SessionState) -> SessionState:
         session.updatedAt = datetime.utcnow()
-        if hasattr(session, "model_dump_json"):
-            payload = session.model_dump_json(indent=2)
-        else:
-            payload = session.json(ensure_ascii=False, indent=2)
-        self._path(session.sessionId).write_text(payload, encoding="utf-8")
+        session_factory = get_session_factory()
+        if session_factory is None:
+            raise RuntimeError("database session factory is not configured")
+        payload = self._dump(session)
+        with session_factory() as db:
+            db.merge(SessionRecord(session_id=session.sessionId, case_id=session.caseId, payload=payload))
+            db.commit()
         return session
 
-    def list_ids(self) -> List[str]:
-        return [path.stem for path in sorted(self.sessions_dir.glob("*.json"))]
+    def list_ids(self) -> list[str]:
+        session_factory = get_session_factory()
+        if session_factory is None:
+            return []
+        with session_factory() as db:
+            return [item[0] for item in db.query(SessionRecord.session_id).order_by(SessionRecord.session_id).all()]
 
-    def _path(self, session_id: str) -> Path:
-        return self.sessions_dir / f"{session_id}.json"
+    def _validate(self, payload: dict) -> SessionState:
+        if hasattr(SessionState, "model_validate"):
+            return SessionState.model_validate(payload)
+        return SessionState.parse_obj(payload)
+
+    def _dump(self, session: SessionState) -> dict:
+        if hasattr(session, "model_dump"):
+            return session.model_dump(mode="json")
+        return session.dict()

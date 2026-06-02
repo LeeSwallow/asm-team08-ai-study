@@ -1,0 +1,14 @@
+{
+  "caseId": "case_speckled_band",
+  "outDir": "story-generator-workflow/out/case_speckled_band_final",
+  "files": [
+    "case.json",
+    "data.sql",
+    "neo4j.cypher",
+    "asset_manifest.json",
+    "asset_prompts/"
+  ],
+  "assets": 27,
+  "validationErrors": [],
+  "imagesGenerated": false
+}

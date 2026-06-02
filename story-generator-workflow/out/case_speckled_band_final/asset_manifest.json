@@ -1,0 +1,236 @@
+{
+  "caseId": "case_speckled_band",
+  "styleBible": {
+    "genre": "Korean noir detective visual novel",
+    "palette": [
+      "deep navy",
+      "warm amber",
+      "desaturated burgundy",
+      "charcoal black"
+    ],
+    "lighting": "cinematic noir rim light, rainy mansion atmosphere",
+    "negativePrompt": "text, watermark, logo, low quality, distorted face, childish cartoon, placeholder svg, ugly portrait"
+  },
+  "assets": [
+    {
+      "assetId": "vis_case_speckled_band_background_main",
+      "type": "background",
+      "prompt": "Cinematic Korean noir detective game background, 영국 서리 주 스토크 모란 저택 서쪽 날개 침실, dark rainy atmosphere, evidence board mood, premium visual novel web game, deep navy and warm amber palette, no people, no text, highly detailed.",
+      "outputPath": "assets/backgrounds/main.png"
+    },
+    {
+      "assetId": "vis_char_grimesby_roylott_low",
+      "type": "suspect_portrait",
+      "characterId": "char_grimesby_roylott",
+      "pressure": "low",
+      "expression": "비웃음",
+      "prompt": "Korean noir detective visual novel suspect portrait, 그림즈비 로일롯 박사, 의붓아버지, 인도 체류 경력이 있는 폭력적인 의사. 저택과 헬렌을 통제하며 딸들의 결혼 문제에 과민하다.. Pressure state: low, expression: 비웃음. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_grimesby_roylott/low.png"
+    },
+    {
+      "assetId": "vis_char_grimesby_roylott_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_grimesby_roylott",
+      "pressure": "medium",
+      "expression": "차가운 협박",
+      "prompt": "Korean noir detective visual novel suspect portrait, 그림즈비 로일롯 박사, 의붓아버지, 인도 체류 경력이 있는 폭력적인 의사. 저택과 헬렌을 통제하며 딸들의 결혼 문제에 과민하다.. Pressure state: medium, expression: 차가운 협박. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_grimesby_roylott/medium.png"
+    },
+    {
+      "assetId": "vis_char_grimesby_roylott_high",
+      "type": "suspect_portrait",
+      "characterId": "char_grimesby_roylott",
+      "pressure": "high",
+      "expression": "노골적 위협",
+      "prompt": "Korean noir detective visual novel suspect portrait, 그림즈비 로일롯 박사, 의붓아버지, 인도 체류 경력이 있는 폭력적인 의사. 저택과 헬렌을 통제하며 딸들의 결혼 문제에 과민하다.. Pressure state: high, expression: 노골적 위협. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_grimesby_roylott/high.png"
+    },
+    {
+      "assetId": "vis_char_grimesby_roylott_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_grimesby_roylott",
+      "pressure": "critical",
+      "expression": "궁지의 격노",
+      "prompt": "Korean noir detective visual novel suspect portrait, 그림즈비 로일롯 박사, 의붓아버지, 인도 체류 경력이 있는 폭력적인 의사. 저택과 헬렌을 통제하며 딸들의 결혼 문제에 과민하다.. Pressure state: critical, expression: 궁지의 격노. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_grimesby_roylott/critical.png"
+    },
+    {
+      "assetId": "vis_char_helen_stoner_low",
+      "type": "suspect_portrait",
+      "characterId": "char_helen_stoner",
+      "pressure": "low",
+      "expression": "조심스러움",
+      "prompt": "Korean noir detective visual novel suspect portrait, 헬렌 스토너, 의뢰인/현재 표적, 공포로 조기 노화된 여성. 언니의 죽음과 같은 소리를 들었다고 말한다.. Pressure state: low, expression: 조심스러움. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_helen_stoner/low.png"
+    },
+    {
+      "assetId": "vis_char_helen_stoner_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_helen_stoner",
+      "pressure": "medium",
+      "expression": "불안한 회상",
+      "prompt": "Korean noir detective visual novel suspect portrait, 헬렌 스토너, 의뢰인/현재 표적, 공포로 조기 노화된 여성. 언니의 죽음과 같은 소리를 들었다고 말한다.. Pressure state: medium, expression: 불안한 회상. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_helen_stoner/medium.png"
+    },
+    {
+      "assetId": "vis_char_helen_stoner_high",
+      "type": "suspect_portrait",
+      "characterId": "char_helen_stoner",
+      "pressure": "high",
+      "expression": "고백",
+      "prompt": "Korean noir detective visual novel suspect portrait, 헬렌 스토너, 의뢰인/현재 표적, 공포로 조기 노화된 여성. 언니의 죽음과 같은 소리를 들었다고 말한다.. Pressure state: high, expression: 고백. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_helen_stoner/high.png"
+    },
+    {
+      "assetId": "vis_char_helen_stoner_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_helen_stoner",
+      "pressure": "critical",
+      "expression": "생존 공포",
+      "prompt": "Korean noir detective visual novel suspect portrait, 헬렌 스토너, 의뢰인/현재 표적, 공포로 조기 노화된 여성. 언니의 죽음과 같은 소리를 들었다고 말한다.. Pressure state: critical, expression: 생존 공포. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_helen_stoner/critical.png"
+    },
+    {
+      "assetId": "vis_char_housekeeper_low",
+      "type": "suspect_portrait",
+      "characterId": "char_housekeeper",
+      "pressure": "low",
+      "expression": "흐릿함",
+      "prompt": "Korean noir detective visual novel suspect portrait, 저택 가정부, 내부 목격자, 기억이 흐릿하지만 방 공사와 벨줄의 새로움을 알고 있는 고용인.. Pressure state: low, expression: 흐릿함. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_housekeeper/low.png"
+    },
+    {
+      "assetId": "vis_char_housekeeper_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_housekeeper",
+      "pressure": "medium",
+      "expression": "기억 회복",
+      "prompt": "Korean noir detective visual novel suspect portrait, 저택 가정부, 내부 목격자, 기억이 흐릿하지만 방 공사와 벨줄의 새로움을 알고 있는 고용인.. Pressure state: medium, expression: 기억 회복. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_housekeeper/medium.png"
+    },
+    {
+      "assetId": "vis_char_housekeeper_high",
+      "type": "suspect_portrait",
+      "characterId": "char_housekeeper",
+      "pressure": "high",
+      "expression": "겁먹음",
+      "prompt": "Korean noir detective visual novel suspect portrait, 저택 가정부, 내부 목격자, 기억이 흐릿하지만 방 공사와 벨줄의 새로움을 알고 있는 고용인.. Pressure state: high, expression: 겁먹음. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_housekeeper/high.png"
+    },
+    {
+      "assetId": "vis_char_housekeeper_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_housekeeper",
+      "pressure": "critical",
+      "expression": "양심 고백",
+      "prompt": "Korean noir detective visual novel suspect portrait, 저택 가정부, 내부 목격자, 기억이 흐릿하지만 방 공사와 벨줄의 새로움을 알고 있는 고용인.. Pressure state: critical, expression: 양심 고백. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_housekeeper/critical.png"
+    },
+    {
+      "assetId": "vis_char_gypsy_camp_low",
+      "type": "suspect_portrait",
+      "characterId": "char_gypsy_camp",
+      "pressure": "low",
+      "expression": "무심함",
+      "prompt": "Korean noir detective visual novel suspect portrait, 방랑하는 집시들, 거짓 단서, 부지에 머무는 외부인들. 얼룩무늬 스카프 때문에 쉽게 의심받는다.. Pressure state: low, expression: 무심함. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gypsy_camp/low.png"
+    },
+    {
+      "assetId": "vis_char_gypsy_camp_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_gypsy_camp",
+      "pressure": "medium",
+      "expression": "짜증",
+      "prompt": "Korean noir detective visual novel suspect portrait, 방랑하는 집시들, 거짓 단서, 부지에 머무는 외부인들. 얼룩무늬 스카프 때문에 쉽게 의심받는다.. Pressure state: medium, expression: 짜증. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gypsy_camp/medium.png"
+    },
+    {
+      "assetId": "vis_char_gypsy_camp_high",
+      "type": "suspect_portrait",
+      "characterId": "char_gypsy_camp",
+      "pressure": "high",
+      "expression": "항의",
+      "prompt": "Korean noir detective visual novel suspect portrait, 방랑하는 집시들, 거짓 단서, 부지에 머무는 외부인들. 얼룩무늬 스카프 때문에 쉽게 의심받는다.. Pressure state: high, expression: 항의. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gypsy_camp/high.png"
+    },
+    {
+      "assetId": "vis_char_gypsy_camp_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_gypsy_camp",
+      "pressure": "critical",
+      "expression": "억울함",
+      "prompt": "Korean noir detective visual novel suspect portrait, 방랑하는 집시들, 거짓 단서, 부지에 머무는 외부인들. 얼룩무늬 스카프 때문에 쉽게 의심받는다.. Pressure state: critical, expression: 억울함. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gypsy_camp/critical.png"
+    },
+    {
+      "assetId": "vis_ev_mothers_will",
+      "type": "evidence_photo",
+      "evidenceId": "ev_mothers_will",
+      "prompt": "Noir detective evidence photo, close-up of 어머니의 유서, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_mothers_will.png"
+    },
+    {
+      "assetId": "vis_ev_fake_bell_pull",
+      "type": "evidence_photo",
+      "evidenceId": "ev_fake_bell_pull",
+      "prompt": "Noir detective evidence photo, close-up of 가짜 벨줄, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_fake_bell_pull.png"
+    },
+    {
+      "assetId": "vis_ev_ventilator",
+      "type": "evidence_photo",
+      "evidenceId": "ev_ventilator",
+      "prompt": "Noir detective evidence photo, close-up of 환기구, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_ventilator.png"
+    },
+    {
+      "assetId": "vis_ev_fixed_bed",
+      "type": "evidence_photo",
+      "evidenceId": "ev_fixed_bed",
+      "prompt": "Noir detective evidence photo, close-up of 고정된 침대, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_fixed_bed.png"
+    },
+    {
+      "assetId": "vis_ev_milk_saucer",
+      "type": "evidence_photo",
+      "evidenceId": "ev_milk_saucer",
+      "prompt": "Noir detective evidence photo, close-up of 우유 접시, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_milk_saucer.png"
+    },
+    {
+      "assetId": "vis_ev_looped_whip",
+      "type": "evidence_photo",
+      "evidenceId": "ev_looped_whip",
+      "prompt": "Noir detective evidence photo, close-up of 가죽 채찍, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_looped_whip.png"
+    },
+    {
+      "assetId": "vis_ev_iron_safe",
+      "type": "evidence_photo",
+      "evidenceId": "ev_iron_safe",
+      "prompt": "Noir detective evidence photo, close-up of 철제 금고, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_iron_safe.png"
+    },
+    {
+      "assetId": "vis_ev_fireplace_poker",
+      "type": "evidence_photo",
+      "evidenceId": "ev_fireplace_poker",
+      "prompt": "Noir detective evidence photo, close-up of 벽난로 부중, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_fireplace_poker.png"
+    },
+    {
+      "assetId": "vis_ev_coroner_report",
+      "type": "evidence_photo",
+      "evidenceId": "ev_coroner_report",
+      "prompt": "Noir detective evidence photo, close-up of 검시관의 보고서, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_coroner_report.png"
+    },
+    {
+      "assetId": "vis_ev_gypsy_scarves",
+      "type": "evidence_photo",
+      "evidenceId": "ev_gypsy_scarves",
+      "prompt": "Noir detective evidence photo, close-up of 집시들의 얼룩무늬 스카프, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_gypsy_scarves.png"
+    }
+  ]
+}

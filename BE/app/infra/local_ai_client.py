@@ -11,15 +11,31 @@ from app.ai_engine.schemas.dialogue import DialogueRequest
 from app.ai_engine.schemas.endings import EndingExplainRequest
 from app.ai_engine.schemas.hints import HintRequest
 from app.ai_engine.schemas.notes import NotesSummaryRequest
+from app.infra.knowledge_retriever_provider import get_knowledge_retriever
 
 logger = logging.getLogger(__name__)
+
+
+def _public_runtime_diagnostics(diagnostics: Dict[str, Any]) -> Dict[str, Any]:
+    director = (diagnostics or {}).get("dialogueDirector")
+    if isinstance(director, dict):
+        return {
+            "dialogueDirector": {
+                "strategy": director.get("strategy"),
+                "seedText": director.get("seedText"),
+                "allowedAdmissionLevel": director.get("allowedAdmissionLevel"),
+                "focusTerms": list(director.get("focusTerms") or []),
+                "reason": director.get("reason"),
+            }
+        }
+    return {}
 
 
 class LocalAIClient:
     async def dialogue_response_info(self, payload: Dict[str, Any], fallback: str) -> Dict[str, Any]:
         try:
             req = DialogueRequest.model_validate(payload)
-            result = await asyncio.to_thread(run_dialogue_graph, req)
+            result = await asyncio.to_thread(run_dialogue_graph, req, get_knowledge_retriever())
             answer = result.text or fallback
             proposed_events = [e.model_dump(mode="json") for e in result.proposedEvents]
             safety = result.safety.model_dump(mode="json") if result.safety else {"status": "checked"}
@@ -35,6 +51,7 @@ class LocalAIClient:
                 "intent": result.intent,
                 "dialogueMode": result.dialogueMode,
                 "safety": safety,
+                "runtimeDiagnostics": _public_runtime_diagnostics(result.runtimeDiagnostics),
             }
         except Exception as exc:
             reason = type(exc).__name__

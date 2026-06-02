@@ -1,0 +1,15 @@
+editorDecision: revise
+score:
+  crossTestimony: 0
+  evidencePuzzle: 0
+  culpritDefense: 0
+  innocentSuspects: 0
+  storyFlow: 0
+  fairDifficulty: 0
+  runtimeStructure: 0
+blockingIssues: []
+requiredRevisions: []
+acceptedStrengths: []
+assetGate:
+  allowed: false
+  reason: editor not approved yet

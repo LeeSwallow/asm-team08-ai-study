@@ -127,11 +127,16 @@ export async function submitContradiction(
   if (!session.selectedSuspectId) {
     return degradedSession(session, "contradiction", new Error("suspect selection required"));
   }
+  const selectedStatements = session.statements.filter((item) => statementIds.includes(item.id));
+  const selectedEvidence = session.evidence.filter((item) => evidenceIds.includes(item.id));
+  const statementText = selectedStatements.map((item) => item.text).join(" / ");
+  const evidenceText = selectedEvidence.map((item) => `${item.title}: ${item.description}`).join(" / ");
+  const message = `선택한 진술 "${statementText || statementIds.join(", ")}"은 선택한 증거 "${evidenceText || evidenceIds.join(", ")}"와 모순입니다.`;
   try {
     return normalizeSession(
-      await request<BackendSession>(`/api/v1/sessions/${session.sessionId}/contradictions`, {
+      await request<BackendSession>(`/api/v1/sessions/${session.sessionId}/dialogue`, {
         method: "POST",
-        body: JSON.stringify({ suspectId: session.selectedSuspectId, statementIds, evidenceIds }),
+        body: JSON.stringify({ suspectId: session.selectedSuspectId, message }),
       }),
     );
   } catch (error) {

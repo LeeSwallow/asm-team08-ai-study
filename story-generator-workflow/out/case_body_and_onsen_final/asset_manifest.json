@@ -1,0 +1,328 @@
+{
+  "caseId": "case_body_and_onsen",
+  "styleBible": {
+    "genre": "Korean noir detective visual novel",
+    "palette": [
+      "deep navy",
+      "warm amber",
+      "desaturated burgundy",
+      "charcoal black"
+    ],
+    "lighting": "cinematic noir rim light, rainy mansion atmosphere",
+    "negativePrompt": "text, watermark, logo, low quality, distorted face, childish cartoon, placeholder svg, ugly portrait"
+  },
+  "assets": [
+    {
+      "assetId": "vis_case_body_and_onsen_background_main",
+      "type": "background",
+      "prompt": "Cinematic Korean noir detective game background, 설월장 남탕 노천탕, dark rainy atmosphere, evidence board mood, premium visual novel web game, deep navy and warm amber palette, no people, no text, highly detailed.",
+      "outputPath": "assets/backgrounds/main.png"
+    },
+    {
+      "assetId": "vis_char_gyeong_daesu_low",
+      "type": "suspect_portrait",
+      "characterId": "char_gyeong_daesu",
+      "pressure": "low",
+      "expression": "비꼬는 농담",
+      "prompt": "Korean noir detective visual novel suspect portrait, 경대수, 미스터리 소설가, 32세. 설월장에 2년째 장기 투숙하며 원고를 쓰는 중견 작가. 예민하고 피곤한 얼굴로, 온천 거리와 극장에 자주 드나든다는 소문이 있다.. Pressure state: low, expression: 비꼬는 농담. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gyeong_daesu/low.png"
+    },
+    {
+      "assetId": "vis_char_gyeong_daesu_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_gyeong_daesu",
+      "pressure": "medium",
+      "expression": "짜증 섞인 회피",
+      "prompt": "Korean noir detective visual novel suspect portrait, 경대수, 미스터리 소설가, 32세. 설월장에 2년째 장기 투숙하며 원고를 쓰는 중견 작가. 예민하고 피곤한 얼굴로, 온천 거리와 극장에 자주 드나든다는 소문이 있다.. Pressure state: medium, expression: 짜증 섞인 회피. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gyeong_daesu/medium.png"
+    },
+    {
+      "assetId": "vis_char_gyeong_daesu_high",
+      "type": "suspect_portrait",
+      "characterId": "char_gyeong_daesu",
+      "pressure": "high",
+      "expression": "불륜을 숨기려는 초조함",
+      "prompt": "Korean noir detective visual novel suspect portrait, 경대수, 미스터리 소설가, 32세. 설월장에 2년째 장기 투숙하며 원고를 쓰는 중견 작가. 예민하고 피곤한 얼굴로, 온천 거리와 극장에 자주 드나든다는 소문이 있다.. Pressure state: high, expression: 불륜을 숨기려는 초조함. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gyeong_daesu/high.png"
+    },
+    {
+      "assetId": "vis_char_gyeong_daesu_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_gyeong_daesu",
+      "pressure": "critical",
+      "expression": "무너진 체념",
+      "prompt": "Korean noir detective visual novel suspect portrait, 경대수, 미스터리 소설가, 32세. 설월장에 2년째 장기 투숙하며 원고를 쓰는 중견 작가. 예민하고 피곤한 얼굴로, 온천 거리와 극장에 자주 드나든다는 소문이 있다.. Pressure state: critical, expression: 무너진 체념. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_gyeong_daesu/critical.png"
+    },
+    {
+      "assetId": "vis_char_lim_hoseon_low",
+      "type": "suspect_portrait",
+      "characterId": "char_lim_hoseon",
+      "pressure": "low",
+      "expression": "차분한 진행자",
+      "prompt": "Korean noir detective visual novel suspect portrait, 임호선, 출판사 편집자, 32세. 경대수의 어릴 적 친구이자 담당 편집자. 싹싹하고 협조적인 태도로 조사를 정리하려 하지만, 휴대폰과 옷매무새에 신경을 많이 쓴다.. Pressure state: low, expression: 차분한 진행자. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_lim_hoseon/low.png"
+    },
+    {
+      "assetId": "vis_char_lim_hoseon_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_lim_hoseon",
+      "pressure": "medium",
+      "expression": "논리적 반박",
+      "prompt": "Korean noir detective visual novel suspect portrait, 임호선, 출판사 편집자, 32세. 경대수의 어릴 적 친구이자 담당 편집자. 싹싹하고 협조적인 태도로 조사를 정리하려 하지만, 휴대폰과 옷매무새에 신경을 많이 쓴다.. Pressure state: medium, expression: 논리적 반박. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_lim_hoseon/medium.png"
+    },
+    {
+      "assetId": "vis_char_lim_hoseon_high",
+      "type": "suspect_portrait",
+      "characterId": "char_lim_hoseon",
+      "pressure": "high",
+      "expression": "말실수를 덮는 조급함",
+      "prompt": "Korean noir detective visual novel suspect portrait, 임호선, 출판사 편집자, 32세. 경대수의 어릴 적 친구이자 담당 편집자. 싹싹하고 협조적인 태도로 조사를 정리하려 하지만, 휴대폰과 옷매무새에 신경을 많이 쓴다.. Pressure state: high, expression: 말실수를 덮는 조급함. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_lim_hoseon/high.png"
+    },
+    {
+      "assetId": "vis_char_lim_hoseon_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_lim_hoseon",
+      "pressure": "critical",
+      "expression": "죄책감과 생존 본능의 충돌",
+      "prompt": "Korean noir detective visual novel suspect portrait, 임호선, 출판사 편집자, 32세. 경대수의 어릴 적 친구이자 담당 편집자. 싹싹하고 협조적인 태도로 조사를 정리하려 하지만, 휴대폰과 옷매무새에 신경을 많이 쓴다.. Pressure state: critical, expression: 죄책감과 생존 본능의 충돌. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_lim_hoseon/critical.png"
+    },
+    {
+      "assetId": "vis_char_woo_suyeon_low",
+      "type": "suspect_portrait",
+      "characterId": "char_woo_suyeon",
+      "pressure": "low",
+      "expression": "담담한 설명",
+      "prompt": "Korean noir detective visual novel suspect portrait, 우수연, 온천 전문 문필가, 24세. 전국 온천을 취재하는 라이터. 물 성분과 탕 구조에 밝고, 카메라와 메모를 늘 들고 다닌다. 날카로운 나이프 때문에 의심을 산다.. Pressure state: low, expression: 담담한 설명. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_woo_suyeon/low.png"
+    },
+    {
+      "assetId": "vis_char_woo_suyeon_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_woo_suyeon",
+      "pressure": "medium",
+      "expression": "경계",
+      "prompt": "Korean noir detective visual novel suspect portrait, 우수연, 온천 전문 문필가, 24세. 전국 온천을 취재하는 라이터. 물 성분과 탕 구조에 밝고, 카메라와 메모를 늘 들고 다닌다. 날카로운 나이프 때문에 의심을 산다.. Pressure state: medium, expression: 경계. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_woo_suyeon/medium.png"
+    },
+    {
+      "assetId": "vis_char_woo_suyeon_high",
+      "type": "suspect_portrait",
+      "characterId": "char_woo_suyeon",
+      "pressure": "high",
+      "expression": "날 선 방어",
+      "prompt": "Korean noir detective visual novel suspect portrait, 우수연, 온천 전문 문필가, 24세. 전국 온천을 취재하는 라이터. 물 성분과 탕 구조에 밝고, 카메라와 메모를 늘 들고 다닌다. 날카로운 나이프 때문에 의심을 산다.. Pressure state: high, expression: 날 선 방어. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_woo_suyeon/high.png"
+    },
+    {
+      "assetId": "vis_char_woo_suyeon_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_woo_suyeon",
+      "pressure": "critical",
+      "expression": "통제된 압박",
+      "prompt": "Korean noir detective visual novel suspect portrait, 우수연, 온천 전문 문필가, 24세. 전국 온천을 취재하는 라이터. 물 성분과 탕 구조에 밝고, 카메라와 메모를 늘 들고 다닌다. 날카로운 나이프 때문에 의심을 산다.. Pressure state: critical, expression: 통제된 압박. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_woo_suyeon/critical.png"
+    },
+    {
+      "assetId": "vis_char_kwon_juri_low",
+      "type": "suspect_portrait",
+      "characterId": "char_kwon_juri",
+      "pressure": "low",
+      "expression": "농담으로 넘김",
+      "prompt": "Korean noir detective visual novel suspect portrait, 권주리, 댄서, 20대 초반. 온천 거리 스트립 극장의 인기 댄서. 눈보라 때문에 우연히 여관에 묶였다고 말하지만, 제주행 항공권을 숨기고 있다.. Pressure state: low, expression: 농담으로 넘김. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_kwon_juri/low.png"
+    },
+    {
+      "assetId": "vis_char_kwon_juri_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_kwon_juri",
+      "pressure": "medium",
+      "expression": "불안한 회피",
+      "prompt": "Korean noir detective visual novel suspect portrait, 권주리, 댄서, 20대 초반. 온천 거리 스트립 극장의 인기 댄서. 눈보라 때문에 우연히 여관에 묶였다고 말하지만, 제주행 항공권을 숨기고 있다.. Pressure state: medium, expression: 불안한 회피. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_kwon_juri/medium.png"
+    },
+    {
+      "assetId": "vis_char_kwon_juri_high",
+      "type": "suspect_portrait",
+      "characterId": "char_kwon_juri",
+      "pressure": "high",
+      "expression": "공포 노출",
+      "prompt": "Korean noir detective visual novel suspect portrait, 권주리, 댄서, 20대 초반. 온천 거리 스트립 극장의 인기 댄서. 눈보라 때문에 우연히 여관에 묶였다고 말하지만, 제주행 항공권을 숨기고 있다.. Pressure state: high, expression: 공포 노출. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_kwon_juri/high.png"
+    },
+    {
+      "assetId": "vis_char_kwon_juri_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_kwon_juri",
+      "pressure": "critical",
+      "expression": "절박한 진실 일부",
+      "prompt": "Korean noir detective visual novel suspect portrait, 권주리, 댄서, 20대 초반. 온천 거리 스트립 극장의 인기 댄서. 눈보라 때문에 우연히 여관에 묶였다고 말하지만, 제주행 항공권을 숨기고 있다.. Pressure state: critical, expression: 절박한 진실 일부. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_kwon_juri/critical.png"
+    },
+    {
+      "assetId": "vis_char_son_junsik_low",
+      "type": "suspect_portrait",
+      "characterId": "char_son_junsik",
+      "pressure": "low",
+      "expression": "투덜거림",
+      "prompt": "Korean noir detective visual novel suspect portrait, 손준식, 물수건 납품 업자, 26세. 설월장에 정기적으로 물수건을 납품하는 업자. 여관 내부 동선을 잘 알고 바깥 사정에도 밝다. 담배와 녹음기 때문에 조직 관련 의심을 받는다.. Pressure state: low, expression: 투덜거림. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_son_junsik/low.png"
+    },
+    {
+      "assetId": "vis_char_son_junsik_medium",
+      "type": "suspect_portrait",
+      "characterId": "char_son_junsik",
+      "pressure": "medium",
+      "expression": "성급한 부인",
+      "prompt": "Korean noir detective visual novel suspect portrait, 손준식, 물수건 납품 업자, 26세. 설월장에 정기적으로 물수건을 납품하는 업자. 여관 내부 동선을 잘 알고 바깥 사정에도 밝다. 담배와 녹음기 때문에 조직 관련 의심을 받는다.. Pressure state: medium, expression: 성급한 부인. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_son_junsik/medium.png"
+    },
+    {
+      "assetId": "vis_char_son_junsik_high",
+      "type": "suspect_portrait",
+      "characterId": "char_son_junsik",
+      "pressure": "high",
+      "expression": "권주리 보호",
+      "prompt": "Korean noir detective visual novel suspect portrait, 손준식, 물수건 납품 업자, 26세. 설월장에 정기적으로 물수건을 납품하는 업자. 여관 내부 동선을 잘 알고 바깥 사정에도 밝다. 담배와 녹음기 때문에 조직 관련 의심을 받는다.. Pressure state: high, expression: 권주리 보호. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_son_junsik/high.png"
+    },
+    {
+      "assetId": "vis_char_son_junsik_critical",
+      "type": "suspect_portrait",
+      "characterId": "char_son_junsik",
+      "pressure": "critical",
+      "expression": "조직 축 일부 인정",
+      "prompt": "Korean noir detective visual novel suspect portrait, 손준식, 물수건 납품 업자, 26세. 설월장에 정기적으로 물수건을 납품하는 업자. 여관 내부 동선을 잘 알고 바깥 사정에도 밝다. 담배와 녹음기 때문에 조직 관련 의심을 받는다.. Pressure state: critical, expression: 조직 축 일부 인정. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.",
+      "outputPath": "assets/characters/char_son_junsik/critical.png"
+    },
+    {
+      "assetId": "vis_ev_bloodied_stone",
+      "type": "evidence_photo",
+      "evidenceId": "ev_bloodied_stone",
+      "prompt": "Noir detective evidence photo, close-up of 피 묻은 조경석, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_bloodied_stone.png"
+    },
+    {
+      "assetId": "vis_ev_silenced_pistol",
+      "type": "evidence_photo",
+      "evidenceId": "ev_silenced_pistol",
+      "prompt": "Noir detective evidence photo, close-up of 미사용 소음기 권총, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_silenced_pistol.png"
+    },
+    {
+      "assetId": "vis_ev_victim_basket_disturbed",
+      "type": "evidence_photo",
+      "evidenceId": "ev_victim_basket_disturbed",
+      "prompt": "Noir detective evidence photo, close-up of 뒤져진 탈의 바구니, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_victim_basket_disturbed.png"
+    },
+    {
+      "assetId": "vis_ev_mens_door_thread",
+      "type": "evidence_photo",
+      "evidenceId": "ev_mens_door_thread",
+      "prompt": "Noir detective evidence photo, close-up of 남탕 문틀의 젖은 실밥, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_mens_door_thread.png"
+    },
+    {
+      "assetId": "vis_ev_hoseon_yukata_tear",
+      "type": "evidence_photo",
+      "evidenceId": "ev_hoseon_yukata_tear",
+      "prompt": "Noir detective evidence photo, close-up of 임호선의 찢긴 대여 유카타, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_hoseon_yukata_tear.png"
+    },
+    {
+      "assetId": "vis_ev_lobby_dry_floor",
+      "type": "evidence_photo",
+      "evidenceId": "ev_lobby_dry_floor",
+      "prompt": "Noir detective evidence photo, close-up of 로비 전화기 주변의 마른 바닥, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_lobby_dry_floor.png"
+    },
+    {
+      "assetId": "vis_ev_pistol_oil_on_hoseon_hand",
+      "type": "evidence_photo",
+      "evidenceId": "ev_pistol_oil_on_hoseon_hand",
+      "prompt": "Noir detective evidence photo, close-up of 임호선 손끝의 총기 기름 냄새, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_pistol_oil_on_hoseon_hand.png"
+    },
+    {
+      "assetId": "vis_ev_hoseon_phone_message",
+      "type": "evidence_photo",
+      "evidenceId": "ev_hoseon_phone_message",
+      "prompt": "Noir detective evidence photo, close-up of 삭제된 대화 뒤의 메시지, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_hoseon_phone_message.png"
+    },
+    {
+      "assetId": "vis_ev_bank_statement",
+      "type": "evidence_photo",
+      "evidenceId": "ev_bank_statement",
+      "prompt": "Noir detective evidence photo, close-up of 은행 명세표, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_bank_statement.png"
+    },
+    {
+      "assetId": "vis_ev_daesu_matches",
+      "type": "evidence_photo",
+      "evidenceId": "ev_daesu_matches",
+      "prompt": "Noir detective evidence photo, close-up of 스트립 극장 성냥, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_daesu_matches.png"
+    },
+    {
+      "assetId": "vis_ev_daesu_cash",
+      "type": "evidence_photo",
+      "evidenceId": "ev_daesu_cash",
+      "prompt": "Noir detective evidence photo, close-up of 현금 300만 원, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_daesu_cash.png"
+    },
+    {
+      "assetId": "vis_ev_suyeon_photo",
+      "type": "evidence_photo",
+      "evidenceId": "ev_suyeon_photo",
+      "prompt": "Noir detective evidence photo, close-up of 경대수 몰래 촬영 사진, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_suyeon_photo.png"
+    },
+    {
+      "assetId": "vis_ev_suyeon_note",
+      "type": "evidence_photo",
+      "evidenceId": "ev_suyeon_note",
+      "prompt": "Noir detective evidence photo, close-up of 지역 조직과 당국에 주의 메모, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_suyeon_note.png"
+    },
+    {
+      "assetId": "vis_ev_suyeon_knife",
+      "type": "evidence_photo",
+      "evidenceId": "ev_suyeon_knife",
+      "prompt": "Noir detective evidence photo, close-up of 손때 묻은 나이프, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_suyeon_knife.png"
+    },
+    {
+      "assetId": "vis_ev_juri_ticket",
+      "type": "evidence_photo",
+      "evidenceId": "ev_juri_ticket",
+      "prompt": "Noir detective evidence photo, close-up of 제주행 항공권, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_juri_ticket.png"
+    },
+    {
+      "assetId": "vis_ev_victim_juri_photo_schedule",
+      "type": "evidence_photo",
+      "evidenceId": "ev_victim_juri_photo_schedule",
+      "prompt": "Noir detective evidence photo, close-up of 피해자 수첩의 권주리 사진과 시간 메모, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_victim_juri_photo_schedule.png"
+    },
+    {
+      "assetId": "vis_ev_junsik_marijuana",
+      "type": "evidence_photo",
+      "evidenceId": "ev_junsik_marijuana",
+      "prompt": "Noir detective evidence photo, close-up of 달콤한 냄새의 궐련 세트, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_junsik_marijuana.png"
+    },
+    {
+      "assetId": "vis_ev_junsik_promotion_note",
+      "type": "evidence_photo",
+      "evidenceId": "ev_junsik_promotion_note",
+      "prompt": "Noir detective evidence photo, close-up of 승진 약속 메모, . Found at crime scene. Premium game evidence thumbnail, dark tabletop, realistic prop, no readable text unless generic, no watermark.",
+      "outputPath": "assets/evidence/ev_junsik_promotion_note.png"
+    }
+  ]
+}

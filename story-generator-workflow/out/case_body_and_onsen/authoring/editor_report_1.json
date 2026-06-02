@@ -1,0 +1,111 @@
+{
+  "editorDecision": "blocked",
+  "score": {
+    "crossTestimony": 2,
+    "evidencePuzzle": 1,
+    "culpritDefense": 2,
+    "innocentSuspects": 3,
+    "storyFlow": 2,
+    "fairDifficulty": 1,
+    "runtimeStructure": 2
+  },
+  "blockingIssues": [
+    {
+      "id": "blk_001",
+      "severity": "blocker",
+      "issue": "핵심 해법인 임호선의 피해자 오인과 권총 인지가 공개 증거만으로 입증되지 않는다. 미사용 권총과 피 묻은 돌은 피해자의 무장 및 사인만 설명할 뿐, 임호선이 사건 전 권총을 보았거나 피해자를 경대수 청부업자로 판단했다는 연결을 만들지 못한다."
+    },
+    {
+      "id": "blk_002",
+      "severity": "blocker",
+      "issue": "임호선의 남탕 접근 특정성이 부족하다. 남탕 입구의 젖은 유카타 실밥과 권주리의 젖은 유카타 목격만으로는 온천 여관 환경에서 임호선을 특정하기 어렵다."
+    },
+    {
+      "id": "blk_003",
+      "severity": "blocker",
+      "issue": "권주리 표적 흐름이 최종 동기에 필수인데, 현재 공개 단서는 권주리가 위험하다는 점까지만 보여주며 피해자 이정명이 그 처리 실행자였다는 강한 추론 연결이 부족하다."
+    },
+    {
+      "id": "blk_004",
+      "severity": "blocker",
+      "issue": "중요 목격 진술 st_juri_saw_wet_corridor가 실제 질문 루트에서 unlock되지 않아 con_hoseon_bath_access 해결 경로가 끊긴다."
+    }
+  ],
+  "requiredRevisions": [
+    {
+      "id": "rev_001",
+      "severity": "blocker",
+      "target": "writer",
+      "issue": "con_hoseon_weapon_awareness가 임호선에게 직접 연결되지 않는다.",
+      "requiredChange": "임호선이 사건 전 피해자의 바구니, 권총, 소음기, 또는 수상한 소지품을 인지했다는 공개 단서를 추가하라. 예: 피해자 바구니 근처에서 임호선 유카타 실밥 발견, 임호선 손의 총기 기름 냄새, 임호선이 조사 전 '소음기'를 말실수로 언급하는 단계 진술, 탈의실에서 피해자와 임호선의 짧은 대치를 암시하는 목격 진술.",
+      "acceptanceCheck": "플레이어가 비밀 진상 없이도 '임호선은 피해자가 무장한 위험 인물임을 사건 전 알았다'를 공개 증거와 진술 조합으로 설명할 수 있어야 한다."
+    },
+    {
+      "id": "rev_002",
+      "severity": "blocker",
+      "target": "writer",
+      "issue": "con_hoseon_bath_access가 온천 환경의 흔한 젖은 흔적에 의존해 임호선 특정이 약하다.",
+      "requiredChange": "젖은 유카타 실밥을 임호선의 유카타와 물리적으로 매칭하라. 예: 임호선 유카타 소매의 찢긴 부분, 대여 유카타 번호표, 남탕 문틀 실밥과 동일한 색상/무늬, 로비 전화기 근처에는 물기가 없었다는 기록을 추가하라.",
+      "acceptanceCheck": "남탕 입구 흔적이 '누군가'가 아니라 '임호선'의 로비 주장을 깨는 증거로 기능해야 한다."
+    },
+    {
+      "id": "rev_003",
+      "severity": "high",
+      "target": "writer",
+      "issue": "권주리 표적 흐름과 피해자 이정명의 연결이 약해 임호선의 오인 동기가 추측처럼 보인다.",
+      "requiredChange": "피해자 소지품에 권주리 공연장 성냥, 권주리 사진, 제주행 일정 메모, 또는 조직 보스 지시와 피해자를 연결하는 호출 기록 등 공개 단서를 추가하라. 단, 피해자가 권주리를 죽이러 왔다는 사실을 직접 확정하지 말고 강한 추론 단서로 유지하라.",
+      "acceptanceCheck": "플레이어가 '피해자는 경대수가 아니라 권주리 쪽 사건과 연결된 외부 해결사일 가능성이 높다'를 공개 단서로 추론할 수 있어야 한다."
+    },
+    {
+      "id": "rev_004",
+      "severity": "high",
+      "target": "writer",
+      "issue": "st_juri_saw_wet_corridor가 고아 진술이라 핵심 루트가 런타임에서 끊긴다.",
+      "requiredChange": "q_alibi_juri가 st_juri_womens_bath_claim과 st_juri_saw_wet_corridor를 함께 unlock하도록 구조를 바꾸거나, 별도 질문 q_wet_corridor_juri를 추가하고 path_wet_yukata 및 con_hoseon_bath_access route에 반영하라.",
+      "acceptanceCheck": "12문 제한 내에서 권주리의 젖은 복도 목격 진술을 정상적으로 획득할 수 있어야 한다."
+    },
+    {
+      "id": "rev_005",
+      "severity": "high",
+      "target": "writer",
+      "issue": "q_stone_hoseon, q_debt_hoseon, q_cancel_hoseon이 기존 진술을 반복 unlock해 압박 단계의 보상이 약하다.",
+      "requiredChange": "임호선 압박 질문별 단계 진술을 분리하라. 예: st_hoseon_stone_evasion, st_hoseon_debt_partial_admission, st_hoseon_cancel_slip을 추가해 말실수, 회피, 부분 인정으로 contradiction 해결 값을 제공하라.",
+      "acceptanceCheck": "각 임호선 압박 질문은 새 정보나 새 모순 값을 제공해야 하며, 직접 자백 없이도 방어선이 단계적으로 무너져야 한다."
+    },
+    {
+      "id": "rev_006",
+      "severity": "medium",
+      "target": "writer",
+      "issue": "12문 제한에서 필수 루트가 너무 빡빡하고 중복 unlock 때문에 공정성이 떨어질 수 있다.",
+      "requiredChange": "필수 해결 루트를 9~10문 안에 닫히도록 압축하라. 알리바이 질문이 관련 관찰 진술을 함께 열게 하고, 일부 증거 기반 모순은 질문 없이 공개 증거 조합으로 해결되게 하라.",
+      "acceptanceCheck": "권장 루트 기준으로 모든 핵심 모순과 최종 고발 조건을 10문 이하에서 충족하고, 2문 정도의 실수 여지를 남겨야 한다."
+    },
+    {
+      "id": "rev_007",
+      "severity": "medium",
+      "target": "writer",
+      "issue": "손준식의 조직 동기와 둔기 방법 배제 루트가 최종 구조에 약하게 연결되어 있다.",
+      "requiredChange": "con_junsik_organization_not_method를 cluePaths 또는 final accusation 보조 조건에 연결하고, 손준식은 조직 범죄 축에는 관련되지만 남탕 둔기 살해 직접 행위자는 아니라는 배제 루트를 명확히 하라.",
+      "acceptanceCheck": "플레이어가 손준식을 조직 관련 인물로 의심하더라도 방법, 장소, 직접 증거 비교로 공정하게 배제할 수 있어야 한다."
+    },
+    {
+      "id": "rev_008",
+      "severity": "low",
+      "target": "writer",
+      "issue": "피해자를 '신원 불명'이라고 하면서 숙박부에는 이정명 투숙 기록이 공개되어 표현상 혼란이 있다.",
+      "requiredChange": "공개 premise를 '이정명이라는 이름으로 체크인했지만 실제 신원은 불명인 남성'으로 통일하라.",
+      "acceptanceCheck": "victimName, guest register, publicPremise가 서로 충돌하지 않아야 한다."
+    }
+  ],
+  "acceptedStrengths": [
+    "폭설로 고립된 온천 여관, 남탕 노천탕, 미사용 소음기 권총, 피 묻은 조경석의 도입은 강한 후킹을 만든다.",
+    "다섯 용의자가 각각 불륜, 청부, 잠입 수사, 조직 위협, 마약 거래라는 별도 비밀을 가져 레드헤링의 밀도가 좋다.",
+    "우수연의 칼과 둔기 사인의 대비는 공정한 방법상 배제 퍼즐로 기능한다.",
+    "임호선의 협조적 진행자에서 부분 자백형 방어로 무너지는 방어 arc는 캐릭터적으로 설득력이 있다.",
+    "조직 범죄 흐름과 경대수 살해 의뢰 흐름을 분리해 오인 살인을 밝히는 목표는 재미있는 구조다."
+  ],
+  "assetGate": {
+    "allowed": false,
+    "reason": "사건 구조가 아직 승인되지 않았다. 핵심 공개 단서와 런타임 unlock 경로가 수정된 뒤에야 캐릭터/배경/증거 이미지 제작으로 넘어갈 수 있다."
+  }
+}

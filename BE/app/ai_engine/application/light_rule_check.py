@@ -173,13 +173,22 @@ class LightRuleCheck:
         if agent_input.draft.degraded or (checked.blocked and not checked.repaired):
             return checked
 
+        if (
+            agent_input.dialogueDirectorPlan
+            and agent_input.dialogueDirectorPlan.strategy in {"defensive_pressure", "deflect_unmatched"}
+        ):
+            return checked
+
         # ── Phase 2: 품질 평가 ───────────────────────────────────────────────
         # seed_text를 재구성하기 위해 voice metadata 활용
         voice = getattr(agent_input.draft, "voice", {}) or {}
         speech_style = voice.get("speechStyle") or {}
         tic = str(speech_style.get("tic") or speech_style.get("prefix") or "").strip()
-        # seed는 허용 진술 텍스트로 근사 (정확한 seed는 CharacterAgent만 가짐)
-        seed_approx = agent_input.allowedStatement.text.strip()
+        seed_approx = (
+            agent_input.dialogueDirectorPlan.seedText.strip()
+            if agent_input.dialogueDirectorPlan and agent_input.dialogueDirectorPlan.seedText
+            else agent_input.allowedStatement.text.strip()
+        )
         if tic and not seed_approx.startswith(tic):
             seed_approx = f"{tic} {seed_approx}".strip()
 

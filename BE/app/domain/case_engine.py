@@ -75,7 +75,7 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
                 "pressureState": pressure_state(session.pressureBySuspect.get(item.characterId, 0)),
                 "tensionLevel": tension_level(session.pressureBySuspect.get(item.characterId, 0)),
                 "emotionalState": emotional_state(session.pressureBySuspect.get(item.characterId, 0)),
-                "speechStyle": item.speechStyle or public_speech_style(item.characterId),
+                "speechStyle": public_speech_style(item.characterId) | (item.speechStyle or {}),
                 "publicTimeline": character_public_timeline(case, session, item.characterId),
             }
             for item in case.suspects

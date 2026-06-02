@@ -19,12 +19,6 @@ class DialogueRequest(BaseModel):
     questionId: Optional[str] = None
 
 
-class ContradictionRequest(BaseModel):
-    suspectId: Optional[str] = None
-    statementIds: List[str] = Field(default_factory=list)
-    evidenceIds: List[str] = Field(default_factory=list)
-
-
 class AccusationRequest(BaseModel):
     suspectId: str
     motive: Optional[str] = None

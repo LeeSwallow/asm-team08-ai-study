@@ -4,43 +4,46 @@ from types import SimpleNamespace
 
 from app.ai_engine.application.knowledge_retriever import KnowledgeRetriever
 from app.ai_engine.domain.proposed_events import propose_dialogue_events
+from app.ai_engine.schemas.dialogue import DialogueRequest
 
 
-class FakeGraph:
+class FakeKnowledgeGraphRepository:
     available = True
 
-    def run(self, query: str, **_: object) -> list[dict]:
-        if "MADE_STATEMENT" in query:
-            return [
-                {
-                    "statementId": "st_alibi",
-                    "statementText": "저는 22:00에 제 방에 있었어요.",
-                    "timeWindow": "22:00",
-                    "location": "방",
-                    "contradictions": [
-                        {
-                            "contradictionId": "con_alibi_vs_entry",
-                            "title": "알리바이와 출입 기록 충돌",
-                            "severity": "high",
-                        }
-                    ],
-                    "evidenceConflicts": [{"evidenceId": "ev_entry", "name": "출입 기록"}],
-                }
-            ]
-        if "MATCH (t:TimelineEvent" in query:
-            return [
-                {
-                    "timelineId": "tl_2200",
-                    "time": "22:00",
-                    "title": "공개된 22시 행적",
-                    "description": "공개 타임라인 항목",
-                }
-            ]
+    def find_alibi_conflicts(self, **_: object) -> list[dict]:
+        return [
+            {
+                "statementId": "st_alibi",
+                "statementText": "저는 22:00에 제 방에 있었어요.",
+                "timeWindow": "22:00",
+                "location": "방",
+                "contradictions": [
+                    {
+                        "contradictionId": "con_alibi_vs_entry",
+                        "title": "알리바이와 출입 기록 충돌",
+                        "severity": "high",
+                    }
+                ],
+                "evidenceConflicts": [{"evidenceId": "ev_entry", "name": "출입 기록"}],
+            }
+        ]
+
+    def find_evidence_context(self, **_: object) -> list[dict]:
         return []
+
+    def find_timeline_events(self, **_: object) -> list[dict]:
+        return [
+            {
+                "timelineId": "tl_2200",
+                "time": "22:00",
+                "title": "공개된 22시 행적",
+                "description": "공개 타임라인 항목",
+            }
+        ]
 
 
 def test_retriever_splits_character_and_game_master_context() -> None:
-    context = KnowledgeRetriever(FakeGraph()).retrieve_dialogue_context(
+    context = KnowledgeRetriever(FakeKnowledgeGraphRepository()).retrieve_dialogue_context(
         case_id="case_001",
         suspect_id="char_hanseoyeon",
         question_text="22시에 어디 있었나요?",

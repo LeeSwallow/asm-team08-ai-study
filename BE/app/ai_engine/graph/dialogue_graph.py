@@ -4,14 +4,15 @@ import logging
 from typing import Any
 
 from app.ai_engine.application.character_agent import CharacterAgent, build_character_agent_input, render_dialogue_seed
+from app.ai_engine.application.dialogue_director_agent import DialogueDirectorAgent
 from app.ai_engine.application.dialogue_tone_polisher import DialogueTonePolisher
 from app.ai_engine.application.game_master_agent import GameMasterAgent
-from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext, get_knowledge_retriever
+from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext
 from app.ai_engine.application.light_rule_check import LightRuleCheck
 from app.ai_engine.core.guard import extract_case_context_terms, normalize_text
 from app.ai_engine.core.observability import AiLogContext, emit_ai_node_log, now_ms
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent
-from app.ai_engine.schemas.agents import GameMasterAgentInput, LightRuleCheckInput
+from app.ai_engine.schemas.agents import DialogueDirectorInput, GameMasterAgentInput, LightRuleCheckInput
 from app.ai_engine.schemas.common import Safety
 from app.ai_engine.schemas.dialogue import DialogueRequest, DialogueResponse
 
@@ -135,7 +136,8 @@ def retrieve_context(state: dict[str, Any]) -> dict[str, Any]:
     unlocked_statement_ids = list(getattr(pack, "unlockedStatementIds", []) or []) if pack else []
     unlocked_evidence_ids = list(getattr(pack, "unlockedEvidenceIds", []) or []) if pack else []
     discovered_contradiction_ids = list(getattr(pack, "discoveredContradictionIds", []) or []) if pack else []
-    retrieved = get_knowledge_retriever().retrieve_dialogue_context(
+    knowledge_retriever = state["knowledge_retriever"]
+    retrieved = knowledge_retriever.retrieve_dialogue_context(
         case_id=payload.caseId,
         suspect_id=payload.suspect.id,
         question_text=payload.question.text,
@@ -157,11 +159,31 @@ def retrieve_context(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def direct_dialogue(state: dict[str, Any]) -> dict[str, Any]:
+    started_at = now_ms()
+    payload: DialogueRequest = state["payload"]
+    plan = DialogueDirectorAgent().run(
+        DialogueDirectorInput(
+            payload=payload,
+            retrieved_context=state.get("character_context"),
+        )
+    )
+    emit_ai_node_log(
+        _context(payload),
+        node="DialogueDirectorAgent",
+        started_at=started_at,
+        repaired=bool(plan.seedText),
+        blocked_reason=plan.reason,
+    )
+    return {"dialogue_director_plan": plan}
+
+
 def generate_response(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
     retrieved: CharacterRetrievedContext | None = state.get("character_context")
-    agent_input = build_character_agent_input(payload)
+    director_plan = state.get("dialogue_director_plan")
+    agent_input = build_character_agent_input(payload, director_plan)
     result = CharacterAgent().run(agent_input, retrieved_context=retrieved)
     emit_ai_node_log(
         _context(payload),
@@ -206,6 +228,7 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
         intent=intent,
         suspectName=payload.suspect.name,
         retrieved_context=state.get("character_context"),
+        dialogueDirectorPlan=state.get("dialogue_director_plan"),
     )
     checked = LightRuleCheck().run(check_input)
     safety = checked.safetyFindings
@@ -216,7 +239,11 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
         and not bool(state.get("fallback_used", False))
     ):
         repair_input = check_input.model_copy(
-            update={"draft": state["draft_reply"].model_copy(update={"draftText": render_dialogue_seed(payload)})}
+            update={
+                "draft": state["draft_reply"].model_copy(
+                    update={"draftText": render_dialogue_seed(payload, state.get("dialogue_director_plan"))}
+                )
+            }
         )
         repaired_checked = LightRuleCheck().run(repair_input)
         repaired_safety = repaired_checked.safetyFindings
@@ -277,6 +304,22 @@ def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
     draft_reply = state["draft_reply"]
+    director_plan = state.get("dialogue_director_plan")
+    if director_plan and director_plan.strategy in {"defensive_pressure", "deflect_unmatched"}:
+        emit_ai_node_log(
+            _context(payload),
+            node="DialogueTonePolisher",
+            started_at=started_at,
+            provider=state.get("provider"),
+            model=state.get("model"),
+            fallback_used=bool(state.get("fallback_used", False)),
+            repaired=False,
+        )
+        return {
+            "draft_reply": draft_reply,
+            "text": draft_reply.draftText,
+            "tone_polished": False,
+        }
     polished = DialogueTonePolisher().run(payload, draft_reply)
     tone_polished = polished.draftText != draft_reply.draftText
     emit_ai_node_log(
@@ -387,6 +430,9 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
             },
             "graphRunner": state.get("graph_runner"),
             "graphFallbackReason": state.get("graph_fallback_reason"),
+            "dialogueDirector": state.get("dialogue_director_plan").model_dump()
+            if state.get("dialogue_director_plan")
+            else None,
         },
         safety=Safety(
             leaksSolution=bool(safety.get("leaksSolution", False)),
@@ -417,13 +463,14 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
     return {"result": response}
 
 
-def run_dialogue_graph(payload: DialogueRequest) -> DialogueResponse:
+def run_dialogue_graph(payload: DialogueRequest, knowledge_retriever: Any) -> DialogueResponse:
     state = run_langgraph_or_pipeline(
-        {"payload": payload},
+        {"payload": payload, "knowledge_retriever": knowledge_retriever},
         [
             ("load_context", load_context),
             ("validate_scope", validate_scope),
             ("KnowledgeRetriever", retrieve_context),
+            ("DialogueDirectorAgent", direct_dialogue),
             ("CharacterAgent", generate_response),
             ("DialogueTonePolisher", polish_tone),
             ("LightRuleCheck", guard_response),

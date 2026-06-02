@@ -29,3 +29,12 @@ def get_session_factory():
     if engine is None:
         return None
     return sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+@lru_cache
+def ensure_schema() -> bool:
+    engine = get_engine()
+    if engine is None:
+        return False
+    Base.metadata.create_all(engine)
+    return True

@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.application.case_knowledge_service import CaseKnowledgeService
+from app.application.ports import AIClientPort, CaseRepositoryPort, EventRepositoryPort, SessionRepositoryPort
 from app.core.errors import bad_request, not_found, service_unavailable
 from app.core.leak_guard import assert_no_forbidden_refs
 from app.core.observability import RequestContext
@@ -22,14 +23,10 @@ from app.domain.case_engine import (
 from app.domain.event_processor import EventProcessor, build_visual_state
 from app.domain.event_types import EventType
 from app.domain.interrogation_state import build_interrogation_snapshot, transition_interrogation_state
-from app.domain.models import Case, DialogueEntry, SessionState
+from app.domain.models import Case, DialogueEntry, EventEntry, SessionState
 from app.domain.rule_engine import RuleEngine
 from app.domain.text_matcher import evidence_is_mentioned
 from app.domain.turn_interpreter import interpret_turn
-from app.infra.local_ai_client import LocalAIClient as AIClient
-from app.infra.case_repository import CaseRepository
-from app.infra.event_repository import EventRepository
-from app.infra.session_repository import SessionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +42,11 @@ class DialogueMatch:
 
 @dataclass
 class DialogueService:
-    case_repo: CaseRepository
-    session_repo: SessionRepository
-    event_repo: EventRepository
+    case_repo: CaseRepositoryPort
+    session_repo: SessionRepositoryPort
+    event_repo: EventRepositoryPort
     rule_engine: RuleEngine
-    ai_client: AIClient
+    ai_client: AIClientPort
     knowledge_service: CaseKnowledgeService = field(default_factory=CaseKnowledgeService)
 
     async def submit(
@@ -97,6 +94,18 @@ class DialogueService:
             dialogue_mode=match.dialogue_mode,
         )
         self._merge_turn_interpretation(allowed_event_policy, turn_interpretation.model_dump())
+        contradiction_result = self._judge_turn_contradiction(
+            session=session,
+            case=case,
+            suspect_id=suspect.characterId,
+            message=message,
+            dialogue_mode=match.dialogue_mode,
+            allowed_event_policy=allowed_event_policy,
+            turn_interpretation=turn_interpretation.model_dump(),
+        )
+        question_unlocked_ids = list(question_result["newlyUnlockedIds"])
+        contradiction_unlocked_ids = list((contradiction_result or {}).get("unlockedIds") or [])
+        combined_unlocked_ids = self._dedupe([*question_unlocked_ids, *contradiction_unlocked_ids])
         interrogation_transition = transition_interrogation_state(
             case=case,
             session=session,
@@ -107,6 +116,7 @@ class DialogueService:
             allowed_statement=allowed_statement,
             allowed_event_policy=allowed_event_policy,
         )
+        self._merge_contradiction_result_into_transition(contradiction_result, interrogation_transition)
         self._augment_allowed_statement_for_transition(case, allowed_statement, interrogation_transition.model_dump())
         decisive_pressure_hit = interrogation_transition.decisive_evidence
         interrogation_snapshot = build_interrogation_snapshot(session, suspect.characterId, case)
@@ -127,7 +137,7 @@ class DialogueService:
                 "name": suspect.name,
                 "role": suspect.role,
                 "publicProfile": suspect.publicProfile,
-                "speechStyle": suspect.speechStyle or public_speech_style(suspect.characterId),
+                "speechStyle": public_speech_style(suspect.characterId) | (suspect.speechStyle or {}),
                 "publicTimeline": character_public_timeline(case, session, suspect.characterId),
                 "pressure": session.pressureBySuspect.get(suspect.characterId, 0),
                 "pressureState": interrogation_snapshot["pressureState"],
@@ -176,12 +186,15 @@ class DialogueService:
         answer = self._polish_answer(ai_result["answer"], suspect.name)
         question_id_for_log = match.question.questionId if match.question is not None else None
         npc_entry = self._append_dialogue_entries(session, suspect.characterId, question_id_for_log, suspect.name, message, answer)
-        session.newlyUnlockedIds = question_result["newlyUnlockedIds"]
+        session.newlyUnlockedIds = combined_unlocked_ids
 
         processor = EventProcessor(start_index=self.event_repo.next_index(session.sessionId))
         ai_proposed_events = list(ai_result["proposedEvents"])
         be_proposed_events = self._contradiction_candidate_events(case, session, message, suspect.characterId, match.dialogue_mode)
-        state_proposed_events = self._contradiction_note_events_from_transition(interrogation_transition.model_dump())
+        state_proposed_events = [
+            *self._contradiction_note_events_from_result(contradiction_result),
+            *self._contradiction_note_events_from_transition(interrogation_transition.model_dump()),
+        ]
         proposed_events = [
             *ai_proposed_events,
             *state_proposed_events,
@@ -197,6 +210,15 @@ class DialogueService:
             allow_implicit_note=False,
             allowed_event_types=set(allowed_event_policy["allowedTypes"]),
             allowed_event_policy=allowed_event_policy,
+        )
+        applied_events.extend(
+            self._deterministic_contradiction_events(
+                session=session,
+                case=case,
+                suspect_id=suspect.characterId,
+                contradiction_result=contradiction_result,
+                start_index=self.event_repo.next_index(session.sessionId) + len(applied_events),
+            )
         )
         self._assert_public_surface([event.model_dump(mode="json") for event in applied_events], "applied_events")
         self.event_repo.append_many(applied_events)
@@ -214,6 +236,7 @@ class DialogueService:
             ai_result["fallbackUsed"],
             match.dialogue_mode,
         )
+        ai_runtime_diagnostics = ai_result.get("runtimeDiagnostics") or {}
         return {
             "answer": answer,
             "dialogueResult": {
@@ -243,6 +266,8 @@ class DialogueService:
                 "decisiveEvidencePressure": decisive_pressure_hit,
                 "turnInterpretation": turn_interpretation.model_dump(),
                 "interrogationTransition": interrogation_transition.model_dump(),
+                "contradictionResult": contradiction_result,
+                "aiRuntimeDiagnostics": ai_runtime_diagnostics,
                 "proposedEventsCount": len(ai_proposed_events),
                 "beProposedEventsCount": len(be_proposed_events),
                 "stateProposedEventsCount": len(state_proposed_events),
@@ -278,7 +303,10 @@ class DialogueService:
                 "appliedEventsCount": len(applied_events),
                 "reason": self._diagnostic_reason(match, allowed_event_policy),
                 "turnInterpretation": turn_interpretation.model_dump(),
+                "contradictionResult": contradiction_result,
+                "aiRuntimeDiagnostics": ai_runtime_diagnostics,
             },
+            "contradictionResult": contradiction_result,
             "proposedEventsCount": len(ai_proposed_events),
             "beProposedEventsCount": len(be_proposed_events),
             "stateProposedEventsCount": len(state_proposed_events),
@@ -320,6 +348,102 @@ class DialogueService:
             "model": safety.get("model"),
         }
 
+    def _judge_turn_contradiction(
+        self,
+        *,
+        session: SessionState,
+        case: Case,
+        suspect_id: str,
+        message: str,
+        dialogue_mode: str,
+        allowed_event_policy: dict[str, Any],
+        turn_interpretation: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        if dialogue_mode in {"small_talk", "unmatched"}:
+            return None
+        related_contradiction_ids = list(allowed_event_policy.get("relatedContradictionIds") or [])
+        if not related_contradiction_ids:
+            return None
+        statement_ids = list(allowed_event_policy.get("relatedStatementIds") or [])
+        evidence_ids = list(allowed_event_policy.get("relatedEvidenceIds") or [])
+        contradiction_terms = ("모순", "안 맞", "안맞", "거짓", "이상", "충돌", "입증", "증명")
+        normalized = self._normalize_text(message)
+        explicit_challenge = any(term in normalized for term in contradiction_terms)
+        if not evidence_ids and not explicit_challenge:
+            return None
+        result = self.rule_engine.judge_contradiction(
+            session,
+            case,
+            statement_ids=statement_ids,
+            evidence_ids=evidence_ids,
+            suspect_id=suspect_id,
+        )
+        result["source"] = "dialogue"
+        result["suspectId"] = suspect_id
+        result["mentionedEvidenceIds"] = list(turn_interpretation.get("mentionedEvidenceIds") or [])
+        result["mentionedStatementIds"] = list(turn_interpretation.get("mentionedStatementIds") or [])
+        return result
+
+    def _contradiction_note_events_from_result(self, result: dict[str, Any] | None) -> list[dict]:
+        if not result or result.get("verdict") != "correct" or result.get("newlyDiscovered") is not True:
+            return []
+        contradiction_id = result.get("contradictionId")
+        if not contradiction_id:
+            return []
+        return [
+            {
+                "type": EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value,
+                "payload": {
+                    "contradictionId": contradiction_id,
+                    "statementIds": list(result.get("statementIds") or []),
+                    "evidenceIds": list(result.get("evidenceIds") or []),
+                },
+            }
+        ]
+
+    def _merge_contradiction_result_into_transition(self, result: dict[str, Any] | None, transition) -> None:
+        if not result or result.get("verdict") != "correct" or not result.get("contradictionId"):
+            return
+        contradiction_id = str(result["contradictionId"])
+        if contradiction_id not in transition.contradiction_ids:
+            transition.contradiction_ids.append(contradiction_id)
+        if result.get("newlyDiscovered") is True and contradiction_id not in transition.newly_discovered_contradiction_ids:
+            transition.newly_discovered_contradiction_ids.append(contradiction_id)
+        transition.decisive_evidence = True
+        transition.reason = "dialogue_rule_engine_validated"
+
+    def _deterministic_contradiction_events(
+        self,
+        *,
+        session: SessionState,
+        case: Case,
+        suspect_id: str,
+        contradiction_result: dict[str, Any] | None,
+        start_index: int,
+    ) -> list[EventEntry]:
+        if not contradiction_result:
+            return []
+        if contradiction_result.get("verdict") != "correct" or contradiction_result.get("newlyDiscovered") is not True:
+            return []
+        pressure = session.pressureBySuspect.get(suspect_id, 0)
+        return [
+            EventEntry(
+                id=f"evt_{start_index:06d}",
+                sessionId=session.sessionId,
+                caseId=case.caseId,
+                type=EventType.TENSION_CHANGED.value,
+                payload={
+                    "suspectId": suspect_id,
+                    "pressure": pressure,
+                    "pressureState": pressure_state(pressure),
+                    "tensionLevel": tension_level(pressure),
+                    "tensionScore": pressure,
+                    "source": "dialogue_rule_engine",
+                    "contradictionId": contradiction_result.get("contradictionId"),
+                },
+            )
+        ]
+
     def _classify_dialogue(
         self,
         case: Case,
@@ -357,6 +481,14 @@ class DialogueService:
         if exact:
             return DialogueMatch(dialogue_mode="case_question", question=exact, consumed_question=True)
 
+        evidence_context = self._visible_evidence_context(case, session, normalized_message)
+        if evidence_context is not None and self._looks_like_contradiction_challenge(normalized_message):
+            return DialogueMatch(
+                dialogue_mode="evidence_question",
+                allowed_statement=evidence_context,
+                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message),
+            )
+
         broad_alibi = self._broad_time_alibi_question(candidates, normalized_message)
         if broad_alibi is not None:
             return DialogueMatch(dialogue_mode="timeline_question", question=broad_alibi, consumed_question=True)
@@ -370,11 +502,15 @@ class DialogueService:
             mode = "evidence_question" if self._looks_like_evidence_question(case, session, normalized_message) else "case_question"
             return DialogueMatch(dialogue_mode=mode, question=scored[0][1], consumed_question=True)
 
-        evidence_context = self._visible_evidence_context(case, session, normalized_message)
         if evidence_context is not None:
             return DialogueMatch(
                 dialogue_mode="evidence_question",
                 allowed_statement=evidence_context,
+                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message),
+            )
+        if self._looks_like_evidence_question(case, session, normalized_message):
+            return DialogueMatch(
+                dialogue_mode="evidence_question",
                 fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message),
             )
 
@@ -511,6 +647,10 @@ class DialogueService:
             score += 4
         if question_compact and question_compact in compact:
             score += 4
+        if any(term in compact for term in ("약", "복용", "처방", "수면제")) and any(
+            term in question_compact for term in ("약", "복용", "처방", "수면제")
+        ):
+            score += 3
 
         search_texts = [question.text]
         search_texts.extend(
@@ -533,6 +673,11 @@ class DialogueService:
             for record in case.records
             if record.recordId in question.unlocksRecordIds
         )
+        if any(term in compact for term in ("립스틱", "와인잔", "와인")) and any(
+            term in self._normalize_text(" ".join(search_texts)).replace(" ", "")
+            for term in ("립스틱", "와인잔", "와인")
+        ):
+            score += 3
         overlap = max(
             (self._overlap_score(normalized_message, self._normalize_text(text)) for text in search_texts if text),
             default=0,
@@ -608,7 +753,11 @@ class DialogueService:
         if self._visible_evidence_context(case, session, normalized_message) is not None:
             return True
         compact = normalized_message.replace(" ", "")
-        return any(term in compact for term in ("증거", "단서", "기록", "흔적"))
+        return any(term in compact for term in ("증거", "단서", "기록", "흔적", "복용", "약", "립스틱", "와인잔", "와인"))
+
+    def _looks_like_contradiction_challenge(self, normalized_message: str) -> bool:
+        compact = normalized_message.replace(" ", "")
+        return any(term in compact for term in ("모순", "충돌", "안맞", "말이안", "거짓", "입증", "증명"))
 
     def _visible_evidence_context(self, case: Case, session: SessionState, normalized_message: str) -> dict[str, Any] | None:
         visible_items = []
@@ -910,7 +1059,7 @@ class DialogueService:
             if not set(contradiction.requiredEvidenceIds).issubset(set(session.unlockedEvidenceIds)):
                 continue
             evidence_mentioned = any(
-                evidence_is_mentioned(normalized, evidence)
+                self._source_mentioned(normalized, evidence.name)
                 for evidence in case.evidence
                 if evidence.evidenceId in contradiction.requiredEvidenceIds
             )

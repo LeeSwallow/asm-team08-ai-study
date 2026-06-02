@@ -4,7 +4,7 @@ from app.ai_engine.core.guard import contains_secret
 from app.ai_engine.core.llm import ChainedLLM, deterministic_clip, get_llm, llm_status
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent, normalize_dialogue_text
 from app.ai_engine.prompts.dialogue import DIALOGUE_SYSTEM_PROMPT
-from app.ai_engine.schemas.agents import CharacterAgentInput, DraftCharacterReply
+from app.ai_engine.schemas.agents import CharacterAgentInput, DialogueDirectorPlan, DraftCharacterReply
 from app.ai_engine.schemas.common import PersonaOverlay, PersonaVariant
 from app.ai_engine.schemas.dialogue import DialogueRequest
 
@@ -189,7 +189,27 @@ def _knowledge_prompt_context(payload: DialogueRequest, retrieved_context: objec
     )
 
 
-def _interrogation_prompt_context(payload: DialogueRequest) -> str:
+def _director_prompt_context(plan: DialogueDirectorPlan | None) -> str:
+    if plan is None:
+        return ""
+    parts = [
+        f"strategy={plan.strategy}",
+        f"admission={plan.allowedAdmissionLevel}",
+    ]
+    if plan.focusTerms:
+        parts.append("focusTerms=" + ", ".join(plan.focusTerms[:3]))
+    if plan.styleDirectives:
+        parts.append("directives=" + " / ".join(plan.styleDirectives[:3]))
+    if plan.forbiddenClaims:
+        parts.append("forbidden=" + " / ".join(plan.forbiddenClaims[:3]))
+    return (
+        "\n\nDialogue director plan for this turn: "
+        + " / ".join(str(part) for part in parts if part)
+        + "\nFollow the director seed and constraints before style embellishment."
+    )
+
+
+def _interrogation_prompt_context(payload: DialogueRequest, plan: DialogueDirectorPlan | None = None) -> str:
     transition = payload.interrogationTransition or {}
     snapshot = payload.interrogationState or {}
     turn = payload.turnInterpretation or {}
@@ -213,11 +233,11 @@ def _interrogation_prompt_context(payload: DialogueRequest) -> str:
     if transition.get("decisiveEvidence"):
         context += (
             "\nThe player has just connected a visible evidence item to the suspect's earlier statement. "
-            "Let the suspect react as a pressured person first, then answer from the public facts."
+            "Let the suspect react as a pressured person first, acknowledge only the conflict, and do not confess."
         )
     elif transition.get("move") == "repeat_pressure":
         context += "\nThe player is challenging the previous answer. Keep continuity and do not repeat the exact same sentence."
-    return context
+    return context + _director_prompt_context(plan)
 
 
 def _variant_matches(
@@ -277,7 +297,10 @@ def select_persona_overlay(payload: DialogueRequest) -> PersonaOverlay | None:
     return None
 
 
-def build_character_agent_input(payload: DialogueRequest) -> CharacterAgentInput:
+def build_character_agent_input(
+    payload: DialogueRequest,
+    dialogue_director_plan: DialogueDirectorPlan | None = None,
+) -> CharacterAgentInput:
     pack = payload.characterKnowledgePack
     intent = classify_dialogue_intent(payload.question.text, payload.dialogueMode)
     return CharacterAgentInput(
@@ -300,11 +323,14 @@ def build_character_agent_input(payload: DialogueRequest) -> CharacterAgentInput
         tensionScore=payload.suspect.tensionScore if payload.suspect.tensionScore is not None else payload.suspect.pressure,
         interrogationState=payload.interrogationState,
         interrogationTransition=payload.interrogationTransition,
+        dialogueDirectorPlan=dialogue_director_plan,
         recentDialogue=pack.recentDialogue if pack else [],
     )
 
 
-def render_dialogue_seed(payload: DialogueRequest) -> str:
+def render_dialogue_seed(payload: DialogueRequest, dialogue_director_plan: DialogueDirectorPlan | None = None) -> str:
+    if dialogue_director_plan and dialogue_director_plan.seedText:
+        return dialogue_director_plan.seedText
     base = payload.allowedStatement.text.strip()
     name = payload.suspect.name.strip()
     intent = classify_dialogue_intent(payload.question.text, payload.dialogueMode)
@@ -322,7 +348,7 @@ class CharacterAgent:
         retrieved_context: object | None = None,
     ) -> DraftCharacterReply:
         payload = agent_input.payload
-        seed = render_dialogue_seed(payload)
+        seed = render_dialogue_seed(payload, agent_input.dialogueDirectorPlan)
         status = llm_status()
         provider = str(status["provider"])
         model = str(status["model"])
@@ -409,8 +435,22 @@ class CharacterAgent:
                 error_type="provider_unavailable",
             )
 
+        if agent_input.dialogueDirectorPlan and agent_input.dialogueDirectorPlan.seedText:
+            strategy = agent_input.dialogueDirectorPlan.strategy
+            if strategy in {"defensive_pressure", "deflect_unmatched"}:
+                return draft(
+                    deterministic_clip(seed, max_length=payload.style.maxLength),
+                    fallback_used=False,
+                    degraded=False,
+                    provider_name="dialogue-director",
+                )
+
         try:
-            prompt = DIALOGUE_SYSTEM_PROMPT + _interrogation_prompt_context(payload) + _knowledge_prompt_context(payload, retrieved_context)
+            prompt = (
+                DIALOGUE_SYSTEM_PROMPT
+                + _interrogation_prompt_context(payload, agent_input.dialogueDirectorPlan)
+                + _knowledge_prompt_context(payload, retrieved_context)
+            )
             llm = get_llm()
             text = llm.complete(prompt, seed_text=seed, max_length=payload.style.maxLength)
             # If ChainedLLM silently switched to fallback, report it honestly.

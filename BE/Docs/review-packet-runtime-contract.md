@@ -83,7 +83,6 @@ Docker refresh:
 - `docker compose up -d --no-deps --force-recreate frontend`
 
 Health:
-- `GET http://localhost:8001/health`: ok, provider `openai`
 - `GET http://localhost:8000/api/v1/ready`: ok with AI ok
 - `GET http://localhost:8080/api/v1/ready`: ok with AI ok
 
@@ -140,5 +139,5 @@ Security/regression tests:
 ## Remaining Risks
 
 - Commit-ready remains blocked until independent review accepts the runtime contract and FE consumes BE-backed state only.
-- Worktree contains broad BE/AI/FE dirty changes from the current milestone; split into atomic commits before merge.
+- Worktree contains broad BE/FE dirty changes from the current milestone; split into atomic commits before merge.
 - Pydantic datetime/BaseSettings deprecation warnings remain non-blocking cleanup.

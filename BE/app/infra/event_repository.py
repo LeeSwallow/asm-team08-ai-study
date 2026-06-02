@@ -1,31 +1,46 @@
-import json
-from pathlib import Path
-from typing import Iterable, List
+from __future__ import annotations
+
+from typing import Iterable
 
 from app.domain.models import EventEntry
+from app.infra.db import get_session_factory
+from app.infra.state_orm import EventRecord
 
 
 class EventRepository:
-    def __init__(self, events_dir: Path):
-        self.events_dir = events_dir
-        self.events_dir.mkdir(parents=True, exist_ok=True)
-
-    def append_many(self, events: Iterable[EventEntry]) -> List[EventEntry]:
+    def append_many(self, events: Iterable[EventEntry]) -> list[EventEntry]:
         stored = list(events)
         if not stored:
             return []
-        existing = self.list_for_session(stored[0].sessionId)
-        all_events = [*existing, *stored]
-        payload = [self._dump(event) for event in all_events]
-        self._path(stored[0].sessionId).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        session_factory = get_session_factory()
+        if session_factory is None:
+            raise RuntimeError("database session factory is not configured")
+        with session_factory() as db:
+            for event in stored:
+                db.merge(
+                    EventRecord(
+                        id=event.id,
+                        session_id=event.sessionId,
+                        case_id=event.caseId,
+                        type=event.type,
+                        payload=self._dump(event),
+                    )
+                )
+            db.commit()
         return stored
 
-    def list_for_session(self, session_id: str, after_event_id: str | None = None) -> List[EventEntry]:
-        path = self._path(session_id)
-        if not path.exists():
+    def list_for_session(self, session_id: str, after_event_id: str | None = None) -> list[EventEntry]:
+        session_factory = get_session_factory()
+        if session_factory is None:
             return []
-        raw = json.loads(path.read_text(encoding="utf-8"))
-        events = [self._validate(item) for item in raw]
+        with session_factory() as db:
+            records = (
+                db.query(EventRecord)
+                .filter(EventRecord.session_id == session_id)
+                .order_by(EventRecord.created_at, EventRecord.id)
+                .all()
+            )
+        events = [self._validate(record.payload) for record in records]
         if after_event_id:
             index = next((idx for idx, event in enumerate(events) if event.id == after_event_id), None)
             if index is not None:
@@ -43,9 +58,6 @@ class EventRepository:
 
     def next_id(self, session_id: str) -> str:
         return f"evt_{self.next_index(session_id):06d}"
-
-    def _path(self, session_id: str) -> Path:
-        return self.events_dir / f"{session_id}.json"
 
     def _validate(self, payload: dict) -> EventEntry:
         if hasattr(EventEntry, "model_validate"):

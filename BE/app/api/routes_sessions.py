@@ -8,7 +8,9 @@ from app.api.deps import (
     get_event_repository,
     get_session_commands,
 )
+from app.api.sse import session_event_stream
 from app.application.dialogue_service import DialogueService
+from app.application.ports import EventRepositoryPort
 from app.application.session_commands import SessionCommands
 from app.core.config import Settings, get_settings
 from app.core.errors import bad_request, forbidden, service_unavailable
@@ -20,13 +22,10 @@ from app.domain.event_types import EventType
 from app.domain.interrogation_state import pressure_state as _pressure_state
 from app.domain.interrogation_state import tension_level as _tension_level
 from app.domain.models import Case, EventEntry, SessionState
-from app.infra.event_repository import EventRepository
-from app.infra.sse_transport import session_event_stream
 from app.schemas.sessions import (
     AccusationRequest,
     AskQuestionRequest,
     BookmarkRequest,
-    ContradictionRequest,
     CreateSessionRequest,
     DebugPressureRequest,
     DebugUnlockRequest,
@@ -44,7 +43,7 @@ logger = logging.getLogger(__name__)
 def create_session(
     request: CreateSessionRequest,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     session, case = commands.create_session(request.caseId)
     return _session_payload(session, case, event_repo)
@@ -54,7 +53,7 @@ def create_session(
 def get_session(
     session_id: str,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     session, case = commands.load_session_and_case(session_id)
     return _session_payload(session, case, event_repo)
@@ -67,7 +66,7 @@ async def ask_question(
     raw_request: Request,
     commands: SessionCommands = Depends(get_session_commands),
     dialogue_service: DialogueService = Depends(get_dialogue_service),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     if request.questionText is not None:
         if not request.suspectId:
@@ -104,7 +103,7 @@ async def submit_dialogue(
     request: DialogueRequest,
     raw_request: Request,
     dialogue_service: DialogueService = Depends(get_dialogue_service),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     result = await dialogue_service.submit(
         session_id=session_id,
@@ -121,7 +120,7 @@ def stream_events(
     session_id: str,
     request: Request,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
     once: bool = Query(default=False),
 ):
@@ -152,7 +151,7 @@ def debug_set_pressure(
     request: DebugPressureRequest,
     raw_request: Request,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
     settings: Settings = Depends(get_settings),
 ):
     _require_debug_tools(settings)
@@ -172,7 +171,7 @@ def debug_unlock(
     request: DebugUnlockRequest,
     raw_request: Request,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
     settings: Settings = Depends(get_settings),
 ):
     _require_debug_tools(settings)
@@ -185,32 +184,13 @@ def debug_unlock(
     return _merge_session_payload(result, event_repo)
 
 
-@router.post("/{session_id}/contradictions")
-def raise_contradiction(
-    session_id: str,
-    request: ContradictionRequest,
-    raw_request: Request,
-    commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
-):
-    result = commands.judge_contradiction(
-        session_id=session_id,
-        suspect_id=request.suspectId,
-        statement_ids=request.statementIds,
-        evidence_ids=request.evidenceIds,
-        request_context=_request_context(raw_request),
-    )
-    _append_contradiction_events(result, event_repo)
-    return _merge_session_payload(result, event_repo)
-
-
 @router.post("/{session_id}/accusation")
 def accuse(
     session_id: str,
     request: AccusationRequest,
     raw_request: Request,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     result = commands.judge_accusation(
         session_id=session_id,
@@ -230,7 +210,7 @@ def accuse(
 def list_notes(
     session_id: str,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     session, case = commands.load_session_and_case(session_id)
     payload = _session_payload(session, case, event_repo)
@@ -248,7 +228,7 @@ def create_note(
     session_id: str,
     request: NoteRequest,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     result = commands.create_note(
         session_id=session_id,
@@ -268,7 +248,7 @@ def update_note(
     note_id: str,
     request: NoteUpdateRequest,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     result = commands.update_note(
         session_id=session_id,
@@ -288,7 +268,7 @@ def delete_note(
     session_id: str,
     note_id: str,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     result = commands.delete_note(session_id=session_id, note_id=note_id)
     _append_note_event(result, event_repo, EventType.NOTE_DELETED)
@@ -300,7 +280,7 @@ def create_bookmark(
     session_id: str,
     request: BookmarkRequest,
     commands: SessionCommands = Depends(get_session_commands),
-    event_repo: EventRepository = Depends(get_event_repository),
+    event_repo: EventRepositoryPort = Depends(get_event_repository),
 ):
     result = commands.create_bookmark(session_id, request.targetType, request.targetId, request.note)
     return _merge_session_payload(result, event_repo)
@@ -339,7 +319,7 @@ async def get_ending(
     return await commands.get_ending(session_id)
 
 
-def _session_payload(session: SessionState, case: Case, event_repo: EventRepository) -> dict:
+def _session_payload(session: SessionState, case: Case, event_repo: EventRepositoryPort) -> dict:
     payload = visible_session_payload(session, case)
     payload["lastEventId"] = event_repo.last_id(session.sessionId)
     payload["visualState"] = build_visual_state(session, case, session.selectedSuspectId)
@@ -347,7 +327,7 @@ def _session_payload(session: SessionState, case: Case, event_repo: EventReposit
     return payload
 
 
-def _merge_session_payload(result: dict, event_repo: EventRepository) -> dict:
+def _merge_session_payload(result: dict, event_repo: EventRepositoryPort) -> dict:
     session = result.pop("session")
     case = result.pop("case")
     payload = _session_payload(session, case, event_repo)
@@ -375,7 +355,7 @@ def _require_debug_tools(settings: Settings) -> None:
         )
 
 
-def _append_note_event(result: dict, event_repo: EventRepository, event_type: EventType) -> None:
+def _append_note_event(result: dict, event_repo: EventRepositoryPort, event_type: EventType) -> None:
     session = result["session"]
     case = result["case"]
     note = result.get("note")
@@ -390,7 +370,7 @@ def _append_note_event(result: dict, event_repo: EventRepository, event_type: Ev
     event_repo.append_many([event])
 
 
-def _append_debug_events(result: dict, event_repo: EventRepository, action: str, context: dict) -> None:
+def _append_debug_events(result: dict, event_repo: EventRepositoryPort, action: str, context: dict) -> None:
     session = result["session"]
     case = result["case"]
     debug_result = result.get("debugResult", {})
@@ -454,82 +434,15 @@ def _append_debug_events(result: dict, event_repo: EventRepository, action: str,
     event_repo.append_many(events)
 
 
-def _append_contradiction_events(result: dict, event_repo: EventRepository) -> None:
-    session = result["session"]
-    case = result["case"]
-    verdict = result.get("contradictionResult", {})
-    events: list[EventEntry] = []
-    next_index = event_repo.next_index(session.sessionId)
-
-    def new_event(event_type: EventType, payload: dict) -> EventEntry:
-        nonlocal next_index
-        event = EventEntry(
-            id=f"evt_{next_index:06d}",
-            sessionId=session.sessionId,
-            caseId=case.caseId,
-            type=event_type.value,
-            payload=payload,
-        )
-        next_index += 1
-        return event
-
-    if verdict.get("verdict") == "correct" and verdict.get("contradictionId"):
-        contradiction_id = verdict["contradictionId"]
-        contradiction = next((item for item in case.contradictions if item.contradictionId == contradiction_id), None)
-        if contradiction is not None:
-            events.append(
-                new_event(
-                    EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED,
-                    {
-                        "contradictionId": contradiction.contradictionId,
-                        "suspectId": contradiction.relatedCharacterId,
-                        "statementIds": list(contradiction.requiredStatementIds),
-                        "evidenceIds": list(contradiction.requiredEvidenceIds),
-                        "text": contradiction.message,
-                        "status": "discovered",
-                        "submitEligible": True,
-                    },
-                )
-            )
-
-    evidence_ids = {item.evidenceId for item in case.evidence}
-    for item_id in session.newlyUnlockedIds:
-        if item_id in evidence_ids:
-            events.append(new_event(EventType.EVIDENCE_UNLOCKED, {"evidenceId": item_id}))
-
-    if verdict.get("verdict") == "correct" and verdict.get("newlyDiscovered") is True and verdict.get("contradictionId"):
-        suspect_id = verdict.get("suspectId") or request_suspect_id(verdict, case)
-        if suspect_id:
-            pressure = session.pressureBySuspect.get(suspect_id, 0)
-            events.append(
-                new_event(
-                    EventType.TENSION_CHANGED,
-                    {
-                        "suspectId": suspect_id,
-                        "pressure": pressure,
-                        "pressureState": _pressure_state(pressure),
-                        "tensionLevel": _tension_level(pressure),
-                        "tensionScore": pressure,
-                    },
-                )
-            )
-            events.append(new_event(EventType.VISUAL_STATE_CHANGED, build_visual_state(session, case, suspect_id)))
-
-    event_repo.append_many(events)
-
-
-def _append_accusation_event(result: dict, event_repo: EventRepository) -> None:
+def _append_accusation_event(result: dict, event_repo: EventRepositoryPort) -> None:
     session = result["session"]
     case = result["case"]
     accusation = result.get("accusationResult", {})
     payload = {
         "verdict": accusation.get("verdict"),
-        "proofComplete": accusation.get("proofComplete"),
+        "correct": accusation.get("correct"),
         "submittedMotive": accusation.get("submittedMotive"),
         "submittedMethod": accusation.get("submittedMethod"),
-        "missingEvidenceIds": accusation.get("missingEvidenceIds", []),
-        "missingContradictionIds": accusation.get("missingContradictionIds", []),
-        "missingStatementIds": accusation.get("missingStatementIds", []),
         "message": accusation.get("message"),
         "phase": session.phase,
     }
@@ -542,12 +455,6 @@ def _append_accusation_event(result: dict, event_repo: EventRepository) -> None:
         payload=payload,
     )
     event_repo.append_many([event])
-
-
-def request_suspect_id(verdict: dict, case: Case) -> str | None:
-    contradiction_id = verdict.get("contradictionId")
-    contradiction = next((item for item in case.contradictions if item.contradictionId == contradiction_id), None)
-    return contradiction.relatedCharacterId if contradiction else None
 
 
 def _request_context(request: Request) -> RequestContext:

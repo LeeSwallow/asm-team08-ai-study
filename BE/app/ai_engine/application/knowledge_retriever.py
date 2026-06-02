@@ -3,6 +3,9 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
+from typing import Any
+
+from app.application.ports import KnowledgeGraphRepositoryPort
 
 logger = logging.getLogger(__name__)
 
@@ -101,12 +104,12 @@ def extract_question_entities(question_text: str, allowed_statement_text: str = 
 class KnowledgeRetriever:
     """Neo4j 기반 케이스 지식 검색기. Neo4j 미설정 시 빈 컨텍스트를 반환한다."""
 
-    def __init__(self, case_graph: Any | None = None) -> None:  # noqa: ANN401
-        self._graph = case_graph
+    def __init__(self, graph_repo: KnowledgeGraphRepositoryPort | None = None) -> None:
+        self._graph_repo = graph_repo
 
     @property
     def _available(self) -> bool:
-        return self._graph is not None and getattr(self._graph, "available", False)
+        return self._graph_repo is not None and self._graph_repo.available
 
     def retrieve_character_context(
         self,
@@ -187,34 +190,12 @@ class KnowledgeRetriever:
         try:
             # ① 용의자 + 시간대 → 알리바이 진술 + 충돌 증거
             if entities.time_expressions or suspect_id:
-                rows = self._graph.run(
-                    """
-                    MATCH (ch:Character {caseId: $caseId, characterId: $suspectId})
-                          -[:MADE_STATEMENT]->(s:Statement)
-                    WHERE (size($timeExprs) = 0 OR s.timeWindow IN $timeExprs)
-                      AND (s.statementId IN $unlockedStatementIds OR s.initiallyVisible = true)
-                    OPTIONAL MATCH (con:Contradiction)-[:REQUIRES_STATEMENT]->(s)
-                    OPTIONAL MATCH (con)-[:REQUIRES_EVIDENCE]->(e:Evidence)
-                    WHERE NOT con.contradictionId IN $discoveredContradictionIds
-                    RETURN s.statementId AS statementId,
-                           s.text AS statementText,
-                           s.timeWindow AS timeWindow,
-                           s.location AS location,
-                           collect(DISTINCT {
-                               contradictionId: con.contradictionId,
-                               title: con.title,
-                               severity: con.severity
-                           }) AS contradictions,
-                           collect(DISTINCT {
-                               evidenceId: e.evidenceId,
-                               name: e.name
-                           }) AS evidenceConflicts
-                    """,
-                    caseId=case_id,
-                    suspectId=suspect_id,
-                    timeExprs=entities.time_expressions,
-                    unlockedStatementIds=unlocked_statement_ids,
-                    discoveredContradictionIds=discovered_contradiction_ids,
+                rows = self._graph_repo.find_alibi_conflicts(
+                    case_id=case_id,
+                    suspect_id=suspect_id,
+                    time_expressions=entities.time_expressions,
+                    unlocked_statement_ids=unlocked_statement_ids,
+                    discovered_contradiction_ids=discovered_contradiction_ids,
                 )
                 for row in rows:
                     if row.get("statementText"):
@@ -235,32 +216,10 @@ class KnowledgeRetriever:
 
             # ② 질문에 언급된 증거 → 관련 모순 탐색
             if entities.evidence_terms and unlocked_evidence_ids:
-                rows = self._graph.run(
-                    """
-                    MATCH (e:Evidence {caseId: $caseId})
-                    WHERE any(term IN $evidenceTerms
-                              WHERE toLower(e.name) CONTAINS term
-                                 OR toLower(e.description) CONTAINS term)
-                      AND (e.evidenceId IN $unlockedEvidenceIds OR e.initiallyVisible = true)
-                    OPTIONAL MATCH (con:Contradiction)-[:REQUIRES_EVIDENCE]->(e)
-                    OPTIONAL MATCH (con)-[:REQUIRES_STATEMENT]->(s:Statement)
-                    RETURN e.evidenceId AS evidenceId,
-                           e.name AS name,
-                           e.description AS description,
-                           e.timeWindow AS timeWindow,
-                           collect(DISTINCT {
-                               contradictionId: con.contradictionId,
-                               title: con.title,
-                               severity: con.severity
-                           }) AS contradictions,
-                           collect(DISTINCT {
-                               statementId: s.statementId,
-                               text: s.text
-                           }) AS relatedStatements
-                    """,
-                    caseId=case_id,
-                    evidenceTerms=[t.lower() for t in entities.evidence_terms],
-                    unlockedEvidenceIds=unlocked_evidence_ids,
+                rows = self._graph_repo.find_evidence_context(
+                    case_id=case_id,
+                    evidence_terms=entities.evidence_terms,
+                    unlocked_evidence_ids=unlocked_evidence_ids,
                 )
                 for row in rows:
                     if row.get("name"):
@@ -277,20 +236,9 @@ class KnowledgeRetriever:
 
             # ③ 공개 타임라인 시간대 이벤트
             if entities.time_expressions:
-                rows = self._graph.run(
-                    """
-                    MATCH (t:TimelineEvent {caseId: $caseId})
-                    WHERE t.hidden = false
-                      AND (size($timeExprs) = 0 OR t.time IN $timeExprs)
-                    RETURN t.timelineId AS timelineId,
-                           t.time AS time,
-                           t.title AS title,
-                           t.description AS description
-                    ORDER BY t.time
-                    LIMIT 6
-                    """,
-                    caseId=case_id,
-                    timeExprs=entities.time_expressions,
+                rows = self._graph_repo.find_timeline_events(
+                    case_id=case_id,
+                    time_expressions=entities.time_expressions,
                 )
                 for row in rows:
                     if row.get("title"):
@@ -351,39 +299,3 @@ class KnowledgeRetriever:
     def retrieve(self, **kwargs: object) -> CharacterRetrievedContext:
         """Compatibility wrapper. Prefer retrieve_character_context or retrieve_event_context."""
         return self.retrieve_character_context(**kwargs)  # type: ignore[arg-type]
-
-
-# ── 글로벌 인스턴스 관리 ─────────────────────────────────────────────────────
-
-_retriever: KnowledgeRetriever | None = None
-
-
-def get_knowledge_retriever() -> KnowledgeRetriever:
-    global _retriever
-    if _retriever is None:
-        from app.core.config import get_settings  # lazy import to avoid circular
-        settings = get_settings()
-        if settings.neo4j_uri:
-            try:
-                from app.infra.case_graph import CaseGraph
-                graph = CaseGraph(
-                    uri=settings.neo4j_uri,
-                    user=settings.neo4j_user,
-                    password=settings.neo4j_password,
-                )
-                _retriever = KnowledgeRetriever(graph)
-                logger.info("knowledge_retriever initialized with Neo4j")
-            except Exception as exc:
-                logger.warning(
-                    "knowledge_retriever neo4j init failed, using no-op retriever",
-                    extra={"service": "backend", "reason": type(exc).__name__},
-                )
-                _retriever = KnowledgeRetriever(None)
-        else:
-            logger.info("BE_NEO4J_URI not set — knowledge_retriever in no-op mode")
-            _retriever = KnowledgeRetriever(None)
-    return _retriever
-
-
-# type alias for annotations
-from typing import Any  # noqa: E402

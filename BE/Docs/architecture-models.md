@@ -113,7 +113,7 @@ Dialogue response diagnostic fields exposed to FE:
 
 ```mermaid
 flowchart TD
-    A["AI/GameMaster proposedEvents[]"] --> B["EventProcessor._validate_proposed_event"]
+    A["Embedded GameMaster proposedEvents[]"] --> B["EventProcessor._validate_proposed_event"]
     B --> C{"supported type and dict payload?"}
     C -- no --> R["reject + warning log"]
     C -- yes --> D{"event type"}
