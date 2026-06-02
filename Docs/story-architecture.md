@@ -1,9 +1,9 @@
 # Story Architecture
 
 Owner: DOCS
-Scope: canonical cross-repo story architecture for BE, AI, and FE.
+Scope: canonical story architecture for BE, embedded AI engine, and FE.
 
-This document defines how the main case story, per-character timelines, persona, speech style, tension, visible facts, investigation read models, AI proposed events, BE validation, SSE, FE dialogue bubbles, and FE visual state fit together.
+This document defines how the main case story, per-character timelines, persona, speech style, tension, visible facts, investigation read models, embedded AI proposed events, BE validation, SSE, FE dialogue bubbles, and FE visual state fit together.
 
 First-class 3-Agent model note: `Docs/story-agent-contract.md` is the canonical implementation contract for `CharacterAgentInput -> DraftCharacterReply`, `LightRuleCheckInput -> CheckedCharacterReply`, `GameMasterAgentInput -> GameMasterProposal`, `CharacterKnowledgePack`, and tension-level persona injection.
 
@@ -17,10 +17,10 @@ Verified files:
 - `BE/app/domain/case_engine.py`
 - `BE/app/application/dialogue_service.py`
 - `BE/app/domain/event_processor.py`
-- `AI/app/schemas/common.py`
-- `AI/app/schemas/dialogue.py`
-- `AI/app/application/character_agent.py`
-- `AI/app/domain/proposed_events.py`
+- `BE/app/ai_engine/schemas/common.py`
+- `BE/app/ai_engine/schemas/dialogue.py`
+- `BE/app/ai_engine/application/character_agent.py`
+- `BE/app/ai_engine/domain/proposed_events.py`
 - `FE/src/types.ts`
 - `FE/src/adapters/sessionAdapter.ts`
 - `FE/src/hooks/useInvestigationSession.ts`
@@ -392,7 +392,7 @@ Canonical fields:
 - `emotionalState`: current emotion label such as `neutral|wary|defensive|angry|anxious|shocked|breakdown|confident_lying`.
 - `expression`: FE portrait selector, same taxonomy as visual contract unless a case-specific override is documented.
 
-Decision resolving BE/AI mismatch:
+Decision resolving BE / embedded AI engine mismatch:
 - `suspect.tensionLevel` is a label string, not numeric.
 - AI must not require numeric `tensionLevel`.
 - BE should send `suspect.pressure` and may send `suspect.tensionScore` if normalized numeric intensity is useful.

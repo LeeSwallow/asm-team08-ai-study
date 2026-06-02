@@ -3,26 +3,25 @@
 Owner: DOCS
 Scope: manual/API/browser validation cases for story, dialogue, event, public/private, and visual contracts.
 
-These gates are required before BE/AI/FE runtime work is considered MVP commit-ready. Docs-only changes can be commit-ready separately after markdown sanity checks.
+These gates are required before BE, embedded AI engine, and FE runtime work is considered MVP commit-ready. Docs-only changes can be commit-ready separately after markdown sanity checks.
 
 ## 1. Prerequisites
 
 Expected service URLs when using Docker compose:
 - FE: `http://127.0.0.1:8080`
 - BE: `http://127.0.0.1:8000`
-- AI: `http://127.0.0.1:8001`
 
-Suggested runtime refresh after BE/FE/AI code changes:
+Suggested runtime refresh after BE/FE runtime code changes:
 
 ```bash
-docker compose up -d --build ai backend frontend
+docker compose up -d --build backend frontend
 ```
 
 Docs-only changes:
 - Docker refresh required: no.
 
 Production-like validation rule:
-- BE/AI/FE runtime commit-ready requires Docker refresh after runtime changes, direct health checks, proxy health checks, real FE -> BE -> AI smoke, SSE replay smoke, public leak scan, and explicit provider/fallback diagnostics.
+- BE/embedded-AI/FE runtime commit-ready requires Docker refresh after runtime changes, direct health checks, proxy health checks, real FE -> BE embedded AI smoke, SSE replay smoke, public leak scan, and explicit provider/fallback diagnostics.
 - Mock/local/canned paths may be used for unit tests, but they do not satisfy production runtime commit-ready gates.
 
 ## 2. Public payload leak scan
@@ -395,14 +394,14 @@ Acceptance:
 
 ## 16. AI failure/degraded semantics gate
 
-Goal: AI/provider failure does not fabricate detective progress.
+Goal: embedded AI/provider failure does not fabricate detective progress.
 
 Validation methods:
-- Temporarily point BE to an unavailable AI URL, disable provider config in a controlled test profile, or use a test that simulates AI timeout/error.
+- Disable provider config in a controlled test profile, or use a test that simulates embedded AI timeout/error.
 - Restore normal config after the test.
 
 Acceptance:
-- BE/AI returns explicit failure or degraded response with `fallbackUsed=true` or `degraded=true`.
+- BE returns explicit failure or degraded response with `fallbackUsed=true` or `degraded=true`.
 - Question count is not decremented unless documented as a failed attempt.
 - No `NOTE_FACT_ADDED`, contradiction candidate, evidence unlock, tension progress, or objective advancement is created from AI failure.
 - FE diagnostics show degraded/API failure state instead of normal-looking character testimony.
@@ -410,7 +409,7 @@ Acceptance:
 
 ## 17. TensionPolicy idempotency gate
 
-Goal: BE owns monotonic/idempotent tension updates, and AI/GameMaster cannot fabricate them.
+Goal: BE owns monotonic/idempotent tension updates, and embedded GameMaster cannot fabricate them.
 
 Required BE tests:
 - Unlock-only event does not emit `TENSION_CHANGED` and does not change pressure.
@@ -491,7 +490,7 @@ Runtime projection acceptance:
 Commit impact:
 - This is a high-priority story/content architecture quality milestone.
 - It does not invalidate already-passed no-mock/runtime gates by itself.
-- Runtime commit-ready changes only when BE/AI/FE code or public contract fields change.
+- Runtime commit-ready changes only when BE/embedded-AI/FE code or public contract fields change.
 
 ## 20. Markdown/docs validation gate
 
@@ -528,13 +527,13 @@ Mermaid sanity:
 Docs-only atomic commit can be ready when:
 - Files exist and are non-empty.
 - Mermaid fences are syntactically reasonable.
-- Cross-feedback from BE/AI/FE is answered or recorded as known limitation/migration item.
+- Cross-feedback from BE/embedded-AI/FE is answered or recorded as known limitation/migration item.
 - No runtime code changed.
 - Docker refresh marked not required.
 
 Overall MVP remains blocked until:
-- Production-like BE/AI smoke passes with no silent mock/canned/local fallback.
-- AI failure/degraded semantics prove no fabricated progress on provider failure.
+- Production-like BE embedded-AI smoke passes with no silent mock/canned/local fallback.
+- Embedded AI failure/degraded semantics prove no fabricated progress on provider failure.
 - TensionPolicy idempotency tests pass: unlock no tension, first contradiction exactly one tension change, duplicate no increment, AI-down no progress.
 - Observability/SSE replay diagnostics pass.
 - BE target schema/payload migration validated.

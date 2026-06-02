@@ -1,0 +1,33 @@
+caseId: case_new
+language: ko
+style: korean_noir_detective
+questionLimit: 12
+suspectCount: 4
+requiredActs:
+  - alibi_collection
+  - first_break
+  - motive_pressure
+  - final_accusation
+editorThresholds:
+  minTotalScore: 15
+  minCrossTestimony: 2
+  minEvidencePuzzle: 2
+  minCulpritDefense: 2
+assetGeneration:
+  allowedBeforeEditorApproval: false
+  suspectPressureStates: [low, medium, high, critical]
+  evidenceThumbnails: true
+  backgrounds: true
+runtimeTargets:
+  caseJson: true
+  neo4jCypher: true
+  postgresDataSql: true
+publicBoundaryForbiddenRefs:
+  - secret
+  - solution
+  - isCulprit
+  - hiddenTruth
+  - privateTimeline
+  - privateMotive
+  - actualAction
+  - secretNote

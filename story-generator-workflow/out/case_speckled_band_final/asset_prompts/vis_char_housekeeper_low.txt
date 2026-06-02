@@ -1,0 +1,3 @@
+Korean noir detective visual novel suspect portrait, 저택 가정부, 내부 목격자, 기억이 흐릿하지만 방 공사와 벨줄의 새로움을 알고 있는 고용인.. Pressure state: low, expression: 흐릿함. Consistent identity, centered bust portrait, dark mansion rim light, semi-realistic high quality illustration, readable emotion, no text, no watermark.
+
+NEGATIVE: text, watermark, logo, low quality, distorted face, childish cartoon, placeholder svg, ugly portrait

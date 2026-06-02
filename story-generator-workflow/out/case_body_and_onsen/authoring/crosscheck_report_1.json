@@ -1,0 +1,119 @@
+{
+  "blockingIssues": [
+    {
+      "id": "cc_001",
+      "severity": "blocker",
+      "issue": "핵심 모순 con_hoseon_weapon_awareness가 현재 공개 증거만으로는 임호선에게 연결되지 않는다. '권총이 있었지만 쓰이지 않았다'와 '돌로 맞았다'는 사실은 피해자의 무장 및 사인을 설명하지만, 임호선이 권총을 보았거나 피해자를 청부업자로 오인했다는 점을 직접 반박하지 못한다.",
+      "requiredFix": "임호선이 피해자의 바구니/권총/수상한 소지품을 사건 전 보았다는 공개 단서가 필요하다. 예: 남탕 탈의실에서 임호선의 젖은 유카타 실밥이 피해자 바구니 근처에서도 발견됨, 피해자 바구니가 뒤져진 흔적과 임호선 손의 화약/기름 냄새, 임호선이 '소음기'를 언급하는 말실수, 또는 피해자가 누군가에게 '의뢰 취소는 안 된다'고 말하는 것을 임호선이 들었다는 목격 진술."
+    },
+    {
+      "id": "cc_002",
+      "severity": "blocker",
+      "issue": "con_hoseon_bath_access의 증거가 임호선 특정에 부족하다. 남탕 입구의 젖은 유카타 실밥과 권주리의 '젖은 유카타 자락' 목격만으로는 임호선의 로비 주장을 깨기 어렵고, 온천 여관에서는 젖은 유카타 자체가 흔한 흔적이다.",
+      "requiredFix": "젖은 실밥을 임호선의 유카타와 물리적으로 매칭하라. 예: 임호선 유카타 소매/허리끈의 찢긴 부분, 남탕 문틀 실밥 색상과 동일한 편집자용 대여 유카타 번호표, 임호선이 급히 갈아입은 마른 유카타, 로비 전화기 근처에는 물기 없음 등으로 '남탕 접근자=임호선'을 좁혀야 한다."
+    },
+    {
+      "id": "cc_003",
+      "severity": "high",
+      "issue": "권주리 표적 흐름이 최종 동기에는 필수인데, 현재 증거는 '조직 보스가 권주리를 처리하라 했다'까지만 말하고 피해자 이정명이 그 실행자라는 연결이 약하다. 이 때문에 임호선의 오인이 아니라 플레이어의 추측으로 보일 위험이 있다.",
+      "requiredFix": "피해자와 권주리 처리 지시를 잇는 공개 단서를 추가하라. 예: 피해자 소지품의 권주리 사진/공연장 성냥/제주행 시간 메모, 녹음기 속 보스 목소리와 피해자에게 남긴 호출 기록, 손준식이 피해자를 조직의 외부 해결사로 알아본다는 제한적 진술. 단, '피해자가 권주리를 죽이러 왔다'를 직접 확정하지 말고 강한 추론 단서로 유지하라."
+    },
+    {
+      "id": "cc_004",
+      "severity": "high",
+      "issue": "st_juri_saw_wet_corridor가 중요한 route에 들어가지만 이를 여는 질문이 없다. q_alibi_juri는 st_juri_womens_bath_claim만 unlock하며, 젖은 복도 목격 진술은 질문/증거 공개 루트에서 고아 상태다.",
+      "requiredFix": "q_alibi_juri의 unlock을 st_juri_saw_wet_corridor까지 포함하도록 복수 unlock을 허용하거나, 별도 질문 q_wet_corridor_juri를 추가하라. 또한 con_hoseon_bath_access route와 path_wet_yukata에 이 질문을 명시하라."
+    },
+    {
+      "id": "cc_005",
+      "severity": "high",
+      "issue": "q_stone_hoseon, q_debt_hoseon, q_cancel_hoseon이 모두 기존 임호선 진술을 재사용해 압박 단계의 정보 상승이 약하다. 같은 st_hoseon_lobby_claim 또는 st_hoseon_message_claim만 반복 unlock되면 플레이어는 질문을 썼는데 새 단서를 얻지 못했다고 느낀다.",
+      "requiredFix": "압박 질문별로 단계적 진술을 분리하라. 예: st_hoseon_stone_evasion, st_hoseon_debt_partial_admission, st_hoseon_cancel_slip. 각각은 직접 자백이 아니라 말실수/회피/부분 인정으로 설계해 contradiction 해소에 필요한 값을 제공해야 한다."
+    },
+    {
+      "id": "cc_006",
+      "severity": "medium",
+      "issue": "12문 제한에서 권장 루트가 매우 빡빡하다. 모든 용의자 최소 1회 질문 5개, 최종 필수 진술 5개, 임호선 압박 추가 2~3개를 요구하면 실수 여지가 거의 없다. 특히 고아 진술과 중복 unlock 때문에 실제 플레이에서는 실패가 불공정해질 수 있다.",
+      "requiredFix": "필수 루트를 9~10문 안에 닫히게 압축하라. 알리바이 질문이 관련 관찰 진술을 함께 열도록 하고, 증거 기반 contradiction은 질문 없이도 획득 가능한 공개 증거로 일부 해결되게 하라. 최종 고발 필수 contradiction은 3개 핵심+1개 보조로 완화하는 방안도 검토하라."
+    },
+    {
+      "id": "cc_007",
+      "severity": "medium",
+      "issue": "손준식 관련 contradiction con_junsik_organization_not_method는 solution.requiredContradictionIds에는 없지만, 권주리 표적 분리에는 사실상 필요하다. 현재 route matrix에는 빠져 있어 조직 축을 오해한 플레이어를 방법상 배제시키는 안전장치가 약하다.",
+      "requiredFix": "con_junsik_organization_not_method를 cluePaths 또는 final accusation 보조 조건에 연결하라. 손준식이 조직과 연결되어도 남탕 둔기 살해의 직접 행위자가 아니라는 배제 루트를 명확히 제공해야 한다."
+    },
+    {
+      "id": "cc_008",
+      "severity": "low",
+      "issue": "공개 premise는 피해자를 '신원 불명의 남성 손님'이라고 하는데 timeline과 records는 초반부터 '이정명' 체크인을 공개한다. 신원 불명과 가명/투숙명 공개의 경계가 약간 혼란스럽다.",
+      "requiredFix": "표현을 통일하라. 예: '이정명이라는 이름으로 체크인했지만 실제 신원은 불명'으로 수정하면 public premise, guest register, victimName이 충돌하지 않는다."
+    }
+  ],
+  "suspectUsefulnessMatrix": [
+    {
+      "suspectId": "char_gyeong_daesu",
+      "helpsExpose": "권주리와의 불륜, 현금, 극장 성냥을 통해 권주리/손준식/조직 축을 열고, 임호선이 왜 경대수를 둘러싼 살인 의뢰에 휘말렸는지 배경을 만든다.",
+      "exposedBy": "ev_daesu_cash_matches, st_daesu_cash_claim, 권주리 관련 압박 진술, 손준식의 마약 단서와 교차 검증.",
+      "roleQuality": "pass"
+    },
+    {
+      "suspectId": "char_lim_hoseon",
+      "helpsExpose": "진범으로서 삭제 메시지, 은행 명세, 남탕 접근 흔적, 피해자 오인이라는 최종 루트를 담당한다.",
+      "exposedBy": "ev_hoseon_phone_message, ev_bank_statement, ev_wet_yukata_threads, ev_bloodied_stone, ev_silenced_pistol, st_hoseon_lobby_claim, st_hoseon_message_claim, st_hoseon_no_weapon_claim. 다만 권총 인지와 남탕 접근을 임호선에게 특정하는 공개 단서가 보강되어야 한다.",
+      "roleQuality": "weak"
+    },
+    {
+      "suspectId": "char_woo_suyeon",
+      "helpsExpose": "칼, 감시 사진, 조직 메모로 강한 레드헤링을 제공하면서 둔기 사인과 수사/감시 축을 통해 방법상 배제를 학습시킨다.",
+      "exposedBy": "ev_suyeon_knife, ev_bloodied_stone, ev_suyeon_photo, ev_suyeon_note, st_suyeon_knife_claim.",
+      "roleQuality": "pass"
+    },
+    {
+      "suspectId": "char_kwon_juri",
+      "helpsExpose": "제주행 항공권과 조직 위협으로 피해자의 실제 표적이 경대수가 아닐 수 있음을 드러내고, 임호선의 오인 동기를 보조한다.",
+      "exposedBy": "ev_juri_ticket, st_juri_ticket_claim, rec_junsik_recording, st_junsik_boss_voice. 단 피해자와 권주리 표적 지시의 직접 연결 단서가 부족하다.",
+      "roleQuality": "weak"
+    },
+    {
+      "suspectId": "char_son_junsik",
+      "helpsExpose": "조직 범죄, 마약 거래, 권주리 보호 동기를 제공해 별도 범죄 흐름을 열고 경대수 현금의 의미를 설명한다.",
+      "exposedBy": "ev_junsik_marijuana, ev_junsik_promotion_note, rec_junsik_recording, st_junsik_boss_voice, st_junsik_towel_claim. 다만 조직 동기와 둔기 방법 배제를 최종 루트에 더 명시해야 한다.",
+      "roleQuality": "pass"
+    }
+  ],
+  "contradictionRouteCoverage": [
+    {
+      "contradictionId": "con_hoseon_bath_access",
+      "coverage": "weak",
+      "note": "필요한 방향은 맞지만 젖은 유카타 실밥이 임호선의 것이라는 특정성이 없다. st_juri_saw_wet_corridor도 unlock 경로가 없어 현재는 루트가 끊긴다."
+    },
+    {
+      "contradictionId": "con_hoseon_cancelled_contract",
+      "coverage": "pass",
+      "note": "삭제된 오연희 메시지와 은행 명세는 살인 의뢰 취소 정황을 강하게 암시한다. 단 q_debt_hoseon/q_cancel_hoseon은 별도 단계 진술을 제공하면 더 공정하다."
+    },
+    {
+      "contradictionId": "con_hoseon_weapon_awareness",
+      "coverage": "fail",
+      "note": "권총 미사용과 돌 살해는 사인과 피해자의 무장을 설명하지만 임호선이 권총을 알았거나 피해자를 청부업자로 오인했다는 반박 증거가 아니다. 최종 고발 핵심으로 쓰려면 별도 공개 연결 단서가 필수다."
+    },
+    {
+      "contradictionId": "con_victim_target_misdirection",
+      "coverage": "weak",
+      "note": "권주리의 제주행과 처리 녹음은 권주리가 위험하다는 점은 보여주지만, 피해자 이정명이 그 처리 실행자였다는 연결이 부족하다."
+    },
+    {
+      "contradictionId": "con_suyeon_not_blunt_method",
+      "coverage": "pass",
+      "note": "칼 소지와 둔기 사인의 대비가 명확해 우수연을 방법상 배제하는 레드헤링으로 기능한다."
+    },
+    {
+      "contradictionId": "con_junsik_organization_not_method",
+      "coverage": "weak",
+      "note": "조직 동기와 현장 방법의 불일치는 유용하지만 solution 필수 루트와 cluePaths에서 약하게 취급된다. 권주리 표적 흐름과 함께 손준식을 배제하는 보조 루트로 연결하는 것이 좋다."
+    }
+  ],
+  "timelineConsistency": "weak",
+  "publicPrivateLeakageRisk": "weak",
+  "summary": "기본 구조와 캐릭터 기능은 좋고, 여러 범죄 흐름을 분리해 오인 살인을 밝히는 목표도 매력적이다. 그러나 현재 버전은 최종 해법의 핵심인 '임호선이 피해자를 경대수 청부업자로 오인했다'를 공개 증거만으로 입증하기 어렵다. 특히 권총 인지, 남탕 접근자 특정, 피해자와 권주리 표적 지시의 연결이 모두 한 단계씩 부족하다. 또한 중요한 목격 진술 st_juri_saw_wet_corridor의 unlock 경로가 없고 임호선 압박 질문들이 중복 진술을 반환해 12문 제한에서 공정성이 떨어질 수 있다. 공개/비공개 경계는 대체로 유지되지만, critical 대사와 공개 단서가 직접 자백처럼 흐르지 않도록 단계별 말실수와 물증 중심으로 보강해야 한다."
+}

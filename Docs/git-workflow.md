@@ -1,6 +1,6 @@
 # Git 운영 및 리뷰 절차
 
-이 저장소는 루트 디렉터리 하나만 Git 저장소로 사용한다. `AI/`, `BE/`, `FE/`, `Docs/` 내부에는 별도 `.git`을 만들지 않는다.
+이 저장소는 루트 디렉터리 하나만 Git 저장소로 사용한다. `BE/`, `FE/`, `Docs/` 내부에는 별도 `.git`을 만들지 않는다.
 
 원격 저장소:
 
@@ -103,8 +103,7 @@ git commit -m "feat(be): add session restore command"
 7. 필요한 검증과 리뷰 체크를 실행한다.
 
 ```bash
-cd AI && uv run pytest -q
-cd ../BE && uv run pytest -q
+cd BE && uv run pytest -q
 cd ../FE && npm run build
 git diff --check
 ```
@@ -209,7 +208,7 @@ merge 전 확인 사항:
 변경사항마다 다음 관점으로 검토한다.
 
 - 요구사항: PRD 또는 Issue의 목표와 직접 연결되는가.
-- 구조: `AI`, `BE`, `FE`, `Docs` 중 책임 경계가 적절한가.
+- 구조: `BE`, `BE/app/ai_engine`, `FE`, `Docs` 중 책임 경계가 적절한가.
 - 계약: API 요청/응답, 이벤트, 데이터 파일 형식이 문서와 일치하는가.
 - 검증: 테스트, 빌드, 수동 확인 중 어떤 증거로 동작을 증명했는가.
 - 운영: 환경 변수, Docker, 캐시, 로컬 산출물이 Git에 섞이지 않는가.
@@ -219,6 +218,6 @@ merge 전 확인 사항:
 
 ## 루트 저장소 유지 규칙
 
-- `AI/.git`, `BE/.git`, `FE/.git`, `Docs/.git`을 다시 만들지 않는다.
+- `BE/.git`, `FE/.git`, `Docs/.git`을 다시 만들지 않는다.
 - 외부 예제 저장소를 가져올 때는 `git clone` 대신 필요한 파일만 복사하거나, 별도 `ref/` 하위에 Git 메타데이터 없이 둔다.
 - 서브모듈이 필요하면 팀 합의 후 `git submodule`로 명시적으로 추가한다.

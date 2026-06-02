@@ -1,0 +1,7 @@
+caseId: case_new
+styleBible:
+  genre: Korean noir detective visual novel
+  palette: [deep navy, warm amber, desaturated burgundy, charcoal black]
+  lighting: cinematic noir rim light, rainy mansion atmosphere
+  negativePrompt: text, watermark, logo, low quality, distorted face, childish cartoon, placeholder svg
+assets: []
