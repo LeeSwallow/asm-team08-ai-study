@@ -78,6 +78,130 @@ flowchart TD
    - **상세**: 안전하게 대화가 완료되면, 해당 대화 내용을 기반으로 플레이어가 수첩에 추가할 만한 새로운 사실 정보(`NOTE_FACT_ADDED`)나 모순 단서(`NOTE_CONTRADICTION_CANDIDATE_ADDED`)를 백엔드에 제안합니다.
    - **중요성 (안전 장치)**: 게임 상태(Tension 수치, 증거 해제, 정답 판정)를 직접 수정하는 위험한 이벤트 유형은 발급할 수 없도록 엄격히 제한되어 있으며, 제안된 모든 이벤트는 백엔드 규칙 엔진(Deterministic Rule Engine)의 정밀한 검증을 통과해야만 최종 데이터에 반영됩니다.
 
+## 데이터베이스 및 지식 그래프 아키텍처 (DB & Knowledge Graph Architecture)
+
+이 프로젝트는 케이스(사건)의 정적 사실 관계를 보관하는 **지식 그래프(GraphDB / Neo4j)**와 플레이어 세션의 동적인 진행 상태를 저장하는 **관계형 데이터베이스(RDB / PostgreSQL)**를 철저히 물리적/개념적으로 분리하여 설계했습니다.
+
+이를 통해 AI 에이전트 파이프라인과 게임의 규칙 엔진이 상태 간섭 없이 안전하게 작동합니다.
+
+### 1. DB 책임 분리 (Responsibility Separation)
+
+| 데이터베이스 | 주요 역할 | 보관 데이터 | 주요 비즈니스 컴포넌트 |
+| :--- | :--- | :--- | :--- |
+| **Neo4j (GraphDB)** | 사건 지식 그래프 및 해금 경로 | 정적 사건 사실 정보 (인물 관계, 타임라인, 증거, 진술, 모순 판정 구조, 사건 해답) | `KnowledgeRetriever` (AI 데이터 검색), `CaseRepository` (사건 초기 모델 조회), `RuleEngine` (모순 판정) |
+| **PostgreSQL (RDB)** | 플레이어 세션 런타임 상태 | 세션별 플레이 진행도 (남은 질문 수, 용의자별 압박 수치, 플레이어가 발견한 모순/진술/증거 목록, 플레이어 수첩 메모) | `Backend Event Processor` (이벤트 기반 상태 변이), `SessionRepository` (런타임 복구 및 SQL 영속화) |
+
+---
+
+### 2. Neo4j 지식 그래프 아키텍처 (GraphDB Schema)
+
+Neo4j는 사건의 모든 인물, 진술, 단서 간의 논리적 연관 관계와 해금 조건(Unlock Chain)을 그래프 노드와 관계로 설계하여 효율적인 그래프 조회를 지원합니다.
+
+```mermaid
+flowchart LR
+    CaseHub(("Case (사건 루트)"))
+    
+    subgraph Actor["인물 도메인"]
+        Character["Character (용의자)"]
+        Question["Question (질문 후보)"]
+        Statement["Statement (진술)"]
+        
+        Character -->|HAS_QUESTION| Question
+        Character -->|MADE_STATEMENT| Statement
+        Character -.->|IN_RELATION| Character
+    end
+    
+    subgraph Fact["증거 및 타임라인"]
+        Evidence["Evidence (물증)"]
+        Record["Record (기록 문서)"]
+        Timeline["TimelineEvent (사건 시간대)"]
+        
+        Timeline -->|SOURCED_FROM| Evidence
+        Timeline -.->|SOURCED_FROM| Statement
+    end
+    
+    subgraph Puzzle["추리 및 해금 체인"]
+        Contradiction{{"Contradiction (모순)"}}
+        Act["Act (스토리 진행 막)"]
+        
+        Contradiction -->|REQUIRES_STATEMENT| Statement
+        Contradiction -->|REQUIRES_EVIDENCE| Evidence
+        Question -->|UNLOCKS| Statement
+        Question -->|UNLOCKS| Evidence
+        Question -->|UNLOCKS| Question
+        Contradiction -->|UNLOCKS| Question
+    end
+
+    subgraph Secret["비공개 해답 정보 (비노출)"]
+        Solution[["Solution (진범 및 필수증거)"]]
+    end
+
+    CaseHub -->|HAS_CHARACTER| Character
+    CaseHub -->|HAS_EVIDENCE| Evidence
+    CaseHub -->|HAS_RECORD| Record
+    CaseHub -->|HAS_TIMELINE_EVENT| Timeline
+    CaseHub -->|HAS_CONTRADICTION| Contradiction
+    CaseHub -->|HAS_ACT| Act
+    CaseHub -->|HAS_SOLUTION| Solution
+```
+
+- **안전 규칙 (Security Gate)**: `Solution` 및 용의자 노드의 `isCulprit`, `secret` 속성은 비공개 영역으로 보호되며, 플레이어 API 및 AI 캐릭터 대화 프롬프트에 직접 유출되지 않도록 게이트웨어 단계에서 필터링됩니다.
+
+---
+
+### 3. PostgreSQL 세션 런타임 ERD (PostgreSQL Schema)
+
+PostgreSQL은 플레이어마다 개별적으로 진행되는 수사 진척도를 안전한 트랜잭션 단위로 관리하며, 변경 히스토리를 이벤트 원장(Events)으로 보존해 실시간 리플레이(SSE Replay)를 보장합니다.
+
+```mermaid
+erDiagram
+    SESSIONS ||--o{ DIALOGUE_LOG : "owns (대화 기록)"
+    SESSIONS ||--o{ NOTES : "owns (수사 노트)"
+    SESSIONS ||--o{ BOOKMARKS : "owns (북마크)"
+    SESSIONS ||--o{ EVENTS : "emits (SSE 변경 이벤트)"
+    SESSIONS ||--o{ ASKED_QUESTIONS : "tracks (질문 횟수)"
+
+    SESSIONS {
+        text session_id PK
+        text case_id
+        text phase "investigation / accusation / solved / failed"
+        int remaining_questions "남은 질문 수 (초기 12회)"
+        jsonb pressure_by_suspect "용의자별 실시간 압박 수치"
+        text_array unlocked_evidence_ids "플레이어가 발견한 물증 목록"
+        text_array unlocked_statement_ids "플레이어가 획득한 진술 목록"
+        text_array discovered_contradiction_ids "플레이어가 제기한 모순 목록"
+        timestamp updated_at
+    }
+    
+    DIALOGUE_LOG {
+        int id PK
+        text session_id FK
+        text suspect_id
+        text speaker "player / suspect"
+        text text "대화 내용"
+        timestamp created_at
+    }
+    
+    NOTES {
+        text note_id PK
+        text session_id FK
+        text title
+        text content
+        jsonb source_refs "출처 노드/단서 ID 목록"
+        timestamp updated_at
+    }
+```
+
+---
+
+### 4. AI와 데이터베이스의 상호작용 흐름 (Interactive Loop)
+
+AI 에이전트와 데이터베이스는 다음과 같은 흐름으로 상호작용하여 상태의 무결성을 유지합니다.
+
+1. **지식 인입 (Retrieval)**: 플레이어 질문이 입력되면, `KnowledgeRetriever`가 질문 속 엔티티(시간, 장소, 증거 단어)를 추출하여 **Neo4j**에서 연관된 사건 지식 그래프 정보를 조회(Read)합니다. 플레이어가 아직 해금하지 못한 비공개 노드는 조회 결과에서 원천 배제됩니다.
+2. **이벤트 제안 (Proposal)**: 대화 완료 후, **GameMaster Agent**가 대화 맥락을 파악하고 플레이어의 수사 수첩에 추가할 수첩 노트(`NOTE_FACT_ADDED`)나 단서 북마크를 제안(Propose)합니다.
+3. **엄격한 백엔드 검증 및 커밋 (Verification & Commit)**: 백엔드의 **Event Processor** 및 **RuleEngine**이 AI의 제안을 검증하여, 플레이어가 실제로 잠금 해제한 자격이 있는지 확인합니다. 검증을 통과한 변경 사항만이 **PostgreSQL** 세션 데이터에 반영(Write/Commit)되며 플레이어 화면(UI)으로 SSE 이벤트를 통해 실시간 발행됩니다.
+
 ## 저장소 구조
 
 ```text
