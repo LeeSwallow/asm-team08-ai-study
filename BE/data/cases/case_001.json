@@ -1,8 +1,8 @@
 {
   "caseId": "case_001",
   "sceneId": "scene_001",
-  "title": "진실은, 서로의 말 속에 있다",
-  "summary": "폭풍우가 저택을 고립시킨 밤, 73세 실업가 강도준이 2층 서재에서 쓰러진 채 발견됐다. 외부 침입 흔적은 없고, 창문 빗장은 안에서 잠겨 있었다. 네 명의 용의자는 각자의 알리바이를 주장하지만 어딘가 하나씩 어긋난다. 당신에게는 12번의 탐문 기회가 있다.",
+  "title": "폭풍 속 서재의 거짓말",
+  "summary": "폭풍우가 저택을 고립시킨 밤, 실업가 강도준이 2층 서재에서 쓰러진 채 발견됐다. 외부 침입 흔적은 없고, 서재 안에는 멈춘 회중시계와 지워진 듯한 동선, 서로를 감싸는 듯한 네 사람의 말만 남았다. 당신에게 주어진 것은 12번의 탐문뿐이다. 알리바이, 숨긴 갈등, 현장 조작의 순서를 엮어 진짜 거짓말을 찾아내야 한다.",
   "victimId": "victim_kangdojun",
   "victimName": "강도준",
   "incidentTime": "22:00~22:10",
@@ -14,58 +14,98 @@
       "characterId": "char_hanseoyeon",
       "name": "한서연",
       "role": "조카",
-      "publicProfile": "강도준의 조카. 사업 실패 후 상속에 기대는 처지였다. 표면적으로 냉정하고 말수가 적지만 압박 시 방어적이 된다.",
+      "publicProfile": "사업 실패 이후 저택에 머무는 시간이 늘었다. 냉정한 태도로 버티지만 돈과 가족 이야기가 나오면 말끝이 날카로워진다.",
       "secret": "22:02에 서재에 들어갔고 정전 중 현장을 조작했다. 반지가 현장에 떨어진 것을 모른다.",
       "motiveCandidate": true,
       "isCulprit": true,
       "speechStyle": {
         "tic": "…",
         "prefix": "",
-        "vocabulary": ["사실은", "아니", "그게", "그냥"],
+        "vocabulary": [
+          "사실은",
+          "아니",
+          "그게",
+          "그냥"
+        ],
         "tone": "defensive"
       },
       "publicTimeline": [
-        { "time": "21:40", "location": "자기 방", "claimedAction": "방에서 폭풍 소리 들으며 있었다" },
-        { "time": "22:00", "location": "자기 방", "claimedAction": "방에 있었다" },
-        { "time": "22:10", "location": "자기 방", "claimedAction": "윤재호 소리에 방에서 나왔다" }
+        {
+          "time": "21:40",
+          "location": "자기 방",
+          "claimedAction": "방에서 폭풍 소리 들으며 있었다"
+        },
+        {
+          "time": "22:00",
+          "location": "자기 방",
+          "claimedAction": "방에 있었다"
+        },
+        {
+          "time": "22:10",
+          "location": "자기 방",
+          "claimedAction": "윤재호 소리에 방에서 나왔다"
+        }
       ],
       "personaVariants": [
         {
           "id": "pv_seo_neutral",
           "label": "차가운 부정",
-          "tensionLevels": ["low"],
+          "tensionLevels": [
+            "low"
+          ],
           "overlay": {
             "tone": "calm_defensive",
             "voice": "짧게 부정하고, 감정은 누르되 질문이 불편하다는 기색을 숨기지 않는다.",
             "hesitation": 0.25,
             "evasiveness": 0.55,
-            "styleDirectives": ["절제된 방어", "짧은 문장", "1인칭"]
+            "styleDirectives": [
+              "절제된 방어",
+              "짧은 문장",
+              "1인칭"
+            ]
           }
         },
         {
           "id": "pv_seo_rattled",
           "label": "흔들리는 반박",
-          "tensionLevels": ["medium", "high"],
-          "pressureStates": ["pressed"],
+          "tensionLevels": [
+            "medium",
+            "high"
+          ],
+          "pressureStates": [
+            "pressed"
+          ],
           "overlay": {
             "tone": "evidence_shock",
             "voice": "증거가 나오면 먼저 말이 끊기고, 곧바로 자기 진술을 붙잡으며 반박한다.",
             "hesitation": 0.85,
             "evasiveness": 0.72,
-            "styleDirectives": ["말 더듬음", "반박과 동요가 함께 드러남", "단서 주인을 임의로 만들지 않음"]
+            "styleDirectives": [
+              "말 더듬음",
+              "반박과 동요가 함께 드러남",
+              "단서 주인을 임의로 만들지 않음"
+            ]
           }
         },
         {
           "id": "pv_seo_breaking",
           "label": "무너지는 방어",
-          "tensionLevels": ["critical"],
-          "pressureStates": ["broken"],
+          "tensionLevels": [
+            "critical"
+          ],
+          "pressureStates": [
+            "broken"
+          ],
           "overlay": {
             "tone": "broken",
             "voice": "몰아붙이면 버티는 말보다 숨이 먼저 새고, 공개된 사실은 더 직접적으로 인정한다.",
             "hesitation": 0.95,
             "evasiveness": 0.25,
-            "styleDirectives": ["짧은 호흡", "회피 감소", "공개된 모순은 인정"]
+            "styleDirectives": [
+              "짧은 호흡",
+              "회피 감소",
+              "공개된 모순은 인정"
+            ]
           }
         }
       ]
@@ -75,59 +115,103 @@
       "characterId": "char_yoonjaeho",
       "name": "윤재호",
       "role": "집사",
-      "publicProfile": "강도준을 30년째 모신 집사. 저택 구조와 가족 사정을 속속들이 안다. 사건 최초 발견자.",
+      "publicProfile": "저택의 동선과 오래된 규칙을 누구보다 잘 안다. 정중하지만 가족 문제를 묻는 질문에는 침묵이 길어진다.",
       "secret": "피해자의 유언장 변경 사실과 한서연의 재정 상태를 알고 있었다. 침묵으로 한서연을 간접적으로 보호했다.",
       "motiveCandidate": false,
       "isCulprit": false,
       "speechStyle": {
         "tic": "",
         "prefix": "말씀드리자면 ",
-        "vocabulary": ["회장님", "정확히는", "확인하건대", "제가 기억하기론"],
+        "vocabulary": [
+          "회장님",
+          "정확히는",
+          "확인하건대",
+          "제가 기억하기론"
+        ],
         "tone": "formal"
       },
       "publicTimeline": [
-        { "time": "21:45", "location": "1층 식당", "claimedAction": "식당 정리 작업 중" },
-        { "time": "22:00", "location": "1층 식당", "claimedAction": "정리 작업 계속" },
-        { "time": "22:05~22:07", "location": "2층 복도", "claimedAction": "정전 확인차 이동" },
-        { "time": "22:10", "location": "2층 서재 앞", "claimedAction": "순찰 중 열린 서재 문 발견" }
+        {
+          "time": "21:45",
+          "location": "1층 식당",
+          "claimedAction": "식당 정리 작업 중"
+        },
+        {
+          "time": "22:00",
+          "location": "1층 식당",
+          "claimedAction": "정리 작업 계속"
+        },
+        {
+          "time": "22:05~22:07",
+          "location": "2층 복도",
+          "claimedAction": "정전 확인차 이동"
+        },
+        {
+          "time": "22:10",
+          "location": "2층 서재 앞",
+          "claimedAction": "순찰 중 열린 서재 문 발견"
+        }
       ],
       "personaVariants": [
         {
           "id": "pv_yoon_loyal",
           "label": "정중한 통제",
-          "tensionLevels": ["low"],
+          "tensionLevels": [
+            "low"
+          ],
           "overlay": {
             "tone": "formal",
             "voice": "정중하지만 필요한 말만 하고, 회장님에 대한 예의를 앞세워 거리를 둔다.",
             "hesitation": 0.2,
             "evasiveness": 0.3,
-            "styleDirectives": ["격식", "짧은 확인", "과잉 설명 금지"]
+            "styleDirectives": [
+              "격식",
+              "짧은 확인",
+              "과잉 설명 금지"
+            ]
           }
         },
         {
           "id": "pv_yoon_conflicted",
           "label": "갈등 노출",
-          "tensionLevels": ["medium", "high"],
-          "pressureStates": ["pressed"],
+          "tensionLevels": [
+            "medium",
+            "high"
+          ],
+          "pressureStates": [
+            "pressed"
+          ],
           "overlay": {
             "tone": "tense",
             "voice": "충성심과 사실 사이에서 말끝이 흐려지고, 방어보다 신중한 인정이 앞선다.",
             "hesitation": 0.6,
             "evasiveness": 0.55,
-            "styleDirectives": ["말끝 흐림", "회장님 호칭 유지", "숨기는 듯한 신중함"]
+            "styleDirectives": [
+              "말끝 흐림",
+              "회장님 호칭 유지",
+              "숨기는 듯한 신중함"
+            ]
           }
         },
         {
           "id": "pv_yoon_breaking",
           "label": "침묵 붕괴",
-          "tensionLevels": ["critical"],
-          "pressureStates": ["broken"],
+          "tensionLevels": [
+            "critical"
+          ],
+          "pressureStates": [
+            "broken"
+          ],
           "overlay": {
             "tone": "broken",
             "voice": "더 숨기려 하기보다 공개된 지시와 기록을 조심스럽게 인정한다.",
             "hesitation": 0.8,
             "evasiveness": 0.2,
-            "styleDirectives": ["낮은 목소리", "직접 인정", "변명 축소"]
+            "styleDirectives": [
+              "낮은 목소리",
+              "직접 인정",
+              "변명 축소"
+            ]
           }
         }
       ]
@@ -137,59 +221,103 @@
       "characterId": "char_parkmingyu",
       "name": "박민규",
       "role": "주치의",
-      "publicProfile": "강도준의 주치의. 15년간 건강을 관리해 왔다. 의학적 사안에 대해서는 단언하는 편이지만, 사건과 관련해서는 신중하다.",
+      "publicProfile": "오랫동안 피해자의 건강 기록을 관리했다. 기록과 의학적 근거를 앞세우지만, 책임 소재를 묻는 말에는 방어적이다.",
       "secret": "처방 변경 문제로 피해자와 마지막으로 언쟁을 벌인 사람이다. 하지만 살인과는 무관하다.",
       "motiveCandidate": true,
       "isCulprit": false,
       "speechStyle": {
         "tic": "",
         "prefix": "",
-        "vocabulary": ["의학적으로", "임상적으로", "확인하건대", "기록상"],
+        "vocabulary": [
+          "의학적으로",
+          "임상적으로",
+          "확인하건대",
+          "기록상"
+        ],
         "tone": "professional"
       },
       "publicTimeline": [
-        { "time": "21:00", "location": "손님방", "claimedAction": "피해자 의료 기록 정리" },
-        { "time": "21:30", "location": "피해자 침실", "claimedAction": "21:30 복용분 확인" },
-        { "time": "21:45", "location": "손님방", "claimedAction": "의료 기록 마무리 작업" },
-        { "time": "22:00", "location": "손님방/1층 응접실", "claimedAction": "1층으로 내려왔다" }
+        {
+          "time": "21:00",
+          "location": "손님방",
+          "claimedAction": "피해자 의료 기록 정리"
+        },
+        {
+          "time": "21:30",
+          "location": "피해자 침실",
+          "claimedAction": "21:30 복용분 확인"
+        },
+        {
+          "time": "21:45",
+          "location": "손님방",
+          "claimedAction": "의료 기록 마무리 작업"
+        },
+        {
+          "time": "22:00",
+          "location": "손님방/1층 응접실",
+          "claimedAction": "1층으로 내려왔다"
+        }
       ],
       "personaVariants": [
         {
           "id": "pv_park_professional",
           "label": "전문가 방어",
-          "tensionLevels": ["low"],
+          "tensionLevels": [
+            "low"
+          ],
           "overlay": {
             "tone": "professional",
             "voice": "의학적 기록과 관찰 범위만 말하며 감정을 드러내지 않는다.",
             "hesitation": 0.2,
             "evasiveness": 0.2,
-            "styleDirectives": ["기록 중심", "차분함", "의학 용어는 짧게"]
+            "styleDirectives": [
+              "기록 중심",
+              "차분함",
+              "의학 용어는 짧게"
+            ]
           }
         },
         {
           "id": "pv_park_defensive",
           "label": "전문성 방패",
-          "tensionLevels": ["medium", "high"],
-          "pressureStates": ["pressed"],
+          "tensionLevels": [
+            "medium",
+            "high"
+          ],
+          "pressureStates": [
+            "pressed"
+          ],
           "overlay": {
             "tone": "defensive",
             "voice": "의심받는 순간 기록을 방패처럼 내세우고, 질문을 감정적으로 받아친다.",
             "hesitation": 0.5,
             "evasiveness": 0.55,
-            "styleDirectives": ["기록상", "반박", "추측 거부"]
+            "styleDirectives": [
+              "기록상",
+              "반박",
+              "추측 거부"
+            ]
           }
         },
         {
           "id": "pv_park_breaking",
           "label": "권위 흔들림",
-          "tensionLevels": ["critical"],
-          "pressureStates": ["broken"],
+          "tensionLevels": [
+            "critical"
+          ],
+          "pressureStates": [
+            "broken"
+          ],
           "overlay": {
             "tone": "broken",
             "voice": "전문가처럼 버티던 말투가 무너지고, 공개된 기록의 빈틈은 인정한다.",
             "hesitation": 0.75,
             "evasiveness": 0.25,
-            "styleDirectives": ["짧은 인정", "권위 약화", "변명 축소"]
+            "styleDirectives": [
+              "짧은 인정",
+              "권위 약화",
+              "변명 축소"
+            ]
           }
         }
       ]
@@ -199,59 +327,103 @@
       "characterId": "char_choiyuna",
       "name": "최윤아",
       "role": "비서",
-      "publicProfile": "강도준의 비서. 일정과 업무를 7년째 관리해 왔다. 효율적이고 감정을 잘 드러내지 않는다.",
+      "publicProfile": "일정과 통화를 빈틈없이 관리한다. 필요한 말만 하는 편이며, 사적인 지시와 기록의 의미를 분리하려 든다.",
       "secret": "피해자가 비밀리에 유언장 변경을 준비한 사실을 알고 있었고, 한서연에게 알리지 말라는 지시를 받았다.",
       "motiveCandidate": false,
       "isCulprit": false,
       "speechStyle": {
         "tic": "네,",
         "prefix": "",
-        "vocabulary": ["일정상", "회장님", "확인했습니다", "기록에"],
+        "vocabulary": [
+          "일정상",
+          "회장님",
+          "확인했습니다",
+          "기록에"
+        ],
         "tone": "concise"
       },
       "publicTimeline": [
-        { "time": "21:30", "location": "응접실", "claimedAction": "내일 일정 서류 정리" },
-        { "time": "21:55", "location": "응접실", "claimedAction": "피해자 전화 수신, 일정 지시" },
-        { "time": "22:00", "location": "응접실", "claimedAction": "서류 정리 계속" },
-        { "time": "22:10", "location": "응접실 → 2층", "claimedAction": "윤재호 소리에 올라갔다" }
+        {
+          "time": "21:30",
+          "location": "응접실",
+          "claimedAction": "내일 일정 서류 정리"
+        },
+        {
+          "time": "21:55",
+          "location": "응접실",
+          "claimedAction": "피해자 전화 수신, 일정 지시"
+        },
+        {
+          "time": "22:00",
+          "location": "응접실",
+          "claimedAction": "서류 정리 계속"
+        },
+        {
+          "time": "22:10",
+          "location": "응접실 → 2층",
+          "claimedAction": "윤재호 소리에 올라갔다"
+        }
       ],
       "personaVariants": [
         {
           "id": "pv_choi_efficient",
           "label": "업무적 차단",
-          "tensionLevels": ["low"],
+          "tensionLevels": [
+            "low"
+          ],
           "overlay": {
             "tone": "concise",
             "voice": "네, 필요한 일정과 기록만 또박또박 말하고 사적인 감정은 잘라낸다.",
             "hesitation": 0.1,
             "evasiveness": 0.2,
-            "styleDirectives": ["간결함", "업무 어휘", "감정 절제"]
+            "styleDirectives": [
+              "간결함",
+              "업무 어휘",
+              "감정 절제"
+            ]
           }
         },
         {
           "id": "pv_choi_guarded",
           "label": "경계 모드",
-          "tensionLevels": ["medium", "high"],
-          "pressureStates": ["pressed"],
+          "tensionLevels": [
+            "medium",
+            "high"
+          ],
+          "pressureStates": [
+            "pressed"
+          ],
           "overlay": {
             "tone": "tense",
             "voice": "기록은 인정하지만 의도를 묻는 말에는 짧게 방어하고 숨을 고른다.",
             "hesitation": 0.4,
             "evasiveness": 0.55,
-            "styleDirectives": ["짧은 정정", "호흡 조절", "일정 기록 강조"]
+            "styleDirectives": [
+              "짧은 정정",
+              "호흡 조절",
+              "일정 기록 강조"
+            ]
           }
         },
         {
           "id": "pv_choi_breaking",
           "label": "통제 상실",
-          "tensionLevels": ["critical"],
-          "pressureStates": ["broken"],
+          "tensionLevels": [
+            "critical"
+          ],
+          "pressureStates": [
+            "broken"
+          ],
           "overlay": {
             "tone": "broken",
             "voice": "업무적으로 버티던 태도가 깨지고, 공개된 통화나 일정의 의미를 더 직접적으로 인정한다.",
             "hesitation": 0.7,
             "evasiveness": 0.25,
-            "styleDirectives": ["네,로 시작하되 흔들림", "직접 인정", "짧은 문장"]
+            "styleDirectives": [
+              "네,로 시작하되 흔들림",
+              "직접 인정",
+              "짧은 문장"
+            ]
           }
         }
       ]
@@ -311,8 +483,8 @@
       "foundAt": "서재 금고 옆",
       "timeWindow": "불명",
       "reliability": 0.85,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "con_room_claim_vs_entry_log"
     },
     {
       "id": "ev_phone_call",
@@ -323,8 +495,8 @@
       "foundAt": "피해자 휴대폰",
       "timeWindow": "21:55",
       "reliability": 0.9,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "q_choiyuna_last_call"
     },
     {
       "id": "ev_medicine_box",
@@ -335,8 +507,8 @@
       "foundAt": "피해자 침실",
       "timeWindow": "21:30",
       "reliability": 0.75,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "q_parkmingyu_medicine"
     },
     {
       "id": "ev_storm_blackout",
@@ -347,8 +519,8 @@
       "foundAt": "관리실 로그",
       "timeWindow": "22:05~22:07",
       "reliability": 0.88,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_blackout"
     },
     {
       "id": "ev_ring_near_victim",
@@ -359,8 +531,8 @@
       "foundAt": "서재 피해자 주변",
       "timeWindow": "22:00~22:10",
       "reliability": 0.9,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "con_room_claim_vs_entry_log"
     },
     {
       "id": "ev_lipstick_tube",
@@ -371,8 +543,8 @@
       "foundAt": "서재 쓰레기통",
       "timeWindow": "불명",
       "reliability": 0.7,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "q_choiyuna_wine"
     },
     {
       "id": "ev_window_bolt",
@@ -394,8 +566,20 @@
       "foundAt": "저택 CCTV 시스템",
       "timeWindow": "22:05~22:07",
       "reliability": 0.75,
-      "initiallyVisible": true,
-      "unlockCondition": null
+      "initiallyVisible": false,
+      "unlockCondition": "con_watch_time_manipulated"
+    },
+    {
+      "id": "ev_prescription_dispute_note",
+      "evidenceId": "ev_prescription_dispute_note",
+      "name": "처방 변경 메모",
+      "type": "record",
+      "description": "피해자 책상 서랍에서 발견된 메모. 박민규가 처방 변경을 강하게 반대했고, 피해자는 책임 소재를 따지겠다고 적어 두었다. 살해 수단과 직접 연결되지는 않지만 숨긴 언쟁을 보여준다.",
+      "foundAt": "서재 책상 서랍",
+      "timeWindow": "21:30 이전",
+      "reliability": 0.82,
+      "initiallyVisible": false,
+      "unlockCondition": "q_parkmingyu_medicine"
     }
   ],
   "records": [
@@ -639,6 +823,39 @@
       "location": "응접실",
       "initiallyVisible": false,
       "unlockCondition": "q_choiyuna_last_call"
+    },
+    {
+      "id": "st_parkmingyu_no_argument",
+      "statementId": "st_parkmingyu_no_argument",
+      "characterId": "char_parkmingyu",
+      "questionText": "피해자와 다툼은 없었나요?",
+      "text": "처방에 대한 의견 차이는 있었지만 다툼이라고 할 정도는 아니었습니다. 기록상 문제도 없었습니다.",
+      "timeWindow": "21:30 이전",
+      "location": "피해자 침실",
+      "initiallyVisible": false,
+      "unlockCondition": "q_parkmingyu_argument"
+    },
+    {
+      "id": "st_yoonjaeho_family_tension",
+      "statementId": "st_yoonjaeho_family_tension",
+      "characterId": "char_yoonjaeho",
+      "questionText": "가족들 사이 분위기는 어땠나요?",
+      "text": "말씀드리자면 최근 저택 안 분위기는 좋지 않았습니다. 특히 돈과 유언 이야기가 나오면 모두 말을 아꼈습니다.",
+      "timeWindow": "사건 전",
+      "location": "저택",
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_family_tension"
+    },
+    {
+      "id": "st_choiyuna_ring_seen",
+      "statementId": "st_choiyuna_ring_seen",
+      "characterId": "char_choiyuna",
+      "questionText": "반지에 대해 아는 것이 있나요?",
+      "text": "네, 그 반지는 한서연 씨가 중요한 자리에서 자주 끼던 물건으로 기억합니다. 사건 당일 착용 여부까지는 확인하지 못했습니다.",
+      "timeWindow": "사건 전",
+      "location": "저택",
+      "initiallyVisible": false,
+      "unlockCondition": "ev_ring_near_victim"
     }
   ],
   "questions": [
@@ -648,7 +865,9 @@
       "characterId": "char_hanseoyeon",
       "text": "22:00에 어디 있었나요?",
       "answer": "제 방에 있었습니다. 폭풍 때문에 밖으로 나갈 생각도 못 했어요.",
-      "unlocksStatementIds": ["st_hanseoyeon_room_2200"],
+      "unlocksStatementIds": [
+        "st_hanseoyeon_room_2200"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -657,7 +876,9 @@
       "characterId": "char_hanseoyeon",
       "text": "상속 문제로 다툰 적 있나요?",
       "answer": "말다툼은 있었지만 가족끼리 그럴 수 있잖아요. 죽일 이유는 없었습니다.",
-      "unlocksStatementIds": ["st_hanseoyeon_no_reason"],
+      "unlocksStatementIds": [
+        "st_hanseoyeon_no_reason"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -674,7 +895,9 @@
       "characterId": "char_hanseoyeon",
       "text": "서재의 와인잔을 알고 있나요?",
       "answer": "와인잔은 제 것이 아닙니다. 그날 와인을 마시지 않았어요.",
-      "unlocksStatementIds": ["st_hanseoyeon_wine_deny"],
+      "unlocksStatementIds": [
+        "st_hanseoyeon_wine_deny"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -683,9 +906,23 @@
       "characterId": "char_hanseoyeon",
       "text": "서재에 들어갔다면 무엇을 봤나요?",
       "answer": "이미 회장님이 쓰러진 것처럼 보였습니다. 겁이 나서 바로 나왔어요.",
-      "unlocksStatementIds": ["st_hanseoyeon_pressure"],
+      "unlocksStatementIds": [
+        "st_hanseoyeon_pressure"
+      ],
       "initiallyUnlocked": false,
       "unlockCondition": "con_room_claim_vs_entry_log"
+    },
+    {
+      "id": "q_hanseoyeon_ring_missing",
+      "questionId": "q_hanseoyeon_ring_missing",
+      "characterId": "char_hanseoyeon",
+      "text": "현장에서 발견된 반지는 왜 거기에 있었나요?",
+      "answer": "…그 반지가 제 것처럼 보인다는 건 알아요. 그런데 어디서 잃어버렸는지는 정말 모르겠습니다.",
+      "unlocksStatementIds": [
+        "st_hanseoyeon_ring_missing"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "ev_ring_near_victim"
     },
     {
       "id": "q_yoonjaeho_discovery",
@@ -693,7 +930,9 @@
       "characterId": "char_yoonjaeho",
       "text": "피해자를 언제 발견했나요?",
       "answer": "22:10쯤 순찰 중 서재 문이 열려 있는 걸 보고 안을 확인했습니다.",
-      "unlocksStatementIds": ["st_yoonjaeho_found_2210"],
+      "unlocksStatementIds": [
+        "st_yoonjaeho_found_2210"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -702,8 +941,12 @@
       "characterId": "char_yoonjaeho",
       "text": "정전 당시 무엇을 했나요?",
       "answer": "22:05부터 몇 분간 전등이 꺼졌습니다. 관리실 기록을 확인하면 남아 있을 겁니다.",
-      "unlocksStatementIds": ["st_yoonjaeho_blackout"],
-      "unlocksEvidenceIds": ["ev_storm_blackout"],
+      "unlocksStatementIds": [
+        "st_yoonjaeho_blackout"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_storm_blackout"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -712,7 +955,9 @@
       "characterId": "char_yoonjaeho",
       "text": "유언장 변경 사실을 알고 있었나요?",
       "answer": "회장님이 변호사를 부르라고 하신 건 들었습니다. 자세한 내용은 모릅니다.",
-      "unlocksRelationIds": ["rel_yoonjaeho_loyalty"],
+      "unlocksRelationIds": [
+        "rel_yoonjaeho_loyalty"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -721,7 +966,9 @@
       "characterId": "char_yoonjaeho",
       "text": "서재 열쇠 관리는 어떻게 됩니까?",
       "answer": "카드키는 가족 포함 발급 가능합니다. 구형 열쇠는 회장님과 제 것 두 개뿐입니다.",
-      "unlocksStatementIds": ["st_yoonjaeho_key_only_victim"],
+      "unlocksStatementIds": [
+        "st_yoonjaeho_key_only_victim"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -730,7 +977,9 @@
       "characterId": "char_parkmingyu",
       "text": "22:00에 어디 있었나요?",
       "answer": "손님방에서 의료 기록을 정리하고 있었습니다.",
-      "unlocksStatementIds": ["st_parkmingyu_guestroom_2200"],
+      "unlocksStatementIds": [
+        "st_parkmingyu_guestroom_2200"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -739,8 +988,13 @@
       "characterId": "char_parkmingyu",
       "text": "피해자의 약은 언제 확인했나요?",
       "answer": "21:30 복용분을 확인했습니다. 약으로 인한 급사는 아닐 겁니다.",
-      "unlocksStatementIds": ["st_parkmingyu_medicine"],
-      "unlocksEvidenceIds": ["ev_medicine_box"],
+      "unlocksStatementIds": [
+        "st_parkmingyu_medicine"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_medicine_box",
+        "ev_prescription_dispute_note"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -749,8 +1003,12 @@
       "characterId": "char_choiyuna",
       "text": "피해자와 마지막으로 연락한 때는?",
       "answer": "21:55에 전화를 받았습니다. 내일 변호사 일정을 잡으라는 지시였습니다.",
-      "unlocksStatementIds": ["st_choiyuna_call_record"],
-      "unlocksEvidenceIds": ["ev_phone_call"],
+      "unlocksStatementIds": [
+        "st_choiyuna_call_record"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_phone_call"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -759,7 +1017,9 @@
       "characterId": "char_choiyuna",
       "text": "비밀 일정이 있었나요?",
       "answer": "내일 변호사와 만날 예정이었습니다. 회장님은 다른 가족에게 알리지 말라고 했습니다.",
-      "unlocksRelationIds": ["rel_choiyuna_schedule"],
+      "unlocksRelationIds": [
+        "rel_choiyuna_schedule"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -768,9 +1028,50 @@
       "characterId": "char_choiyuna",
       "text": "서재의 와인잔을 알고 있나요?",
       "answer": "저는 와인을 마시지 않았습니다. 립스틱 색도 제 것이 아닙니다.",
-      "unlocksStatementIds": ["st_choiyuna_no_wine"],
-      "unlocksEvidenceIds": ["ev_lipstick_tube"],
+      "unlocksStatementIds": [
+        "st_choiyuna_no_wine"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_lipstick_tube"
+      ],
       "initiallyUnlocked": true
+    },
+    {
+      "id": "q_parkmingyu_argument",
+      "questionId": "q_parkmingyu_argument",
+      "characterId": "char_parkmingyu",
+      "text": "피해자와 다툼은 없었나요?",
+      "answer": "처방 방향에 대한 의견 차이는 있었지만, 감정적인 충돌은 아니었습니다. 기록으로 확인 가능한 범위만 말씀드리겠습니다.",
+      "unlocksStatementIds": [
+        "st_parkmingyu_no_argument"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "id": "q_yoonjaeho_family_tension",
+      "questionId": "q_yoonjaeho_family_tension",
+      "characterId": "char_yoonjaeho",
+      "text": "가족들 사이 분위기는 어땠나요?",
+      "answer": "최근에는 조용한 날이 드물었습니다. 다만 제가 본 것과 짐작을 섞어 말씀드릴 수는 없습니다.",
+      "unlocksStatementIds": [
+        "st_yoonjaeho_family_tension"
+      ],
+      "unlocksRelationIds": [
+        "rel_yoonjaeho_loyalty"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "id": "q_choiyuna_ring",
+      "questionId": "q_choiyuna_ring",
+      "characterId": "char_choiyuna",
+      "text": "반지에 대해 아는 것이 있나요?",
+      "answer": "제가 단정할 수는 없지만, 비슷한 반지를 한서연 씨가 자주 착용했습니다. 소유 확인 기록과 함께 봐야 합니다.",
+      "unlocksStatementIds": [
+        "st_choiyuna_ring_seen"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "ev_ring_near_victim"
     }
   ],
   "contradictions": [
@@ -779,34 +1080,56 @@
       "contradictionId": "con_room_claim_vs_entry_log",
       "title": "방에 있었다는 진술과 서재 출입 기록의 충돌",
       "relatedCharacterId": "char_hanseoyeon",
-      "requiredStatementIds": ["st_hanseoyeon_room_2200"],
-      "requiredEvidenceIds": ["ev_study_entry_log"],
+      "requiredStatementIds": [
+        "st_hanseoyeon_room_2200"
+      ],
+      "requiredEvidenceIds": [
+        "ev_study_entry_log"
+      ],
       "severity": "core",
       "pressureDelta": 40,
       "reasonCode": "time_location_conflict",
       "message": "한서연의 22:00 방 알리바이는 22:02 서재 출입 기록과 충돌합니다.",
-      "unlockedIds": ["st_hanseoyeon_pressure", "q_hanseoyeon_after_pressure", "ev_torn_will", "ev_ring_near_victim"]
+      "unlockedIds": [
+        "st_hanseoyeon_pressure",
+        "q_hanseoyeon_after_pressure",
+        "ev_torn_will",
+        "ev_ring_near_victim",
+        "q_hanseoyeon_ring_missing",
+        "q_choiyuna_ring"
+      ]
     },
     {
       "id": "con_watch_time_manipulated",
       "contradictionId": "con_watch_time_manipulated",
       "title": "회중시계 시각 조작 의혹",
       "relatedCharacterId": "char_hanseoyeon",
-      "requiredStatementIds": ["st_hanseoyeon_pressure"],
-      "requiredEvidenceIds": ["ev_broken_watch", "ev_storm_blackout"],
+      "requiredStatementIds": [
+        "st_hanseoyeon_pressure"
+      ],
+      "requiredEvidenceIds": [
+        "ev_broken_watch",
+        "ev_storm_blackout"
+      ],
       "severity": "major",
       "pressureDelta": 25,
       "reasonCode": "scene_manipulation_during_blackout",
       "message": "정전 시간과 부자연스러운 회중시계 파편은 현장 조작 가능성을 뒷받침합니다.",
-      "unlockedIds": ["ev_deleted_cctv"]
+      "unlockedIds": [
+        "ev_deleted_cctv"
+      ]
     },
     {
       "id": "con_inheritance_motive",
       "contradictionId": "con_inheritance_motive",
       "title": "상속 갈등과 찢어진 유언장",
       "relatedCharacterId": "char_hanseoyeon",
-      "requiredStatementIds": ["st_hanseoyeon_no_reason"],
-      "requiredEvidenceIds": ["ev_torn_will"],
+      "requiredStatementIds": [
+        "st_hanseoyeon_no_reason"
+      ],
+      "requiredEvidenceIds": [
+        "ev_torn_will"
+      ],
       "severity": "core",
       "pressureDelta": 35,
       "reasonCode": "inheritance_motive_confirmed",
@@ -818,38 +1141,71 @@
       "contradictionId": "con_call_record",
       "title": "피해자의 마지막 통화와 비서의 진술",
       "relatedCharacterId": "char_choiyuna",
-      "requiredStatementIds": ["st_choiyuna_call_2155"],
-      "requiredEvidenceIds": ["ev_phone_call"],
+      "requiredStatementIds": [
+        "st_choiyuna_call_2155"
+      ],
+      "requiredEvidenceIds": [
+        "ev_phone_call"
+      ],
       "severity": "minor",
       "pressureDelta": 10,
       "reasonCode": "hidden_will_schedule",
       "message": "최윤아는 통화 내용을 처음엔 축소해 말했지만, 통화 기록은 3분 12초의 상세 지시가 있었음을 보여줍니다.",
-      "unlockedIds": ["rec_will_revision_notice"]
+      "unlockedIds": [
+        "rec_will_revision_notice"
+      ]
     },
     {
       "id": "con_ring_vs_no_entry",
       "contradictionId": "con_ring_vs_no_entry",
       "title": "현장 발견 반지와 서재 출입 부정",
       "relatedCharacterId": "char_hanseoyeon",
-      "requiredStatementIds": ["st_hanseoyeon_ring_missing"],
-      "requiredEvidenceIds": ["ev_ring_near_victim"],
+      "requiredStatementIds": [
+        "st_hanseoyeon_ring_missing"
+      ],
+      "requiredEvidenceIds": [
+        "ev_ring_near_victim"
+      ],
       "severity": "major",
       "pressureDelta": 30,
       "reasonCode": "physical_evidence_at_scene",
       "message": "한서연의 반지가 피해자 근처에서 발견됐습니다. 서재 출입을 부정하는 진술과 충돌합니다.",
-      "unlockedIds": ["rec_ring_ownership"]
+      "unlockedIds": [
+        "rec_ring_ownership"
+      ]
     },
     {
       "id": "con_wine_glass_lipstick",
       "contradictionId": "con_wine_glass_lipstick",
       "title": "와인잔 립스틱과 부인 진술",
       "relatedCharacterId": "char_hanseoyeon",
-      "requiredStatementIds": ["st_hanseoyeon_wine_deny"],
-      "requiredEvidenceIds": ["ev_wine_glass"],
+      "requiredStatementIds": [
+        "st_hanseoyeon_wine_deny"
+      ],
+      "requiredEvidenceIds": [
+        "ev_wine_glass"
+      ],
       "severity": "minor",
       "pressureDelta": 15,
       "reasonCode": "physical_trace_contradiction",
       "message": "한서연은 와인을 마시지 않았다고 했지만, 서재 와인잔에는 특정 색상의 립스틱 흔적이 남아 있습니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_park_prescription_dispute",
+      "contradictionId": "con_park_prescription_dispute",
+      "title": "처방 다툼 축소 진술",
+      "relatedCharacterId": "char_parkmingyu",
+      "requiredStatementIds": [
+        "st_parkmingyu_no_argument"
+      ],
+      "requiredEvidenceIds": [
+        "ev_prescription_dispute_note"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "innocent_side_conflict",
+      "message": "박민규는 다툼을 축소했지만 처방 변경 메모는 책임 문제로 강한 언쟁이 있었음을 보여줍니다. 다만 사망 원인과 직접 연결되지는 않는 보조 모순입니다.",
       "unlockedIds": []
     }
   ],
@@ -876,18 +1232,18 @@
     }
   },
   "opening": {
-    "hook": "폭풍우가 저택을 고립시킨 밤, 강도준은 2층 서재에서 사망한 채 발견됐다. 네 사람의 알리바이는 얼핏 맞아 보이지만 어딘가 하나씩 어긋난다.",
-    "objective": "12번의 탐문 안에 알리바이의 충돌, 동기, 조작 흔적을 연결해 최종 범인을 지목하라.",
+    "hook": "폭풍이 전화선과 도로를 끊은 밤, 강도준의 서재 문은 안쪽에서 닫힌 흔적만 남긴 채 열려 있었다. 네 사람은 모두 그 시간에 그곳에 없었다고 말한다.",
+    "objective": "12번의 탐문 안에 거짓 알리바이, 숨긴 갈등, 현장 조작의 순서를 분리해 최종 고발에 필요한 핵심 근거를 확보하라.",
     "rules": [
       "질문 1회마다 남은 탐문 횟수가 1 감소한다.",
       "진술과 증거를 조합해 모순을 제기한다.",
       "핵심 모순을 맞히면 새 질문/증거가 해금된다.",
       "최종 지목은 범인, 동기, 수단, 핵심 근거를 함께 평가한다."
     ],
-    "victoryCondition": "한서연의 방 알리바이를 깨고 상속 동기를 입증한 뒤 필수 근거와 함께 최종 지목한다."
+    "victoryCondition": "서재에 실제로 접근한 인물의 거짓말과 그 거짓말을 낳은 동기를 함께 입증한다."
   },
   "storyline": {
-    "publicPremise": "외부 침입 흔적이 없는 저택 내부 사건이다. 플레이어는 각 인물의 시간대별 진술과 객관 기록을 대조해 말의 충돌을 찾아야 한다.",
+    "publicPremise": "외부 침입이 불가능한 저택 내부 사건이다. 플레이어는 객관 기록, 각자의 알리바이, 서로를 감싸거나 밀어내는 진술을 대조해 “누가 거짓말을 했는지”보다 “왜 그 거짓말을 해야 했는지”를 밝혀야 한다.",
     "acts": [
       {
         "actId": "intro",
@@ -895,9 +1251,15 @@
         "objective": "사건 개요와 기본 증거를 확인한다.",
         "entryCondition": "start",
         "focusSuspectIds": [],
-        "recommendedQuestionIds": ["q_hanseoyeon_alibi", "q_yoonjaeho_discovery"],
-        "requiredClueIds": ["ev_servant_log", "ev_study_entry_log"],
-        "playerHint": "먼저 사망 추정 시각과 서재 출입 기록을 비교할 준비를 하라.",
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_alibi",
+          "q_yoonjaeho_discovery"
+        ],
+        "requiredClueIds": [
+          "ev_servant_log",
+          "ev_study_entry_log"
+        ],
+        "playerHint": "처음부터 범인을 찍기보다, 사건 시간대에 실제로 움직임을 증명하는 기록을 찾는다.",
         "completionCondition": "첫 용의자 알리바이 탐문 시작"
       },
       {
@@ -905,10 +1267,23 @@
         "title": "알리바이 수집",
         "objective": "22:00 전후 각 용의자의 위치 진술을 확보한다.",
         "entryCondition": "start",
-        "focusSuspectIds": ["char_hanseoyeon", "char_yoonjaeho", "char_parkmingyu", "char_choiyuna"],
-        "recommendedQuestionIds": ["q_hanseoyeon_alibi", "q_parkmingyu_alibi", "q_yoonjaeho_discovery", "q_choiyuna_last_call"],
-        "requiredClueIds": ["st_hanseoyeon_room_2200", "ev_study_entry_log"],
-        "playerHint": "한서연의 방 알리바이와 22:02 서재 출입 기록을 나란히 보라.",
+        "focusSuspectIds": [
+          "char_hanseoyeon",
+          "char_yoonjaeho",
+          "char_parkmingyu",
+          "char_choiyuna"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_alibi",
+          "q_parkmingyu_alibi",
+          "q_yoonjaeho_discovery",
+          "q_choiyuna_last_call"
+        ],
+        "requiredClueIds": [
+          "st_hanseoyeon_room_2200",
+          "ev_study_entry_log"
+        ],
+        "playerHint": "같은 시간대의 말과 기계 기록을 나란히 놓으면 가장 먼저 어긋나는 축이 보인다.",
         "completionCondition": "con_room_claim_vs_entry_log 해결"
       },
       {
@@ -916,10 +1291,19 @@
         "title": "첫 모순",
         "objective": "방에 있었다는 진술과 서재 출입 기록의 충돌을 제기한다.",
         "entryCondition": "con_room_claim_vs_entry_log",
-        "focusSuspectIds": ["char_hanseoyeon"],
-        "recommendedQuestionIds": ["q_hanseoyeon_after_pressure", "q_yoonjaeho_blackout"],
-        "requiredClueIds": ["st_hanseoyeon_pressure", "ev_torn_will", "ev_storm_blackout"],
-        "playerHint": "압박 후 한서연의 서재 진술과 새로 열린 반지 증거를 확인하라.",
+        "focusSuspectIds": [
+          "char_hanseoyeon"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_after_pressure",
+          "q_yoonjaeho_blackout"
+        ],
+        "requiredClueIds": [
+          "st_hanseoyeon_pressure",
+          "ev_torn_will",
+          "ev_storm_blackout"
+        ],
+        "playerHint": "첫 거짓말을 깨면 새 단서가 열린다. 새 단서가 동기인지, 조작 흔적인지 구분하라.",
         "completionCondition": "압박으로 동기 단서 확인"
       },
       {
@@ -927,10 +1311,21 @@
         "title": "동기 확정",
         "objective": "상속 갈등과 찢어진 유언장, 반지 증거를 연결해 동기와 현장 접촉을 입증한다.",
         "entryCondition": "con_inheritance_motive",
-        "focusSuspectIds": ["char_hanseoyeon", "char_choiyuna"],
-        "recommendedQuestionIds": ["q_hanseoyeon_inheritance", "q_choiyuna_schedule", "q_choiyuna_last_call"],
-        "requiredClueIds": ["st_hanseoyeon_no_reason", "ev_torn_will", "rec_will_revision_notice"],
-        "playerHint": "죽일 이유가 없다는 말과 유언장 변경 흔적이 동시에 참일 수 있는지 검토하라.",
+        "focusSuspectIds": [
+          "char_hanseoyeon",
+          "char_choiyuna"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_inheritance",
+          "q_choiyuna_schedule",
+          "q_choiyuna_last_call"
+        ],
+        "requiredClueIds": [
+          "st_hanseoyeon_no_reason",
+          "ev_torn_will",
+          "rec_will_revision_notice"
+        ],
+        "playerHint": "돈, 일정, 침묵은 각자 다른 이유로 숨겨진다. 직접 살해와 무관한 비밀도 있다.",
         "completionCondition": "con_inheritance_motive 해결"
       },
       {
@@ -938,10 +1333,19 @@
         "title": "최종 지목",
         "objective": "범인, 동기, 수단, 알리바이 모순 근거를 제출한다.",
         "entryCondition": "core contradictions found",
-        "focusSuspectIds": ["char_hanseoyeon"],
-        "recommendedQuestionIds": ["q_hanseoyeon_after_pressure"],
-        "requiredClueIds": ["con_room_claim_vs_entry_log", "con_inheritance_motive", "ev_study_entry_log", "ev_torn_will"],
-        "playerHint": "최종 지목에는 출입 기록과 상속 동기를 함께 넣어야 한다.",
+        "focusSuspectIds": [
+          "char_hanseoyeon"
+        ],
+        "recommendedQuestionIds": [
+          "q_hanseoyeon_after_pressure"
+        ],
+        "requiredClueIds": [
+          "con_room_claim_vs_entry_log",
+          "con_inheritance_motive",
+          "ev_study_entry_log",
+          "ev_torn_will"
+        ],
+        "playerHint": "최종 지목은 사람 이름만으로 부족하다. 거짓 알리바이와 동기를 함께 제시해야 한다.",
         "completionCondition": "accusation submitted"
       }
     ],
@@ -1003,13 +1407,35 @@
         "sourceType": "inference",
         "sourceId": "solution_hidden",
         "hidden": true
+      },
+      {
+        "id": "tl_prescription_argument",
+        "time": "21:25~21:35",
+        "title": "처방 변경 언쟁",
+        "description": "처방 변경을 두고 피해자와 박민규 사이에 책임 문제 언쟁이 있었다.",
+        "sourceType": "evidence",
+        "sourceId": "ev_prescription_dispute_note",
+        "hidden": true,
+        "unlockCondition": "ev_prescription_dispute_note"
+      },
+      {
+        "id": "tl_ring_identified",
+        "time": "사건 이후",
+        "title": "반지 소유 확인",
+        "description": "현장 반지의 소유자를 확인하는 기록이 추가됐다.",
+        "sourceType": "record",
+        "sourceId": "rec_ring_ownership",
+        "hidden": true,
+        "unlockCondition": "rec_ring_ownership"
       }
     ],
     "currentObjectiveRules": [
       {
         "priority": 10,
-        "when": { "missingContradictionId": "con_room_claim_vs_entry_log" },
-        "objective": "한서연의 22:00 방 알리바이와 22:02 서재 출입 기록을 대조하라.",
+        "when": {
+          "missingContradictionId": "con_room_claim_vs_entry_log"
+        },
+        "objective": "먼저 서재 출입 기록과 시간대가 맞지 않는 알리바이를 찾고, 수상한 비밀과 핵심 거짓말을 구분하라.",
         "actId": "alibi_collection"
       },
       {
@@ -1018,14 +1444,101 @@
           "discoveredContradictionId": "con_room_claim_vs_entry_log",
           "missingContradictionId": "con_inheritance_motive"
         },
-        "objective": "압박으로 열린 단서를 확인하고 상속 갈등의 동기를 입증하라.",
+        "objective": "첫 거짓말 이후 열린 단서로 상속 갈등과 현장 접촉 흔적을 분리해 검토하라.",
         "actId": "motive_reveal"
       },
       {
         "priority": 30,
-        "when": { "discoveredContradictionId": "con_inheritance_motive" },
+        "when": {
+          "discoveredContradictionId": "con_inheritance_motive"
+        },
         "objective": "범인, 동기, 수단, 알리바이 모순 근거를 모아 최종 지목하라.",
         "actId": "final_accusation"
+      }
+    ],
+    "cluePaths": [
+      {
+        "pathId": "path_alibi_gap",
+        "title": "시간대 대조",
+        "objective": "사망 추정 시간과 출입 기록, 알리바이 진술의 시간축을 비교한다.",
+        "steps": [
+          {
+            "order": 1,
+            "type": "evidence",
+            "id": "ev_servant_log",
+            "prompt": "사망 추정 시간의 범위를 확인한다."
+          },
+          {
+            "order": 2,
+            "type": "statement",
+            "id": "st_hanseoyeon_room_2200",
+            "prompt": "같은 시간대에 어디 있었다고 말했는지 기록한다."
+          },
+          {
+            "order": 3,
+            "type": "evidence",
+            "id": "ev_study_entry_log",
+            "prompt": "기계 기록이 말과 같은 방향인지 확인한다."
+          }
+        ],
+        "resolvesContradictionId": "con_room_claim_vs_entry_log",
+        "unlocks": [
+          "q_hanseoyeon_after_pressure"
+        ]
+      },
+      {
+        "pathId": "path_false_leads",
+        "title": "무고한 비밀 분리",
+        "objective": "수상한 비밀과 살해 핵심 근거를 구분한다.",
+        "steps": [
+          {
+            "order": 1,
+            "type": "question",
+            "id": "q_parkmingyu_medicine",
+            "prompt": "의학 기록이 직접 사망 원인과 연결되는지 확인한다."
+          },
+          {
+            "order": 2,
+            "type": "question",
+            "id": "q_parkmingyu_argument",
+            "prompt": "숨긴 언쟁이 있어도 살해 방법과 연결되는지 따져 본다."
+          },
+          {
+            "order": 3,
+            "type": "evidence",
+            "id": "ev_prescription_dispute_note",
+            "prompt": "거짓말의 이유가 범행인지 체면/책임 회피인지 분리한다."
+          }
+        ],
+        "resolvesContradictionId": "con_park_prescription_dispute",
+        "unlocks": []
+      },
+      {
+        "pathId": "path_motive_chain",
+        "title": "동기 연결",
+        "objective": "유언장 변경, 통화 지시, 상속 갈등을 한 줄의 동기로 연결한다.",
+        "steps": [
+          {
+            "order": 1,
+            "type": "question",
+            "id": "q_choiyuna_last_call",
+            "prompt": "마지막 통화가 단순 일정인지 확인한다."
+          },
+          {
+            "order": 2,
+            "type": "question",
+            "id": "q_yoonjaeho_family_tension",
+            "prompt": "저택 안에서 그 일정이 어떤 긴장을 만들었는지 확인한다."
+          },
+          {
+            "order": 3,
+            "type": "evidence",
+            "id": "ev_torn_will",
+            "prompt": "숨겨진 일정과 물리적 흔적이 같은 방향을 가리키는지 본다."
+          }
+        ],
+        "resolvesContradictionId": "con_inheritance_motive",
+        "unlocks": []
       }
     ]
   }

@@ -299,11 +299,12 @@ Production policy:
 - Local/mock fixtures are allowed only in tests, Storybook/dev preview, or intentionally configured offline development.
 - FE `LOCAL/MOCK` state is debug-only and must be visibly marked. It cannot be used as commit-ready production evidence.
 - BE compatibility adapters may preserve old endpoints temporarily, but they must still route to canonical validation and diagnostics.
-- AI fallback templates may only produce degraded service messages or safe refusal/repair messages. They must not fabricate character testimony, contradictions, notes, or progress.
+- BE-owned degraded fallback is allowed only when it is generated from public case/session state, marked with `fallbackUsed=true`/`degraded=true`, logged as a warning, and sanitized for private refs. A matched player turn may consume the 12-turn budget, but fallback must not silently masquerade as normal provider output.
+- AI fallback/repair paths must not mutate authoritative truth directly: no fabricated culprit/solution, no private refs, no unvalidated contradiction discovery, no evidence unlock, no note fact, and no tension/objective progress unless the BE rule engine independently validates the public turn.
 
 Environment/config gates:
 - Production-like Docker dogfood must set explicit service URLs for FE -> BE and BE -> AI.
-- If AI provider credentials/config are missing, readiness should fail or dialogue should return degraded semantics with `fallbackUsed=true`; it must not pass as a normal character answer.
+- If AI provider credentials/config are missing, readiness should fail or dialogue should return degraded semantics with `fallbackUsed=true`/`degraded=true`; it must not pass as a normal provider answer.
 - Tests may enable mock providers with a named env flag such as `AI_PROVIDER=mock` or equivalent. Completion reports must state when mock mode was used.
 - Health/readiness endpoints must distinguish process-up from dependency-ready where possible.
 
