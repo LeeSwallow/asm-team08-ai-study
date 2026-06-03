@@ -613,6 +613,52 @@ def test_dialogue_accepts_suspect_id_and_message_and_records_events(tmp_path, mo
     assert "st_hanseoyeon_room_2200" in body
 
 
+def test_session_events_resume_accepts_last_event_id_query_param(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "message": (
+                "\ubc29\uc5d0 \uc788\uc5c8\ub2e4\ub294 \ub9d0\uacfc "
+                "\uc11c\uc7ac \ucd9c\uc785 \uae30\ub85d\uc774 "
+                "\uc11c\ub85c \ucda9\ub3cc\ud558\uc9c0 \uc54a\ub098\uc694?"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    last_event_id = payload["lastEventId"]
+    assert last_event_id
+
+    events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+    event_ids = [line.removeprefix("id: ") for line in events_body.splitlines() if line.startswith("id: ")]
+    assert len(event_ids) >= 2
+    assert event_ids[-1] == last_event_id
+
+    query_resume = client.get(f"/api/v1/sessions/{session_id}/events?once=true&lastEventId={last_event_id}")
+    assert query_resume.status_code == 200
+    assert query_resume.text == ""
+
+    header_resume = client.get(
+        f"/api/v1/sessions/{session_id}/events?once=true",
+        headers={"Last-Event-ID": last_event_id},
+    )
+    assert header_resume.status_code == 200
+    assert header_resume.text == ""
+
+    header_takes_precedence = client.get(
+        f"/api/v1/sessions/{session_id}/events?once=true&lastEventId={last_event_id}",
+        headers={"Last-Event-ID": event_ids[0]},
+    )
+    assert header_takes_precedence.status_code == 200
+    assert f"id: {event_ids[1]}" in header_takes_precedence.text
+
+
 def test_session_get_persists_public_dialogue_runtime_diagnostics(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
