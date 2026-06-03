@@ -22,19 +22,20 @@ import type {
   TimelineEvent,
   Verdict,
   VisualState,
+  PublicContradictionReadModel,
 } from "../types";
-import { defaultBackgroundIdForCase } from "../constants/presentation";
+import { defaultBackgroundIdForCase, normalizeExpression } from "../constants/presentation";
 import { sanitizePublicDiagnosticValue, sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
 const emptyOpening: Opening = {
-  hook: "BE 사건 파일 미수신",
+  hook: "사건 파일 확인 중",
   objective: "서버 공개 사건 파일을 불러와야 합니다.",
   rules: [],
-  victoryCondition: "BE 공개 세션 응답 필요",
+  victoryCondition: "공개 사건 정보 확인 중",
 };
 
 const emptyStoryline: Storyline = {
-  publicPremise: "BE storyline 미수신",
+  publicPremise: "사건 흐름 확인 중",
   acts: [],
   timeline: [],
   cluePaths: [],
@@ -56,6 +57,9 @@ export type BackendSession = {
   caseId: string;
   phase?: "investigation" | "accusation" | "solved" | "failed" | Phase;
   remainingQuestions: number;
+  questionLimit?: number;
+  visibleEvidenceCount?: number;
+  totalEvidenceCount?: number;
   selectedSuspectId?: string | null;
   suspects?: Array<{
     characterId: string;
@@ -63,6 +67,10 @@ export type BackendSession = {
     role: string;
     publicProfile: string;
     motiveCandidate?: boolean;
+    pressure?: number;
+    pressureState?: string;
+    tensionLevel?: string;
+    emotionalState?: string;
     emotion?: string;
     expression?: string;
   }>;
@@ -183,6 +191,7 @@ export type BackendSession = {
     missingContradictionIds?: string[];
     missingStatementIds?: string[];
   };
+  contradictions?: PublicContradictionReadModel;
 };
 
 function eventFeedItem(value: unknown): GameEventFeedItem | null {
@@ -270,7 +279,7 @@ function cleanDialogueText(text: string, speaker: string): string {
     .replaceAll("그대", "형사님");
 }
 
-function runtimeDiagnostics(session: BackendSession, source: "api" | "local"): DialogueRuntimeDiagnostics {
+function runtimeDiagnostics(session: BackendSession, source: "api"): DialogueRuntimeDiagnostics {
   const result = session.dialogueResult;
   return {
     source,
@@ -324,6 +333,40 @@ function statusFromPressure(pressure: number): SuspectStatus {
   return "normal";
 }
 
+function statusFromPublicState(pressure: number, pressureState?: string, tensionLevel?: string): SuspectStatus {
+  const state = `${pressureState ?? ""} ${tensionLevel ?? ""}`.toLowerCase();
+  if (state.includes("break") || state.includes("critical")) return "broken";
+  if (state.includes("high") || state.includes("press") || state.includes("medium") || pressure > 0) return "pressed";
+  return statusFromPressure(pressure);
+}
+
+function deriveExpression(pressure: number, tensionLevel?: string, emotionalState?: string, explicitExpression?: string): string {
+  if (explicitExpression) return normalizeExpression(explicitExpression);
+  const state = `${emotionalState ?? ""} ${tensionLevel ?? ""}`.toLowerCase();
+  if (state.includes("break")) return "breakdown";
+  if (state.includes("shock")) return "shocked";
+  if (state.includes("angry") || state.includes("rage")) return "angry";
+  if (state.includes("anx") || state.includes("critical")) return "anxious";
+  if (state.includes("defensive") || state.includes("high")) return "defensive";
+  if (state.includes("confident") || state.includes("lying")) return "confident_lying";
+  if (state.includes("sad")) return "sad";
+  if (state.includes("focus")) return "focused";
+  if (state.includes("wary") || state.includes("guard") || state.includes("medium")) return "wary";
+  if (pressure >= 85) return "breakdown";
+  if (pressure >= 70) return "anxious";
+  if (pressure >= 45) return "defensive";
+  if (pressure >= 15) return "wary";
+  return "neutral";
+}
+
+function tensionFromPressure(pressure: number, explicit?: string): VisualState["tensionLevel"] {
+  if (explicit) return explicit;
+  if (pressure >= 80) return "critical";
+  if (pressure >= 55) return "high";
+  if (pressure >= 20) return "medium";
+  return "low";
+}
+
 function normalizeCurrentObjective(value: BackendSession["currentObjective"], actId: string, storyline: Storyline): CurrentObjective {
   const act = storyline.acts.find((item) => item.actId === actId) ?? storyline.acts[0];
   if (typeof value === "string") {
@@ -331,7 +374,7 @@ function normalizeCurrentObjective(value: BackendSession["currentObjective"], ac
       actId: act?.actId ?? actId,
       title: act?.title ?? "현재 목표",
       objective: value,
-      playerHint: act?.playerHint ?? "BE 공개 목표 미수신",
+      playerHint: act?.playerHint ?? "공개 목표 확인 중",
     };
   }
   if (value?.objective) {
@@ -339,14 +382,14 @@ function normalizeCurrentObjective(value: BackendSession["currentObjective"], ac
       actId: value.actId ?? act?.actId ?? actId,
       title: value.title ?? act?.title ?? "현재 목표",
       objective: value.objective,
-      playerHint: value.playerHint ?? act?.playerHint ?? "BE 공개 목표 미수신",
+      playerHint: value.playerHint ?? act?.playerHint ?? "공개 목표 확인 중",
     };
   }
   return {
     actId: act?.actId ?? actId,
-    title: act?.title ?? "BE 목표 미수신",
-    objective: act?.objective ?? "BE currentObjective 미수신",
-    playerHint: act?.playerHint ?? "서버 공개 세션 응답을 확인하세요.",
+    title: act?.title ?? "목표 확인 중",
+    objective: act?.objective ?? "현재 목표 확인 중",
+    playerHint: act?.playerHint ?? "공개 사건 정보를 확인하세요.",
   };
 }
 
@@ -380,6 +423,10 @@ function visibleTimelineFallback(storyline: Storyline, evidence: Evidence[], rec
   return storyline.timeline.filter((item) => visibleIds.has(item.sourceId) || !item.unlockCondition);
 }
 
+function emptyContradictions(): PublicContradictionReadModel {
+  return { discoveredIds: [], discovered: [], candidates: [] };
+}
+
 function enrichSessionView(session: GameSessionView): GameSessionView {
   const storyline = session.storyline ?? emptyStoryline;
   const currentActId = session.currentActId ?? storyline.acts[0]?.actId ?? "intro";
@@ -394,15 +441,21 @@ function enrichSessionView(session: GameSessionView): GameSessionView {
       color: suspect.color,
       pressure: suspect.pressure,
       status: suspect.status,
+      pressureState: suspect.pressureState,
+      tensionLevel: suspect.tensionLevel,
       emotion: suspect.emotion,
       expression: suspect.expression,
     })),
+    visibleEvidenceCount: session.visibleEvidenceCount ?? session.evidence.filter((item) => item.unlocked).length,
+    totalEvidenceCount: session.totalEvidenceCount ?? session.evidence.length,
     opening: session.opening ?? emptyOpening,
     storyline,
     currentActId,
     currentObjective: session.currentObjective ?? normalizeCurrentObjective(undefined, currentActId, storyline),
     visibleTimeline:
       session.visibleTimeline ?? visibleTimelineFallback(storyline, session.evidence, session.records, session.statements),
+    source: "api",
+    contradictions: session.contradictions ?? emptyContradictions(),
   };
 }
 
@@ -416,7 +469,10 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
   const emotionBySuspect = session.emotionBySuspect ?? {};
   const expressionBySuspect = session.expressionBySuspect ?? {};
   const suspects: Suspect[] = (session.suspects ?? []).map((item, index) => {
-    const pressure = pressureBySuspect[item.characterId] ?? 0;
+    const pressure = item.pressure ?? pressureBySuspect[item.characterId] ?? 0;
+    const emotionalState = item.emotionalState ?? item.emotion ?? emotionBySuspect[item.characterId] ?? "guarded";
+    const tensionLevel = tensionFromPressure(pressure, item.tensionLevel);
+    const expression = deriveExpression(pressure, tensionLevel, emotionalState, item.expression ?? expressionBySuspect[item.characterId]);
     return {
       id: item.characterId,
       name: item.name,
@@ -425,9 +481,11 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
       motiveHint: item.motiveCandidate ? "동기 후보" : "알리바이 검증 필요",
       color: ["#8f2f2a", "#566170", "#4d6672", "#78613e"][index] ?? "#6f5a3a",
       pressure,
-      status: statusFromPressure(pressure),
-      emotion: item.emotion ?? emotionBySuspect[item.characterId] ?? "guarded",
-      expression: item.expression ?? expressionBySuspect[item.characterId] ?? "neutral",
+      status: statusFromPublicState(pressure, item.pressureState, tensionLevel),
+      pressureState: item.pressureState,
+      tensionLevel,
+      emotion: emotionalState,
+      expression,
     };
   });
   const suspectName = (id: string) => suspects.find((item) => item.id === id)?.name ?? id;
@@ -537,6 +595,9 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     caseId: session.caseId,
     phase: accusationResult ? "result" : normalizePhase(session.phase),
     remainingQuestions: session.remainingQuestions,
+    questionLimit: session.questionLimit ?? 12,
+    visibleEvidenceCount: session.visibleEvidenceCount ?? evidence.filter((item) => item.unlocked).length,
+    totalEvidenceCount: session.totalEvidenceCount ?? evidence.length,
     selectedSuspectId,
     suspects,
     questions,
@@ -550,6 +611,7 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     unlockedQuestionIds: session.unlockedQuestionIds ?? questions.map((item) => item.id),
     newlyUnlockedIds: session.newlyUnlockedIds ?? [],
     foundContradictionIds,
+    contradictions: session.contradictions ?? emptyContradictions(),
     accusationReadiness: session.accusationReadiness,
     opening: session.opening ?? emptyOpening,
     storyline,
@@ -570,12 +632,15 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     result: accusationResult
       ? {
           verdict: accusationResult.verdict,
+          outcome: accusationResult.verdict === "correct" ? "victory" : "defeat",
           title:
             accusationResult.verdict === "correct"
-              ? "정답: 사건이 해결되었습니다"
+              ? "승리: 사건이 해결되었습니다"
               : accusationResult.verdict === "partial"
-                ? "범인은 맞았지만 근거가 부족합니다"
-                : "오답: 결정적 모순을 놓쳤습니다",
+                ? "패배: 범인은 맞았지만 근거가 부족합니다"
+                : accusationResult.verdict === "insufficient"
+                  ? "패배: 제출 근거가 부족합니다"
+                  : "패배: 결정적 모순을 놓쳤습니다",
           message: accusationResult.message,
           usedQuestions: Math.max(0, (session.dialogueLog ?? []).filter((item) => item.speaker === "player").length),
           foundContradictions: foundContradictionIds,

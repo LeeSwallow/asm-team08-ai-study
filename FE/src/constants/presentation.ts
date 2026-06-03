@@ -135,14 +135,6 @@ export const caseCoverAssetPaths: Record<string, string> = {
   case_body_and_onsen: "/assets/cases/case_body_and_onsen/backgrounds/main.png",
 };
 
-export const flowSteps = [
-  { icon: "●●●", title: "사용자 입력", detail: "자연어 질문" },
-  { icon: "◕", title: "Character Agent", detail: "화자의 답변 생성" },
-  { icon: "▧", title: "Light Rule Check", detail: "규칙 기반 검증" },
-  { icon: "⚖", title: "GameMaster Agent", detail: "대화 흐름 및 상태 관리" },
-  { icon: "▤", title: "결과 기록", detail: "증언/모순 사항 저장" },
-] as const;
-
 export function normalizeExpression(expression?: string): CanonicalExpression {
   return expression && expressionSet.has(expression) ? (expression as CanonicalExpression) : "neutral";
 }

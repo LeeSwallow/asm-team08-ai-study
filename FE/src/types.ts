@@ -15,6 +15,15 @@ export type CaseSummary = {
   questionLimit: number;
 };
 
+export type CaseDetail = CaseSummary & {
+  opening?: Opening;
+  publicPremise?: string;
+  suspectCount: number;
+  visibleEvidenceCount: number;
+  visibleRecordCount: number;
+  visibleStatementCount: number;
+};
+
 export type Suspect = {
   id: string;
   name: string;
@@ -24,6 +33,8 @@ export type Suspect = {
   color: string;
   pressure: number;
   status: SuspectStatus;
+  pressureState?: string;
+  tensionLevel?: VisualState["tensionLevel"];
   emotion?: string;
   expression?: string;
 };
@@ -38,7 +49,7 @@ export type VisualState = {
 };
 
 export type DialogueRuntimeDiagnostics = {
-  source: "api" | "local";
+  source: "api";
   dialogueMode?: string;
   intent?: string;
   matchedQuestionId?: string | null;
@@ -260,6 +271,7 @@ export type AccusationPayload = {
 
 export type ResultView = {
   verdict: Verdict;
+  outcome: "victory" | "defeat";
   title: string;
   message: string;
   usedQuestions: number;
@@ -280,11 +292,37 @@ export type AccusationReadiness = {
   requiredStatementCount?: number;
 };
 
+export type PublicContradiction = {
+  contradictionId: string;
+  title: string;
+  suspectId: string;
+  suspectName?: string;
+  statementIds: string[];
+  evidenceIds: string[];
+  requiredStatementIds?: string[];
+  requiredEvidenceIds?: string[];
+  severity?: "core" | "major" | "minor" | string;
+  reasonCode?: string;
+  displayText: string;
+  allRequiredVisible?: boolean;
+  status: "discovered" | "candidate" | string;
+  submitEligible?: boolean;
+};
+
+export type PublicContradictionReadModel = {
+  discoveredIds: string[];
+  discovered: PublicContradiction[];
+  candidates: PublicContradiction[];
+};
+
 export type GameSessionView = {
   sessionId: string;
   caseId: string;
   phase: Phase;
   remainingQuestions: number;
+  questionLimit: number;
+  visibleEvidenceCount: number;
+  totalEvidenceCount: number;
   selectedSuspectId: string | null;
   suspects: Suspect[];
   questions: Question[];
@@ -298,13 +336,14 @@ export type GameSessionView = {
   unlockedQuestionIds: string[];
   newlyUnlockedIds: string[];
   foundContradictionIds: string[];
+  contradictions: PublicContradictionReadModel;
   accusationReadiness?: AccusationReadiness;
   opening: Opening;
   storyline: Storyline;
   currentObjective: CurrentObjective;
   currentActId: string;
   visibleTimeline: TimelineEvent[];
-  source?: "api" | "local";
+  source?: "api";
   visualState?: VisualState;
   latestEvents?: GameEventFeedItem[];
   runtimeDiagnostics?: DialogueRuntimeDiagnostics;

@@ -25,11 +25,11 @@ export function SuspectPanel({ suspects, selectedSuspectId, onSelectSuspect, onO
               className={`suspect-card ${isSelected ? "active" : ""}`}
               onClick={() => onSelectSuspect(suspect.id)}
               aria-current={isSelected}
-              aria-label={`${suspect.name} ${suspect.role}, ${suspectStatusText(suspect.status, isSelected)}`}
+              aria-label={`${suspect.name}, ${suspectStatusText(suspect.status, isSelected)}`}
             >
               <span className="portrait"><img src={suspectAsset(suspect.id, suspect.expression)} alt="" /></span>
               <span className="suspect-info">
-                <strong>{suspect.name} <small>({suspect.role})</small></strong>
+                <strong>{suspect.name}</strong>
                 <span>{suspect.profile}</span>
                 <em>{suspectStatusText(suspect.status, isSelected)}</em>
               </span>
