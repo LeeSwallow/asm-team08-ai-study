@@ -23,7 +23,7 @@ import type {
   Verdict,
   VisualState,
 } from "../types";
-import { defaultBackgroundIdForCase } from "../constants/presentation";
+import { defaultBackgroundIdForCase, normalizeExpression } from "../constants/presentation";
 import { sanitizePublicDiagnosticValue, sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
 const emptyOpening: Opening = {
@@ -63,6 +63,10 @@ export type BackendSession = {
     role: string;
     publicProfile: string;
     motiveCandidate?: boolean;
+    pressure?: number;
+    pressureState?: string;
+    tensionLevel?: string;
+    emotionalState?: string;
     emotion?: string;
     expression?: string;
   }>;
@@ -324,6 +328,40 @@ function statusFromPressure(pressure: number): SuspectStatus {
   return "normal";
 }
 
+function statusFromPublicState(pressure: number, pressureState?: string, tensionLevel?: string): SuspectStatus {
+  const state = `${pressureState ?? ""} ${tensionLevel ?? ""}`.toLowerCase();
+  if (state.includes("break") || state.includes("critical")) return "broken";
+  if (state.includes("high") || state.includes("press") || state.includes("medium") || pressure > 0) return "pressed";
+  return statusFromPressure(pressure);
+}
+
+function deriveExpression(pressure: number, tensionLevel?: string, emotionalState?: string, explicitExpression?: string): string {
+  if (explicitExpression) return normalizeExpression(explicitExpression);
+  const state = `${emotionalState ?? ""} ${tensionLevel ?? ""}`.toLowerCase();
+  if (state.includes("break")) return "breakdown";
+  if (state.includes("shock")) return "shocked";
+  if (state.includes("angry") || state.includes("rage")) return "angry";
+  if (state.includes("anx") || state.includes("critical")) return "anxious";
+  if (state.includes("defensive") || state.includes("high")) return "defensive";
+  if (state.includes("confident") || state.includes("lying")) return "confident_lying";
+  if (state.includes("sad")) return "sad";
+  if (state.includes("focus")) return "focused";
+  if (state.includes("wary") || state.includes("guard") || state.includes("medium")) return "wary";
+  if (pressure >= 85) return "breakdown";
+  if (pressure >= 70) return "anxious";
+  if (pressure >= 45) return "defensive";
+  if (pressure >= 15) return "wary";
+  return "neutral";
+}
+
+function tensionFromPressure(pressure: number, explicit?: string): VisualState["tensionLevel"] {
+  if (explicit) return explicit;
+  if (pressure >= 80) return "critical";
+  if (pressure >= 55) return "high";
+  if (pressure >= 20) return "medium";
+  return "low";
+}
+
 function normalizeCurrentObjective(value: BackendSession["currentObjective"], actId: string, storyline: Storyline): CurrentObjective {
   const act = storyline.acts.find((item) => item.actId === actId) ?? storyline.acts[0];
   if (typeof value === "string") {
@@ -394,6 +432,8 @@ function enrichSessionView(session: GameSessionView): GameSessionView {
       color: suspect.color,
       pressure: suspect.pressure,
       status: suspect.status,
+      pressureState: suspect.pressureState,
+      tensionLevel: suspect.tensionLevel,
       emotion: suspect.emotion,
       expression: suspect.expression,
     })),
@@ -416,7 +456,10 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
   const emotionBySuspect = session.emotionBySuspect ?? {};
   const expressionBySuspect = session.expressionBySuspect ?? {};
   const suspects: Suspect[] = (session.suspects ?? []).map((item, index) => {
-    const pressure = pressureBySuspect[item.characterId] ?? 0;
+    const pressure = item.pressure ?? pressureBySuspect[item.characterId] ?? 0;
+    const emotionalState = item.emotionalState ?? item.emotion ?? emotionBySuspect[item.characterId] ?? "guarded";
+    const tensionLevel = tensionFromPressure(pressure, item.tensionLevel);
+    const expression = deriveExpression(pressure, tensionLevel, emotionalState, item.expression ?? expressionBySuspect[item.characterId]);
     return {
       id: item.characterId,
       name: item.name,
@@ -425,9 +468,11 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
       motiveHint: item.motiveCandidate ? "동기 후보" : "알리바이 검증 필요",
       color: ["#8f2f2a", "#566170", "#4d6672", "#78613e"][index] ?? "#6f5a3a",
       pressure,
-      status: statusFromPressure(pressure),
-      emotion: item.emotion ?? emotionBySuspect[item.characterId] ?? "guarded",
-      expression: item.expression ?? expressionBySuspect[item.characterId] ?? "neutral",
+      status: statusFromPublicState(pressure, item.pressureState, tensionLevel),
+      pressureState: item.pressureState,
+      tensionLevel,
+      emotion: emotionalState,
+      expression,
     };
   });
   const suspectName = (id: string) => suspects.find((item) => item.id === id)?.name ?? id;

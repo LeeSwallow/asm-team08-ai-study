@@ -1,4 +1,4 @@
-import { evidenceAsset, lockedEvidenceAssetPath, suspectAsset } from "../constants/presentation";
+import { evidenceAsset, lockedEvidenceAssetPath, statusLabels, suspectAsset } from "../constants/presentation";
 import type { GameSessionView, RelationMapEdge, RelationMapNode, Suspect } from "../types";
 import { sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
@@ -73,7 +73,7 @@ export function InvestigationDrawer({
   const unlockedRecords = session.records.filter((item) => item.unlocked);
 
   return (
-    <aside className="investigation-drawer clean-drawer" aria-label="수사 자료 상세 패널">
+    <aside className={`investigation-drawer clean-drawer ${mode === "accusation" ? "accusation-drawer" : ""}`} aria-label="수사 자료 상세 패널">
       <header>
         <div>
           <small>INVESTIGATION DESK</small>
@@ -208,38 +208,131 @@ export function InvestigationDrawer({
 
       {mode === "accusation" ? (
         <section className="drawer-scroll final-accusation-sheet clean-accusation-sheet">
-          <h3>최종 고발</h3>
-          <p className={accusationReady?.eligible ? "ready-copy" : "empty-copy"}>
-            {accusationReady?.eligible
-              ? "수첩의 공개 증언·증거 링크와 함께 최종 고발을 제출할 수 있습니다."
-              : `필수 단서 진행: 증거 ${accusationReady?.discoveredRequiredEvidenceCount ?? 0}/${(accusationReady?.discoveredRequiredEvidenceCount ?? 0) + (accusationReady?.missingRequiredEvidenceCount ?? 0)} · 증언 ${accusationReady?.discoveredRequiredStatementCount ?? 0}/${(accusationReady?.discoveredRequiredStatementCount ?? 0) + (accusationReady?.missingRequiredStatementCount ?? 0)}`}
-          </p>
-          <fieldset>
-            <legend>고발 대상</legend>
-            {session.suspects.map((suspect) => (
-              <label key={suspect.id}>
-                <input type="radio" name="accused-suspect" value={suspect.id} checked={accusationSuspectId === suspect.id} onChange={() => onAccusationSuspectChange(suspect.id)} />
-                <span>{suspect.name} ({suspect.role})</span>
-              </label>
-            ))}
-          </fieldset>
-          <label htmlFor="accusation-motive">동기 메모</label>
-          <textarea id="accusation-motive" value={accusationMotive} onChange={(event) => onAccusationMotiveChange(event.target.value)} placeholder="공개 단서로 설명 가능한 동기를 입력하세요." />
-          <label htmlFor="accusation-method">방법 메모</label>
-          <textarea id="accusation-method" value={accusationMethod} onChange={(event) => onAccusationMethodChange(event.target.value)} placeholder="증거와 증언으로 설명 가능한 방법만 적으세요." />
-          <dl className="accusation-context">
-            <div><dt>선택 증거</dt><dd>{selectedEvidence.map((item) => item.title).join(", ") || "없음"}</dd></div>
-            <div><dt>수첩 증거</dt><dd>{notebookProof.evidenceIds.join(", ") || "없음"}</dd></div>
-            <div><dt>선택 증언</dt><dd>{selectedStatements.map((item) => item.id).join(", ") || "없음"}</dd></div>
-            <div><dt>수첩 증언</dt><dd>{notebookProof.statementIds.join(", ") || "없음"}</dd></div>
-          </dl>
+          <div className="accusation-hero">
+            <span>FINAL DOSSIER</span>
+            <h3>최종 고발 검토</h3>
+            <p>최종 판정은 Backend가 공개 세션 상태와 제출 근거를 기준으로 심사합니다. 고발 대상, 동기, 방법이 모두 입력되어야 제출할 수 있습니다.</p>
+          </div>
+          <ReadinessDossier readiness={accusationReady} />
+          <div className="accusation-layout">
+            <fieldset className="accusation-suspect-field">
+              <legend>고발 대상</legend>
+              <div className="accusation-suspect-grid">
+                {session.suspects.map((suspect) => (
+                  <label key={suspect.id} className={`accusation-suspect-card ${accusationSuspectId === suspect.id ? "selected" : ""}`}>
+                    <input type="radio" name="accused-suspect" value={suspect.id} checked={accusationSuspectId === suspect.id} onChange={() => onAccusationSuspectChange(suspect.id)} />
+                    <img src={suspectAsset(suspect.id, suspect.expression)} alt="" />
+                    <span>
+                      <strong>{suspect.name}</strong>
+                      <small>{suspect.role}</small>
+                      <em>{statusLabels[suspect.status]} · 긴장 {suspect.tensionLevel ?? "low"} · 압박 {suspect.pressure}%</em>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="accusation-memo-grid">
+              <label htmlFor="accusation-motive">동기 메모</label>
+              <textarea id="accusation-motive" value={accusationMotive} onChange={(event) => onAccusationMotiveChange(event.target.value)} placeholder="공개 단서로 설명 가능한 동기를 입력하세요." />
+              <label htmlFor="accusation-method">방법 메모</label>
+              <textarea id="accusation-method" value={accusationMethod} onChange={(event) => onAccusationMethodChange(event.target.value)} placeholder="증거와 증언으로 설명 가능한 방법만 적으세요." />
+            </div>
+          </div>
+          <ProofSummary
+            selectedEvidence={selectedEvidence}
+            notebookEvidenceIds={notebookProof.evidenceIds}
+            selectedStatements={selectedStatements}
+            notebookStatementIds={notebookProof.statementIds}
+            contradictionIds={session.foundContradictionIds}
+          />
           {session.result ? <article className="verdict-card"><b>{session.result.title}</b><p>{session.result.message}</p></article> : null}
+          <p className="accusation-submit-copy">
+            {!accusationSuspectId || !accusationMotive.trim() || !accusationMethod.trim()
+              ? "필수 입력: 고발 대상, 동기 메모, 방법 메모를 완성하세요."
+              : accusationReady && !accusationReady.eligible
+                ? "필수 단서가 아직 부족합니다. 제출은 가능하지만 Backend 판정에서 근거 부족으로 처리될 수 있습니다."
+                : "최종 제출 준비가 완료되었습니다. 제출 후 Backend 판정 결과가 세션에 기록됩니다."}
+          </p>
           <button className="submit-contradiction" type="button" onClick={onSubmitAccusation} disabled={busy || !accusationSuspectId || !accusationMotive.trim() || !accusationMethod.trim()}>
             BE로 최종 고발 제출
           </button>
         </section>
       ) : null}
     </aside>
+  );
+}
+
+function ReadinessDossier({ readiness }: { readiness?: GameSessionView["accusationReadiness"] }) {
+  const rows = [
+    {
+      label: "필수 모순",
+      discovered: readiness?.discoveredRequiredContradictionCount ?? 0,
+      required: readiness?.requiredContradictionCount ?? ((readiness?.discoveredRequiredContradictionCount ?? 0) + (readiness?.missingRequiredContradictionCount ?? 0)),
+      missing: readiness?.missingRequiredContradictionCount ?? 0,
+    },
+    {
+      label: "필수 증거",
+      discovered: readiness?.discoveredRequiredEvidenceCount ?? 0,
+      required: readiness?.requiredEvidenceCount ?? ((readiness?.discoveredRequiredEvidenceCount ?? 0) + (readiness?.missingRequiredEvidenceCount ?? 0)),
+      missing: readiness?.missingRequiredEvidenceCount ?? 0,
+    },
+    {
+      label: "필수 증언",
+      discovered: readiness?.discoveredRequiredStatementCount ?? 0,
+      required: readiness?.requiredStatementCount ?? ((readiness?.discoveredRequiredStatementCount ?? 0) + (readiness?.missingRequiredStatementCount ?? 0)),
+      missing: readiness?.missingRequiredStatementCount ?? 0,
+    },
+  ];
+  const missing = rows.filter((row) => row.missing > 0);
+  return (
+    <section className={`readiness-dossier ${readiness?.eligible ? "eligible" : "ineligible"}`} aria-label="최종 고발 준비 상태">
+      <header>
+        <strong>{readiness?.eligible ? "필수 단서 충족" : "필수 단서 미충족"}</strong>
+        <span>{readiness ? "BE accusationReadiness" : "BE readiness 미수신"}</span>
+      </header>
+      <div className="readiness-grid">
+        {rows.map((row) => (
+          <div key={row.label}>
+            <span>{row.label}</span>
+            <b>{row.discovered}/{row.required}</b>
+            <small>{row.missing > 0 ? `부족 ${row.missing}` : "충족"}</small>
+          </div>
+        ))}
+      </div>
+      <p>{missing.length > 0 ? `누락: ${missing.map((row) => `${row.label} ${row.missing}`).join(" · ")}` : "필수 모순, 증거, 증언 준비 상태가 충족되었습니다."}</p>
+    </section>
+  );
+}
+
+function ProofSummary({
+  selectedEvidence,
+  notebookEvidenceIds,
+  selectedStatements,
+  notebookStatementIds,
+  contradictionIds,
+}: {
+  selectedEvidence: GameSessionView["evidence"];
+  notebookEvidenceIds: string[];
+  selectedStatements: GameSessionView["statements"];
+  notebookStatementIds: string[];
+  contradictionIds: string[];
+}) {
+  const hasProof = selectedEvidence.length > 0 || notebookEvidenceIds.length > 0 || selectedStatements.length > 0 || notebookStatementIds.length > 0 || contradictionIds.length > 0;
+  return (
+    <section className="proof-summary" aria-label="제출 근거 요약">
+      <header><h4>제출 근거 요약</h4><span>{hasProof ? "공개 근거만 표시" : "근거 없음"}</span></header>
+      {hasProof ? (
+        <dl>
+          <div><dt>선택 증거</dt><dd>{selectedEvidence.map((item) => item.title).join(", ") || "없음"}</dd></div>
+          <div><dt>수첩 증거</dt><dd>{notebookEvidenceIds.join(", ") || "없음"}</dd></div>
+          <div><dt>선택 증언</dt><dd>{selectedStatements.map((item) => `${item.speaker}: ${item.text}`).join(" / ") || "없음"}</dd></div>
+          <div><dt>수첩 증언</dt><dd>{notebookStatementIds.join(", ") || "없음"}</dd></div>
+          <div><dt>발견 모순</dt><dd>{contradictionIds.join(", ") || "없음"}</dd></div>
+        </dl>
+      ) : (
+        <p className="empty-copy">선택된 증거, 수첩 링크, 발견된 모순이 없습니다. 최종 판정은 Backend가 현재 세션의 공개 진행 상태를 기준으로 처리합니다.</p>
+      )}
+    </section>
   );
 }
 

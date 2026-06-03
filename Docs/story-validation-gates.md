@@ -319,15 +319,14 @@ Goal: contradiction gameplay requires player selection of testimony/statement pl
 
 Browser flow:
 1. Ask Han Seo-yeon for her alibi to unlock `st_hanseoyeon_room_2200`.
-2. Open statement/testimony selection and choose `st_hanseoyeon_room_2200`.
-3. Choose evidence `ev_study_entry_log`.
-4. Submit contradiction.
-5. Confirm BE response/SSE updates contradiction detail, notes/notebook, pressure/tension, current objective, and visual state.
+2. Ask a natural-language follow-up that explicitly mentions the public evidence, e.g. `서재 출입 기록에는 왜 당신 이름이 남아 있나요?`.
+3. Confirm BE Dialogue API maps the utterance to public evidence/statement refs.
+4. Confirm GameMaster proposedEvents and BE EventProcessor/SSE update contradiction detail, notes/notebook, pressure/tension, current objective, and visual state.
 
 Acceptance:
-- FE does not use a single canned `증거 제시` action with preselected hidden IDs.
-- BE validates the submitted public IDs and returns deterministic result.
-- Candidate contradictions remain candidates until explicit submission.
+- FE does not expose a canned `증거 제시` action that bypasses natural-language interrogation.
+- BE validates public refs inferred from the dialogue turn and returns deterministic state updates.
+- Candidate contradictions remain candidates until the dialogue pipeline and EventProcessor validate them.
 - Discovered contradiction details are visible without FE inferring from IDs alone.
 
 ## 14. Comic/ImageGen asset gate

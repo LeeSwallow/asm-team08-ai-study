@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { askQuestion, createNote, createSession, debugSetPressure, debugUnlock, deleteNote, getCases, getSession, submitAccusation, submitContradiction, updateNote } from "../api";
 import { QUESTION_LIMIT } from "../constants/presentation";
 import { clearStoredSession, loadStoredSession, loadStoredSessionId, saveStoredSession } from "../storage";
@@ -12,7 +12,14 @@ import {
 import { createActionTimer, logEvent } from "../utils/observability";
 import { useSessionEvents } from "./useSessionEvents";
 
-export function useInvestigationSession() {
+type InvestigationSessionOptions = {
+  sessionId?: string;
+  onSessionCreated?: (sessionId: string) => void;
+  onSessionCleared?: () => void;
+};
+
+export function useInvestigationSession(options: InvestigationSessionOptions = {}) {
+  const requestedSessionIdRef = useRef<string | null>(null);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [session, setSession] = useState<GameSessionView | null>(() => {
     const stored = loadStoredSession();
@@ -55,6 +62,35 @@ export function useInvestigationSession() {
   }, [eventFeed]);
 
   useSessionEvents(session, setSession, (event) => appendFeedEvents([event]));
+
+  useEffect(() => {
+    if (!options.sessionId || session?.sessionId === options.sessionId || requestedSessionIdRef.current === options.sessionId) return;
+    requestedSessionIdRef.current = options.sessionId;
+    setBusy(true);
+    setStatusMessage("서버 세션을 복구하는 중입니다.");
+    const done = createActionTimer({ component: "SessionDeskPage", action: "load_session", sessionId: options.sessionId });
+    getSession(options.sessionId, null)
+      .then((restored) => {
+        setSession(restored);
+        setResumableSessionId(restored.sessionId);
+        setSelectedEvidenceIds([]);
+        setSelectedStatementIds([]);
+        setInspectedEvidenceId(null);
+        setActiveDrawer(null);
+        setEventFeed([]);
+        setDraftQuestion("");
+        setStatusMessage("서버 세션을 복구했습니다.");
+        done({ level: "info", caseId: restored.caseId });
+      })
+      .catch((error: unknown) => {
+        setSession(null);
+        setResumableSessionId(null);
+        clearStoredSession();
+        setStatusMessage("세션 복구 실패: 사건 목록에서 새 세션을 시작하세요.");
+        done({ level: "error", reason: error instanceof Error ? error.message : "unknown" });
+      })
+      .finally(() => setBusy(false));
+  }, [options.sessionId, session?.sessionId]);
 
   useEffect(() => {
     const done = createActionTimer({ component: "InvestigationSession", action: "load_cases" });
@@ -100,6 +136,7 @@ export function useInvestigationSession() {
       const created = await createSession(caseId);
       setSession(created);
       setResumableSessionId(created.sessionId);
+      options.onSessionCreated?.(created.sessionId);
       setSelectedEvidenceIds([]);
       setSelectedStatementIds([]);
       setInspectedEvidenceId(null);
@@ -177,7 +214,9 @@ export function useInvestigationSession() {
           ? "이 턴에서 진행 이벤트 없음"
           : `${diagnostic?.proposedEventsCount ?? "?"}/${diagnostic?.appliedEventsCount ?? "?"}`;
       setStatusMessage(
-        `자연어 질문 접수 · source=${diagnostic?.source ?? next.source ?? "unknown"} · intent=${diagnostic?.intent ?? diagnostic?.dialogueMode ?? "AI intent 미분류"} · matched=${matchedRefs.join(", ") || "공개 근거 미연결"} · events=${eventSummary} · fallback=${diagnostic?.fallbackUsed ? "yes" : "no"}`,
+        diagnostic?.fallbackUsed || diagnostic?.degraded
+          ? `자연어 질문은 처리됐지만 진단 확인이 필요합니다 · events=${eventSummary}`
+          : `자연어 질문 접수 · events=${eventSummary} · matched=${matchedRefs.length}`,
       );
       done({
         level: diagnostic?.source === "local" || diagnostic?.fallbackUsed ? "warn" : "info",
@@ -398,6 +437,7 @@ export function useInvestigationSession() {
     clearStoredSession();
     setSession(null);
     setResumableSessionId(null);
+    options.onSessionCleared?.();
     setStatusMessage("진행 상태를 초기화했습니다. 시작할 사건 파일을 선택하세요.");
     logEvent({ component: "AppHeader", action: "reset_session", sessionId: session?.sessionId, caseId: session?.caseId });
   }

@@ -33,7 +33,12 @@ class RuleEngine:
             session.newlyUnlockedIds = []
         answer = question.answer
         if repeated:
-            answer = f"이미 답한 질문입니다. {question.answer}"
+            repeat_prefixes = (
+                "이미 답한 질문입니다.",
+                "같은 질문에 다시 답하자면,",
+                "방금 확인한 내용과 같습니다.",
+            )
+            answer = f"{repeat_prefixes[(previous_count - 1) % len(repeat_prefixes)]} {question.answer}"
         return {
             "answer": answer,
             "newlyUnlockedIds": newly_unlocked,

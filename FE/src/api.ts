@@ -1,4 +1,4 @@
-import type { AccusationPayload, CaseSummary, GameSessionView, NoteEntry } from "./types";
+import type { AccusationPayload, CaseDetail, CaseSummary, GameSessionView, NoteEntry } from "./types";
 import { askMockQuestion, submitMockAccusation, submitMockContradiction } from "./mockData";
 import { normalizeCase, normalizeSession, type BackendCase, type BackendSession } from "./adapters/sessionAdapter";
 import { logEvent } from "./utils/observability";
@@ -17,6 +17,15 @@ export type NotesListResponse = {
 };
 
 export type SessionAssistantResponse = Record<string, unknown>;
+
+type BackendCaseDetail = BackendCase & {
+  opening?: CaseDetail["opening"];
+  storyline?: { publicPremise?: string };
+  suspects?: unknown[];
+  evidence?: unknown[];
+  records?: unknown[];
+  statements?: unknown[];
+};
 
 export function sessionEventsUrl(sessionId: string, lastEventId?: string) {
   const query = lastEventId ? `?lastEventId=${encodeURIComponent(lastEventId)}` : "";
@@ -88,6 +97,20 @@ export async function getCases(): Promise<CaseSummary[]> {
     logApiFallback("cases_api_failed", error);
     throw error;
   }
+}
+
+export async function getCaseDetail(caseId: string): Promise<CaseDetail> {
+  const item = await request<BackendCaseDetail>(`/api/v1/cases/${caseId}`);
+  const summary = normalizeCase(item);
+  return {
+    ...summary,
+    opening: item.opening,
+    publicPremise: item.storyline?.publicPremise,
+    suspectCount: item.suspects?.length ?? 0,
+    visibleEvidenceCount: item.evidence?.length ?? 0,
+    visibleRecordCount: item.records?.length ?? 0,
+    visibleStatementCount: item.statements?.length ?? 0,
+  };
 }
 
 export async function createSession(caseId: string): Promise<GameSessionView> {

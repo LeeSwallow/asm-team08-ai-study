@@ -5,10 +5,12 @@ from app.domain.models import Case, SessionState
 
 
 def initial_session_state(case: Case, session_id: str) -> SessionState:
+    default_suspect_id = _default_selected_suspect_id(case)
     return SessionState(
         sessionId=session_id,
         caseId=case.caseId,
         remainingQuestions=case.questionLimit,
+        selectedSuspectId=default_suspect_id,
         unlockedEvidenceIds=[item.evidenceId for item in case.evidence if item.initiallyVisible],
         unlockedRecordIds=[item.recordId for item in case.records if item.initiallyVisible],
         unlockedRelationIds=[item.relationshipId for item in case.relations if item.initiallyVisible],
@@ -16,6 +18,20 @@ def initial_session_state(case: Case, session_id: str) -> SessionState:
         unlockedQuestionIds=[item.questionId for item in case.questions if item.initiallyUnlocked],
         pressureBySuspect={suspect.characterId: 0 for suspect in case.suspects},
     )
+
+
+def _default_selected_suspect_id(case: Case) -> str | None:
+    """Pick the first public focus suspect so a new session is immediately playable.
+
+    The selection is public UI state only. It must not derive from private solution
+    fields such as culprit/secret/motive.
+    """
+    if case.storyline:
+        for act in case.storyline.acts:
+            for suspect_id in act.focusSuspectIds:
+                if any(suspect.characterId == suspect_id for suspect in case.suspects):
+                    return suspect_id
+    return case.suspects[0].characterId if case.suspects else None
 
 
 def apply_unlocks(session: SessionState, case: Case, ids: Iterable[str]) -> List[str]:
@@ -92,6 +108,9 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
         "unlockedQuestionIds": session.unlockedQuestionIds,
         "askedQuestionCounts": session.askedQuestionCounts,
         "newlyUnlockedIds": session.newlyUnlockedIds,
+        "lastDialogueResult": session.lastDialogueResult,
+        "lastRuntimeDiagnostics": session.lastRuntimeDiagnostics,
+        "runtimeDiagnostics": session.lastRuntimeDiagnostics,
         "discoveredContradictionIds": session.discoveredContradictionIds,
         "pressureBySuspect": session.pressureBySuspect,
         "pressureStates": {

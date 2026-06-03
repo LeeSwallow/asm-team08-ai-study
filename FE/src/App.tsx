@@ -1,115 +1,34 @@
-import { AppHeader } from "./components/AppHeader";
-import { EvidencePanel } from "./components/EvidencePanel";
-import { InterrogationStage } from "./components/InterrogationStage";
-import { InvestigationDrawer } from "./components/InvestigationDrawer";
-import { ScenarioSelectScreen } from "./components/ScenarioSelectScreen";
-import { SettingsDrawer } from "./components/SettingsDrawer";
-import { SuspectPanel } from "./components/SuspectPanel";
-import { SystemFlowStrip } from "./components/SystemFlowStrip";
-import { useInvestigationSession } from "./hooks/useInvestigationSession";
+import { useEffect, useState } from "react";
+import { CaseDetailPage } from "./pages/CaseDetailPage";
+import { CaseListPage } from "./pages/CaseListPage";
+import { SessionDeskPage } from "./pages/SessionDeskPage";
+import { parseRoute, type AppRoute } from "./routing";
 
 export default function App() {
-  const desk = useInvestigationSession();
+  const [route, setRoute] = useState<AppRoute>(() => parseRoute());
 
-  if (!desk.session) {
-    return (
-      <ScenarioSelectScreen
-        cases={desk.cases}
-        statusMessage={desk.statusMessage}
-        busy={desk.busy}
-        resumableSessionId={desk.resumableSessionId}
-        onStartCase={desk.startCase}
-        onResumeSession={desk.resumeStoredSession}
-      />
-    );
+  useEffect(() => {
+    const syncRoute = () => setRoute(parseRoute());
+    window.addEventListener("popstate", syncRoute);
+    if (window.location.pathname === "/") {
+      window.history.replaceState(null, "", "/cases");
+      syncRoute();
+    }
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
+
+  function navigate(path: string) {
+    window.history.pushState(null, "", path);
+    setRoute(parseRoute(path));
   }
 
-  return (
-    <main className="noir-desk">
-      <AppHeader
-        onOpenCaseFile={() => desk.setActiveDrawer("case")}
-        onOpenEvidence={() => desk.setActiveDrawer("evidence")}
-        onOpenNotes={() => desk.setActiveDrawer("notes")}
-        onOpenRelations={() => desk.setActiveDrawer("relations")}
-        onOpenAccusation={() => desk.setActiveDrawer("accusation")}
-        onOpenSettings={() => desk.setActiveDrawer("settings")}
-      />
+  if (route.name === "caseDetail") {
+    return <CaseDetailPage caseId={route.caseId} onNavigate={navigate} />;
+  }
 
-      <section className="desk-grid" aria-label="수사 데스크">
-        <SuspectPanel
-          suspects={desk.session.suspects}
-          selectedSuspectId={desk.session.selectedSuspectId}
-          onSelectSuspect={desk.selectSuspect}
-          onOpenRelations={() => desk.setActiveDrawer("relations")}
-        />
-        <InterrogationStage
-          selectedSuspect={desk.selectedSuspect}
-          suspects={desk.session.suspects}
-          latestAnswer={desk.latestAnswer}
-          dialogueLog={desk.session.dialogueLog}
-          eventFeed={desk.eventFeed}
-          draftQuestion={desk.draftQuestion}
-          questionHint={desk.questionHint}
-          busy={desk.busy}
-          remainingQuestions={desk.session.remainingQuestions}
-          visualState={desk.session.visualState}
-          runtimeDiagnostics={desk.session.runtimeDiagnostics}
-          onDraftQuestionChange={desk.setDraftQuestion}
-          onSubmitQuestion={desk.submitQuestion}
-          onPresentEvidence={() => desk.setActiveDrawer("evidence")}
-        />
-        <EvidencePanel
-          session={desk.session}
-          evidenceTiles={desk.evidenceTiles}
-          selectedEvidenceIds={desk.selectedEvidenceIds}
-          onToggleEvidence={desk.toggleEvidence}
-        />
-      </section>
+  if (route.name === "sessionDesk") {
+    return <SessionDeskPage sessionId={route.sessionId} onNavigate={navigate} />;
+  }
 
-      {desk.activeDrawer && desk.activeDrawer !== "settings" ? (
-        <InvestigationDrawer
-          mode={desk.activeDrawer}
-          session={desk.session}
-          inspectedEvidenceId={desk.inspectedEvidenceId}
-          selectedEvidenceIds={desk.selectedEvidenceIds}
-          selectedStatementIds={desk.selectedStatementIds}
-          draftNote={desk.draftNote}
-          editingNoteId={desk.editingNoteId}
-          editingNoteText={desk.editingNoteText}
-          busy={desk.busy}
-          onClose={() => desk.setActiveDrawer(null)}
-          onOpenMode={(mode) => desk.setActiveDrawer(mode)}
-          onInspectEvidence={desk.setInspectedEvidenceId}
-          onToggleEvidence={desk.toggleEvidence}
-          onDraftNoteChange={desk.setDraftNote}
-          onEditingNoteTextChange={desk.setEditingNoteText}
-          onAddNote={desk.addNote}
-          onStartEditNote={desk.startEditNote}
-          onCancelEditNote={desk.cancelEditNote}
-          onSaveEditedNote={desk.saveEditedNote}
-          onRemoveNote={desk.removeNote}
-          accusationSuspectId={desk.accusationSuspectId}
-          accusationMotive={desk.accusationMotive}
-          accusationMethod={desk.accusationMethod}
-          onAccusationSuspectChange={desk.setAccusationSuspectId}
-          onAccusationMotiveChange={desk.setAccusationMotive}
-          onAccusationMethodChange={desk.setAccusationMethod}
-          onSubmitAccusation={desk.submitFinalAccusation}
-        />
-      ) : null}
-
-      {desk.activeDrawer === "settings" ? (
-        <SettingsDrawer
-          session={desk.session}
-          busy={desk.busy}
-          onClose={() => desk.setActiveDrawer(null)}
-          onAdjustPressure={desk.adjustDebugPressure}
-          onUnlock={desk.unlockDebug}
-          onReset={desk.resetGame}
-        />
-      ) : null}
-
-      <SystemFlowStrip statusMessage={desk.statusMessage} remainingQuestions={desk.session.remainingQuestions} />
-    </main>
-  );
+  return <CaseListPage onNavigate={navigate} />;
 }

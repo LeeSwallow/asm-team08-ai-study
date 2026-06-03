@@ -15,6 +15,15 @@ export type CaseSummary = {
   questionLimit: number;
 };
 
+export type CaseDetail = CaseSummary & {
+  opening?: Opening;
+  publicPremise?: string;
+  suspectCount: number;
+  visibleEvidenceCount: number;
+  visibleRecordCount: number;
+  visibleStatementCount: number;
+};
+
 export type Suspect = {
   id: string;
   name: string;
@@ -24,6 +33,8 @@ export type Suspect = {
   color: string;
   pressure: number;
   status: SuspectStatus;
+  pressureState?: string;
+  tensionLevel?: VisualState["tensionLevel"];
   emotion?: string;
   expression?: string;
 };

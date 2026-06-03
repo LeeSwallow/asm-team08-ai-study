@@ -113,6 +113,7 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
     session_id = session["sessionId"]
     assert session["remainingQuestions"] == 12
+    assert session["selectedSuspectId"] is not None
     assert len(session["suspects"]) >= 4
     assert len(session["evidence"]) >= 4
 
@@ -495,6 +496,56 @@ def test_dialogue_accepts_suspect_id_and_message_and_records_events(tmp_path, mo
     assert "event: TENSION_CHANGED" not in body
     assert "id: " in body
     assert "st_hanseoyeon_room_2200" in body
+
+
+def test_session_get_persists_public_dialogue_runtime_diagnostics(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    dialogue = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "message": "22시에 방에 있었다는 진술은 서재 출입 기록의 22:02 카드키 기록과 모순입니다.",
+        },
+    ).json()
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+
+    assert loaded["selectedSuspectId"] == "char_hanseoyeon"
+    assert loaded["runtimeDiagnostics"]["provider"] == "contract-test-ai"
+    assert loaded["runtimeDiagnostics"]["dialogueMode"] == dialogue["dialogueResult"]["dialogueMode"]
+    assert loaded["runtimeDiagnostics"]["appliedEventsCount"] == dialogue["dialogueResult"]["appliedEventsCount"]
+    assert loaded["lastDialogueResult"]["contradictionResult"]["verdict"] == "correct"
+    assert loaded["contradictions"]["candidates"]
+    assert loaded["contradictions"]["discovered"]
+    candidate = loaded["contradictions"]["candidates"][0]
+    for key in ["contradictionId", "title", "suspectId", "statementIds", "evidenceIds", "severity", "reasonCode", "displayText", "submitEligible"]:
+        assert key in candidate
+    assert _forbidden_token_hits(loaded) == []
+
+
+def test_dialogue_other_suspect_mention_does_not_consume_active_suspect_question(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    yoon = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "윤재호는 22시쯤 어디에 있었나요?"},
+    ).json()
+    kang = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "강도준의 상속 문제를 설명해 주세요."},
+    ).json()
+
+    assert yoon["dialogueResult"]["dialogueMode"] == "unmatched"
+    assert yoon["dialogueResult"]["matchedQuestionId"] is None
+    assert yoon["dialogueResult"]["consumedQuestion"] is False
+    assert kang["dialogueResult"]["dialogueMode"] == "unmatched"
+    assert kang["dialogueResult"]["matchedQuestionId"] is None
+    assert kang["dialogueResult"]["consumedQuestion"] is False
+    assert client.get(f"/api/v1/sessions/{session_id}").json()["askedQuestionCounts"] == {}
 
 
 def test_questions_endpoint_accepts_fe_free_text_compatibility_payload(tmp_path, monkeypatch):

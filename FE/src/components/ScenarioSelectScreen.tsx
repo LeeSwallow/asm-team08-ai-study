@@ -7,11 +7,12 @@ type ScenarioSelectScreenProps = {
   statusMessage: string;
   busy: boolean;
   resumableSessionId: string | null;
-  onStartCase: (caseId: string) => void;
-  onResumeSession: () => void;
+  onOpenCase?: (caseId: string) => void;
+  onStartCase?: (caseId: string) => void;
+  onResumeSession?: () => void;
 };
 
-export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSessionId, onStartCase, onResumeSession }: ScenarioSelectScreenProps) {
+export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSessionId, onOpenCase, onStartCase, onResumeSession }: ScenarioSelectScreenProps) {
   const hasCases = cases.length > 0;
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const selectedCase = useMemo(
@@ -84,8 +85,16 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
                     <dd>{caseFile.questionLimit}회</dd>
                   </div>
                 </dl>
-                <button type="button" disabled={busy} aria-pressed={selected} onClick={() => setSelectedCaseId(caseFile.id)}>
-                  {selected ? "선택됨" : "사건 읽어보기"}
+                <button
+                  type="button"
+                  disabled={busy}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setSelectedCaseId(caseFile.id);
+                    onOpenCase?.(caseFile.id);
+                  }}
+                >
+                  {onOpenCase ? "사건 상세" : selected ? "선택됨" : "사건 읽어보기"}
                 </button>
               </article>
             );
@@ -98,20 +107,22 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
           </div>
         )}
 
-        {selectedCase ? (
+        {(selectedCase && onStartCase) || (resumableSessionId && onResumeSession) ? (
           <aside className="scenario-start-bar" aria-label="선택한 사건 시작">
             <div>
-              <span>선택한 사건</span>
-              <strong>{selectedCase.title}</strong>
+              <span>{selectedCase ? "선택한 사건" : "저장된 세션"}</span>
+              <strong>{selectedCase?.title ?? resumableSessionId}</strong>
             </div>
-            {resumableSessionId ? (
+            {resumableSessionId && onResumeSession ? (
               <button type="button" className="resume-case-button" disabled={busy} onClick={onResumeSession}>
                 이전 세션 이어하기
               </button>
             ) : null}
-            <button type="button" disabled={busy} onClick={() => onStartCase(selectedCase.id)}>
-              {busy ? "세션 준비 중" : "선택한 사건 시작"}
-            </button>
+            {selectedCase && onStartCase ? (
+              <button type="button" disabled={busy} onClick={() => onStartCase(selectedCase.id)}>
+                {busy ? "세션 준비 중" : "선택한 사건 시작"}
+              </button>
+            ) : null}
           </aside>
         ) : null}
 

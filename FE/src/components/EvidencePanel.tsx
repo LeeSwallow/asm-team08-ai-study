@@ -1,22 +1,30 @@
 import { EvidenceGrid } from "./EvidenceGrid";
+import { ContradictionPanel } from "./ContradictionPanel";
 import type { GameSessionView } from "../types";
-import type { EvidenceTileView } from "../viewModels/investigationDesk";
+import type { ContradictionCandidateView, EvidenceTileView } from "../viewModels/investigationDesk";
 
 type EvidencePanelProps = {
   session: GameSessionView;
   evidenceTiles: EvidenceTileView[];
   selectedEvidenceIds: string[];
+  selectedStatementIds: string[];
+  contradictionCandidates: ContradictionCandidateView[];
   onToggleEvidence: (evidenceId: string) => void;
+  onSelectContradiction: (statementId: string, evidenceId: string) => void;
 };
 
 export function EvidencePanel({
   session,
   evidenceTiles,
   selectedEvidenceIds,
+  selectedStatementIds,
+  contradictionCandidates,
   onToggleEvidence,
+  onSelectContradiction,
 }: EvidencePanelProps) {
   const unlockedEvidence = session.evidence.filter((item) => item.unlocked);
-  const latestRecords = session.records.filter((item) => item.unlocked).slice(0, 3);
+  const unlockedRecords = session.records.filter((item) => item.unlocked);
+  const unlockedRelations = session.relations.filter((item) => item.unlocked);
 
   return (
     <aside className="panel evidence-panel" aria-labelledby="evidence-title">
@@ -27,25 +35,24 @@ export function EvidencePanel({
         selectedEvidenceIds={selectedEvidenceIds}
         onToggleEvidence={onToggleEvidence}
       />
-      <section className="desk-summary-card" aria-label="사건 자료 요약">
+      <div className="right-investigation-loop">
+        <ContradictionPanel
+          candidates={contradictionCandidates}
+          selectedStatementIds={selectedStatementIds}
+          selectedEvidenceIds={selectedEvidenceIds}
+          onSelect={onSelectContradiction}
+        />
+      </div>
+      <section className="desk-summary-card compact" aria-label="사건 자료 요약">
         <header>
-          <strong>자료 보드</strong>
-          <span>{latestRecords.length} records</span>
+          <strong>연동 자료</strong>
+          <span>BE session</span>
         </header>
         <div className="desk-summary-stats">
-          <b>{session.notes.length}</b><span>메모</span>
-          <b>{session.relations.filter((item) => item.unlocked).length}</b><span>관계</span>
+          <span><b>{unlockedRecords.length}</b> 기록</span>
+          <span><b>{session.notes.length}</b> 메모</span>
+          <span><b>{unlockedRelations.length}</b> 관계</span>
         </div>
-        {latestRecords.length > 0 ? (
-          latestRecords.map((record) => (
-            <article key={record.id}>
-              <b>{record.time}</b>
-              <p>{record.title}</p>
-            </article>
-          ))
-        ) : (
-          <p className="empty-inline">공개 사건 기록이 아직 없습니다.</p>
-        )}
       </section>
     </aside>
   );
