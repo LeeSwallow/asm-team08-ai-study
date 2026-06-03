@@ -39,18 +39,80 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Player[플레이어 질문 입력] --> KR[1. Knowledge Retriever<br/>엔티티 추출 및 관련 사실 검색]
-    KR -->|대화 맥락 & 질문 의도| DDA[2. Dialogue Director Agent<br/>턴 전략 수립 및 가이드라인 제안]
-    DDA -->|전략 가이드 & 대사 시드| CA[3. Character Agent<br/>인물 페르소나 및 텐션 반영 대사 초안 작성]
-    CA -->|작성된 대사 초안| DTP[4. Dialogue Tone Polisher<br/>한국어 구어체 윤색 및 스포일러 필터링]
-    DTP -->|윤색된 대사| LRC{5. Light Rule Check<br/>안전성 및 몰입 방해 요소 검증}
-    
-    LRC -->|통과| GMA[6. Game Master Agent<br/>추리 수첩/북마크 변경안 제안]
-    LRC -->|실패: 품질/보안 이슈| Regen[재생성 및 보정<br/>Regeneration 1-2회 시도]
-    Regen --> LRC
-    
-    GMA -->|제안된 노트 이벤트| BE_EP[백엔드 이벤트 프로세서<br/>Backend Event Processor]
-    BE_EP -->|검증 및 적용| DB[(세션 DB / FE UI)]
+    Player[플레이어 질문 입력] --> KR
+
+    %% 1. Knowledge Retriever
+    subgraph KR[1. Knowledge Retriever]
+        direction TB
+        K_Entities{엔티티 추출 성공?}
+        K_Entities -->|Yes| K_Cypher[Neo4j Cypher 검색<br/>연관 타임라인/증거/진술 조회]
+        K_Entities -->|No| K_Fallback[기본 캐릭터 정보 제공<br/>Visible Timeline/Alibi/Evidence]
+    end
+
+    KR --> DDA
+
+    %% 2. Dialogue Director Agent
+    subgraph DDA[2. Dialogue Director Agent]
+        direction TB
+        D_Intent{질문 의도 분석}
+        D_Intent -->|unmatched| D_Deflect[deflect_unmatched 전략<br/>새 알리바이/증거 창작 금지]
+        D_Intent -->|decisiveEvidence| D_Contradict[defensive_pressure 전략<br/>충돌 인정, 범행 부인 대사 지침]
+        D_Intent -->|repeat_pressure| D_Repeat[controlled_deflection 전략<br/>이전 대사 반복 회피 지침]
+        D_Intent -->|default / matched| D_Default[answer_public_fact 전략<br/>공개 사실 기반 답변 지침]
+    end
+
+    DDA -->|디렉터 계획서 DialogueDirectorPlan| CA
+
+    %% 3. Character Agent
+    subgraph CA[3. Character Agent]
+        direction TB
+        C_Tension{긴장도/감정 상태 검사}
+        C_Tension -->|특정 조건 충족| C_Overlay[인물 변형 페르소나 적용<br/>PersonaOverlay: 회피성/망설임 조율]
+        C_Tension -->|기본 상태| C_Base[기본 페르소나 적용]
+        C_Overlay & C_Base --> C_Draft[대사 시드와 결합하여 캐릭터 대사 초안 작성]
+    end
+
+    CA -->|대사 초안 draftText| DTP
+
+    %% 4. Dialogue Tone Polisher
+    subgraph DTP[4. Dialogue Tone Polisher]
+        direction TB
+        T_Degraded{이미 에러 상태인가?}
+        T_Degraded -->|Yes| T_Pass[윤색 생략]
+        T_Degraded -->|No| T_Polish[심문실 구어체 윤색<br/>괄호 지문/시스템 투 제거]
+        T_Polish --> T_Anchor{팩트 앵커 유실 검사}
+        T_Anchor -->|유실됨| T_Repair[팩트 강제 결합 및 클리핑]
+        T_Anchor -->|유존| T_PolishDone[윤색 완료]
+        T_Pass & T_Repair & T_PolishDone --> DTP_Out[출력 대사]
+    end
+
+    DTP -->|윤색된 대사| LRC
+
+    %% 5. Light Rule Check
+    subgraph LRC[5. Light Rule Check]
+        direction TB
+        L_Check{품질/안전 규칙 위배 감지?}
+        L_Check -->|No| L_Pass[검증 통과]
+        L_Check -->|Yes: 인칭오류,챗봇투,지문| L_Regen{시도 횟수 < 2?}
+        L_Regen -->|Yes| L_Retry[시스템 프롬프트 보정 후 재생성 요청]
+        L_Regen -->|No| L_Degrade[Degraded 마킹 / BE Fallback 복구 플래그]
+    end
+
+    L_Retry -.->|재작성| CA
+    L_Pass --> GMA
+    L_Degrade --> GMA
+
+    %% 6. Game Master Agent
+    subgraph GMA[6. Game Master Agent]
+        direction TB
+        G_Safe{대사 최종 검증 결과 안전한가?}
+        G_Safe -->|No: 차단/유출/에러| G_Reject[이벤트 제안 취소]
+        G_Safe -->|Yes| G_Propose[노트/모순 후보/북마크 제안<br/>NOTE_FACT_ADDED 등 발급]
+        G_Propose --> G_Sanitize[민감한 비공개 참조 데이터 소거]
+    end
+
+    G_Reject & G_Sanitize -->|GameMasterProposal| BE_EP[백엔드 규칙 엔진 / 이벤트 프로세서]
+    BE_EP -->|최종 정합성 검증| DB[(세션 DB / FE UI)]
 ```
 
 ### 각 에이전트의 역할 및 상세 정보
