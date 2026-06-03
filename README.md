@@ -23,6 +23,8 @@ flowchart LR
   BE -->|SSE/WebSocket events| FE
 ```
 
+![System Architecture Diagram](Docs/images/system-architecture.png)
+
 - `FE`: React/Vite 기반 단일 화면 수사 데스크, nginx 정적 서빙
 - `BE`: FastAPI Backend API, deterministic rule engine, Event Processor, PostgreSQL/Neo4j persistence, 내장 AI engine
 - `Docs`: 시나리오, 계약, 아키텍처, 운영/리뷰 문서
