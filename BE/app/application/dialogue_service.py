@@ -167,23 +167,17 @@ class DialogueService:
         }
         self._assert_public_surface(ai_payload, "ai_payload")
         ai_result = await self.ai_client.dialogue_response_info(ai_payload, fallback_answer)
-        if ai_result.get("degraded"):
-            self._raise_ai_degraded(
-                request_context=request_context,
-                session=session,
-                case=case,
-                suspect_id=suspect.characterId,
-                started_at=started_at,
-                reason=str(ai_result.get("degradedReason") or "ai_service_unavailable"),
-            )
-        self._assert_public_surface(
-            {
-                "answer": ai_result.get("answer"),
-                "proposedEvents": ai_result.get("proposedEvents") or [],
-            },
-            "ai_result",
+        ai_result = self._safe_ai_result_or_fallback(
+            ai_result=ai_result,
+            fallback_answer=fallback_answer,
+            request_context=request_context,
+            session=session,
+            case=case,
+            suspect_id=suspect.characterId,
+            started_at=started_at,
         )
         answer = self._polish_answer(ai_result["answer"], suspect.name)
+        answer = self._differentiate_repeated_reply(session, suspect.characterId, match.dialogue_mode, question_result, answer)
         question_id_for_log = match.question.questionId if match.question is not None else None
         npc_entry = self._append_dialogue_entries(session, suspect.characterId, question_id_for_log, suspect.name, message, answer)
         session.newlyUnlockedIds = combined_unlocked_ids
@@ -222,9 +216,75 @@ class DialogueService:
         )
         self._assert_public_surface([event.model_dump(mode="json") for event in applied_events], "applied_events")
         self.event_repo.append_many(applied_events)
+        public_safety = self._public_safety(ai_result["safety"])
+        ai_runtime_diagnostics = ai_result.get("runtimeDiagnostics") or {}
+        dialogue_result = {
+            "messageId": npc_entry.id,
+            "suspectId": suspect.characterId,
+            "dialogueMode": match.dialogue_mode,
+            "intent": match.dialogue_mode,
+            "matchedQuestionId": question_id_for_log,
+            "matchedIntentId": question_id_for_log or match.dialogue_mode,
+            "repeated": question_result["repeated"],
+            "askCount": question_result["askCount"],
+            "remainingQuestions": session.remainingQuestions,
+            "previousRemainingQuestions": previous_remaining_questions,
+            "remainingQuestionsDelta": session.remainingQuestions - previous_remaining_questions,
+            "unlockedIds": question_result["newlyUnlockedIds"],
+            "consumedQuestion": match.consumed_question,
+            "fallbackUsed": ai_result["fallbackUsed"],
+            "provider": ai_result["provider"],
+            "model": ai_result.get("model"),
+            "safety": public_safety,
+            "matchedRefs": self._matched_refs(allowed_statement, allowed_event_policy),
+            "diagnosticReason": self._diagnostic_reason(match, allowed_event_policy),
+            "aiIntent": ai_result.get("intent"),
+            "aiDialogueMode": ai_result.get("dialogueMode"),
+            "emotionalState": emotional_state(session.pressureBySuspect.get(suspect.characterId, 0)),
+            "tensionLevel": tension_level(session.pressureBySuspect.get(suspect.characterId, 0)),
+            "decisiveEvidencePressure": decisive_pressure_hit,
+            "turnInterpretation": turn_interpretation.model_dump(),
+            "interrogationTransition": interrogation_transition.model_dump(),
+            "contradictionResult": contradiction_result,
+            "aiRuntimeDiagnostics": ai_runtime_diagnostics,
+            "proposedEventsCount": len(ai_proposed_events),
+            "beProposedEventsCount": len(be_proposed_events),
+            "stateProposedEventsCount": len(state_proposed_events),
+            "totalProposedEventsCount": len(proposed_events),
+            "appliedEventsCount": len(applied_events),
+            "appliedEvents": [event.model_dump(mode="json") for event in applied_events],
+        }
+        runtime_diagnostics = {
+            "intent": match.dialogue_mode,
+            "dialogueMode": match.dialogue_mode,
+            "matchedQuestionId": question_id_for_log,
+            "matchedRefs": self._matched_refs(allowed_statement, allowed_event_policy),
+            "provider": ai_result["provider"],
+            "model": ai_result.get("model"),
+            "safety": public_safety,
+            "aiIntent": ai_result.get("intent"),
+            "aiDialogueMode": ai_result.get("dialogueMode"),
+            "proposedEventsCount": len(ai_proposed_events),
+            "beProposedEventsCount": len(be_proposed_events),
+            "stateProposedEventsCount": len(state_proposed_events),
+            "totalProposedEventsCount": len(proposed_events),
+            "appliedEventsCount": len(applied_events),
+            "reason": self._diagnostic_reason(match, allowed_event_policy),
+            "turnInterpretation": turn_interpretation.model_dump(),
+            "contradictionResult": contradiction_result,
+            "aiRuntimeDiagnostics": ai_runtime_diagnostics,
+        }
+        session.lastDialogueResult = self._last_dialogue_summary(dialogue_result)
+        session.lastRuntimeDiagnostics = self._last_runtime_diagnostics(runtime_diagnostics)
+        self._assert_public_surface(
+            {
+                "lastDialogueResult": session.lastDialogueResult,
+                "lastRuntimeDiagnostics": session.lastRuntimeDiagnostics,
+            },
+            "last_dialogue_session_state",
+        )
         self.session_repo.save(session)
 
-        public_safety = self._public_safety(ai_result["safety"])
         if ai_result["fallbackUsed"]:
             self._log_ai_fallback(request_context, session, case, suspect.characterId, started_at)
         self._log_dialogue(
@@ -236,45 +296,9 @@ class DialogueService:
             ai_result["fallbackUsed"],
             match.dialogue_mode,
         )
-        ai_runtime_diagnostics = ai_result.get("runtimeDiagnostics") or {}
         return {
             "answer": answer,
-            "dialogueResult": {
-                "messageId": npc_entry.id,
-                "suspectId": suspect.characterId,
-                "dialogueMode": match.dialogue_mode,
-                "intent": match.dialogue_mode,
-                "matchedQuestionId": question_id_for_log,
-                "matchedIntentId": question_id_for_log or match.dialogue_mode,
-                "repeated": question_result["repeated"],
-                "askCount": question_result["askCount"],
-                "remainingQuestions": session.remainingQuestions,
-                "previousRemainingQuestions": previous_remaining_questions,
-                "remainingQuestionsDelta": session.remainingQuestions - previous_remaining_questions,
-                "unlockedIds": question_result["newlyUnlockedIds"],
-                "consumedQuestion": match.consumed_question,
-                "fallbackUsed": ai_result["fallbackUsed"],
-                "provider": ai_result["provider"],
-                "model": ai_result.get("model"),
-                "safety": public_safety,
-                "matchedRefs": self._matched_refs(allowed_statement, allowed_event_policy),
-                "diagnosticReason": self._diagnostic_reason(match, allowed_event_policy),
-                "aiIntent": ai_result.get("intent"),
-                "aiDialogueMode": ai_result.get("dialogueMode"),
-                "emotionalState": emotional_state(session.pressureBySuspect.get(suspect.characterId, 0)),
-                "tensionLevel": tension_level(session.pressureBySuspect.get(suspect.characterId, 0)),
-                "decisiveEvidencePressure": decisive_pressure_hit,
-                "turnInterpretation": turn_interpretation.model_dump(),
-                "interrogationTransition": interrogation_transition.model_dump(),
-                "contradictionResult": contradiction_result,
-                "aiRuntimeDiagnostics": ai_runtime_diagnostics,
-                "proposedEventsCount": len(ai_proposed_events),
-                "beProposedEventsCount": len(be_proposed_events),
-                "stateProposedEventsCount": len(state_proposed_events),
-                "totalProposedEventsCount": len(proposed_events),
-                "appliedEventsCount": len(applied_events),
-                "appliedEvents": [event.model_dump(mode="json") for event in applied_events],
-            },
+            "dialogueResult": dialogue_result,
             "questionResult": {
                 "questionId": question_id_for_log,
                 "repeated": question_result["repeated"],
@@ -286,26 +310,7 @@ class DialogueService:
             "provider": ai_result["provider"],
             "model": ai_result.get("model"),
             "safety": public_safety,
-            "runtimeDiagnostics": {
-                "intent": match.dialogue_mode,
-                "dialogueMode": match.dialogue_mode,
-                "matchedQuestionId": question_id_for_log,
-                "matchedRefs": self._matched_refs(allowed_statement, allowed_event_policy),
-                "provider": ai_result["provider"],
-                "model": ai_result.get("model"),
-                "safety": public_safety,
-                "aiIntent": ai_result.get("intent"),
-                "aiDialogueMode": ai_result.get("dialogueMode"),
-                "proposedEventsCount": len(ai_proposed_events),
-                "beProposedEventsCount": len(be_proposed_events),
-                "stateProposedEventsCount": len(state_proposed_events),
-                "totalProposedEventsCount": len(proposed_events),
-                "appliedEventsCount": len(applied_events),
-                "reason": self._diagnostic_reason(match, allowed_event_policy),
-                "turnInterpretation": turn_interpretation.model_dump(),
-                "contradictionResult": contradiction_result,
-                "aiRuntimeDiagnostics": ai_runtime_diagnostics,
-            },
+            "runtimeDiagnostics": runtime_diagnostics,
             "contradictionResult": contradiction_result,
             "proposedEventsCount": len(ai_proposed_events),
             "beProposedEventsCount": len(be_proposed_events),
@@ -316,6 +321,101 @@ class DialogueService:
             "visualState": build_visual_state(session, case, suspect.characterId),
             "session": session,
             "case": case,
+        }
+
+    def _safe_ai_result_or_fallback(
+        self,
+        *,
+        ai_result: dict[str, Any],
+        fallback_answer: str,
+        request_context: RequestContext,
+        session: SessionState,
+        case: Case,
+        suspect_id: str,
+        started_at: float,
+    ) -> dict[str, Any]:
+        """Keep the deterministic BE turn authoritative when AI is degraded or unsafe.
+
+        A provider/policy failure should not bounce back to FE as a repeated API failure:
+        the turn has already been classified and, for matched questions, the 12-turn
+        budget has already been consumed by RuleEngine. Return a public BE fallback,
+        mark diagnostics honestly, and continue saving the updated session.
+        """
+        reason = str(ai_result.get("degradedReason") or "ai_service_unavailable")
+        safety = dict(ai_result.get("safety") or {})
+        fallback_used = bool(ai_result.get("fallbackUsed"))
+        degraded = bool(ai_result.get("degraded"))
+        repair_reason: str | None = None
+
+        try:
+            assert_no_forbidden_refs(
+                {
+                    "answer": ai_result.get("answer"),
+                    "proposedEvents": ai_result.get("proposedEvents") or [],
+                },
+                surface="ai_result",
+            )
+        except ValueError:
+            repair_reason = "public_safety_repair"
+            logger.warning(
+                "ai result replaced with backend fallback after public safety repair",
+                extra={
+                    "service": "backend",
+                    "request_id": request_context.request_id,
+                    "session_id": session.sessionId,
+                    "case_id": case.caseId,
+                    "route": request_context.route,
+                    "suspect_id": suspect_id,
+                    "duration_ms": int((time.perf_counter() - started_at) * 1000),
+                    "fallback_used": True,
+                    "reason": repair_reason,
+                },
+            )
+
+        if degraded:
+            logger.warning(
+                "ai degraded; continuing dialogue turn with backend fallback",
+                extra={
+                    "service": "backend",
+                    "request_id": request_context.request_id,
+                    "session_id": session.sessionId,
+                    "case_id": case.caseId,
+                    "route": request_context.route,
+                    "suspect_id": suspect_id,
+                    "duration_ms": int((time.perf_counter() - started_at) * 1000),
+                    "fallback_used": True,
+                    "reason": reason,
+                },
+            )
+
+        if degraded or repair_reason:
+            safety.update(
+                {
+                    "status": "degraded" if degraded and not repair_reason else "repaired",
+                    "fallbackUsed": True,
+                    "degraded": degraded,
+                    "repaired": bool(repair_reason),
+                    "blockedReason": repair_reason or reason,
+                }
+            )
+            return {
+                **ai_result,
+                "answer": fallback_answer,
+                "proposedEvents": [],
+                "fallbackUsed": True,
+                "degraded": degraded,
+                "provider": ai_result.get("provider") or "backend-rule-engine",
+                "model": ai_result.get("model"),
+                "safety": safety,
+            }
+
+        return {
+            **ai_result,
+            "answer": ai_result.get("answer") or fallback_answer,
+            "proposedEvents": ai_result.get("proposedEvents") or [],
+            "fallbackUsed": fallback_used,
+            "degraded": degraded,
+            "safety": safety or {"status": "checked", "fallbackUsed": fallback_used},
         }
 
     def _assert_public_surface(self, value: Any, surface: str) -> None:
@@ -347,6 +447,60 @@ class DialogueService:
             "provider": safety.get("provider"),
             "model": safety.get("model"),
         }
+
+    def _last_dialogue_summary(self, dialogue_result: dict[str, Any]) -> dict[str, Any]:
+        keys = (
+            "messageId",
+            "suspectId",
+            "dialogueMode",
+            "intent",
+            "matchedQuestionId",
+            "matchedIntentId",
+            "repeated",
+            "askCount",
+            "remainingQuestions",
+            "previousRemainingQuestions",
+            "remainingQuestionsDelta",
+            "consumedQuestion",
+            "fallbackUsed",
+            "provider",
+            "model",
+            "safety",
+            "matchedRefs",
+            "diagnosticReason",
+            "aiIntent",
+            "aiDialogueMode",
+            "emotionalState",
+            "tensionLevel",
+            "contradictionResult",
+            "proposedEventsCount",
+            "beProposedEventsCount",
+            "stateProposedEventsCount",
+            "totalProposedEventsCount",
+            "appliedEventsCount",
+        )
+        return {key: dialogue_result.get(key) for key in keys}
+
+    def _last_runtime_diagnostics(self, runtime_diagnostics: dict[str, Any]) -> dict[str, Any]:
+        keys = (
+            "intent",
+            "dialogueMode",
+            "matchedQuestionId",
+            "matchedRefs",
+            "provider",
+            "model",
+            "safety",
+            "aiIntent",
+            "aiDialogueMode",
+            "proposedEventsCount",
+            "beProposedEventsCount",
+            "stateProposedEventsCount",
+            "totalProposedEventsCount",
+            "appliedEventsCount",
+            "reason",
+            "contradictionResult",
+        )
+        return {key: runtime_diagnostics.get(key) for key in keys}
 
     def _judge_turn_contradiction(
         self,
@@ -477,6 +631,19 @@ class DialogueService:
                 fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message),
             )
 
+        if self._is_repeat_detail_followup(session, suspect_id, normalized_message):
+            return DialogueMatch(
+                dialogue_mode="pressure_followup",
+                allowed_statement=self._recent_context_statement(case, session, suspect_id, message),
+                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message),
+            )
+
+        if self._mentions_non_active_character_only(case, suspect_id, normalized_message):
+            return DialogueMatch(
+                dialogue_mode="unmatched",
+                fallback_answer=self._fallback_answer_for_intent("unmatched", self._suspect(case, suspect_id), message),
+            )
+
         exact = next((item for item in candidates if self._normalize_text(item.text) == normalized_message), None)
         if exact:
             return DialogueMatch(dialogue_mode="case_question", question=exact, consumed_question=True)
@@ -521,6 +688,22 @@ class DialogueService:
 
     def _suspect(self, case: Case, suspect_id: str):
         return next(item for item in case.suspects if item.characterId == suspect_id)
+
+    def _mentions_non_active_character_only(self, case: Case, suspect_id: str, normalized_message: str) -> bool:
+        compact = normalized_message.replace(" ", "")
+        active = self._suspect(case, suspect_id)
+        active_names = {self._normalize_text(active.name).replace(" ", ""), suspect_id.lower()}
+        active_mentioned = any(name and name in compact for name in active_names)
+        victim_name = self._normalize_text(case.victimName).replace(" ", "")
+        if victim_name and victim_name in compact:
+            return not active_mentioned
+        for suspect in case.suspects:
+            if suspect.characterId == suspect_id:
+                continue
+            names = {self._normalize_text(suspect.name).replace(" ", ""), suspect.characterId.lower()}
+            if any(name and name in compact for name in names):
+                return not active_mentioned
+        return False
 
     def _ai_question_payload(self, match: DialogueMatch, message: str) -> dict[str, str]:
         if match.question is not None:
@@ -593,6 +776,57 @@ class DialogueService:
                     changed = True
                     break
         return stripped
+
+    def _differentiate_repeated_reply(
+        self,
+        session: SessionState,
+        suspect_id: str,
+        dialogue_mode: str,
+        question_result: dict[str, Any],
+        answer: str,
+    ) -> str:
+        prior_answers = [
+            entry.text
+            for entry in session.dialogueLog[-12:]
+            if entry.suspectId == suspect_id and entry.speaker != "player"
+        ]
+        if question_result.get("repeated") is True:
+            prefixes = (
+                "다시 정리하면,",
+                "앞서 말한 내용과 같지만,",
+                "한 번 더 확인하자면,",
+            )
+            ask_count = int(question_result.get("askCount") or 2)
+            return f"{prefixes[(ask_count - 2) % len(prefixes)]} {answer}"
+        evidence_template = "제 말이 흔들린다는 건 알겠습니다"
+        if dialogue_mode == "evidence_question" and evidence_template in answer and any(evidence_template in item for item in prior_answers):
+            return answer.replace(
+                "그래도 그걸 곧바로 인정하라는 건 무리예요. 제가 설명해야 할 부분이 있다는 것까지만 말하겠습니다.",
+                "하지만 그 기록 하나로 제 행동 전체가 단정되는 건 받아들일 수 없어요. 확인할 수 있는 부분부터 다시 짚겠습니다.",
+            )
+        if answer not in prior_answers:
+            return answer
+        variants = {
+            "unmatched": (
+                "그 질문은 지금 제게 확인할 수 있는 범위를 벗어납니다.",
+                "그건 제가 바로 답할 수 있는 질문이 아닙니다.",
+                "그 부분은 제 진술과 직접 연결해서 물어봐 주세요.",
+            ),
+            "small_talk": (
+                "인사보다 사건 이야기를 하시죠.",
+                "짧게 하겠습니다. 사건과 관련된 걸 물어보세요.",
+                "지금은 잡담할 상황이 아닙니다.",
+            ),
+        }
+        options = variants.get(dialogue_mode)
+        if not options:
+            options = (
+                "표현을 바꾸면 이렇습니다.",
+                "같은 취지로 말하겠습니다.",
+                "다시 말하자면 이렇습니다.",
+            )
+        repeat_count = prior_answers.count(answer)
+        return f"{options[(repeat_count - 1) % len(options)]} {answer}"
 
     def _allowed_statement_for_question(self, case: Case, question, fallback_answer: str) -> dict[str, Any]:
         for statement_id in question.unlocksStatementIds:
@@ -724,6 +958,14 @@ class DialogueService:
                 "그게답",
             )
         )
+
+    def _is_repeat_detail_followup(self, session: SessionState, suspect_id: str, normalized_message: str) -> bool:
+        compact = normalized_message.replace(" ", "")
+        if not any(entry.suspectId == suspect_id for entry in session.dialogueLog[-4:]):
+            return False
+        if not any(term in compact for term in ("방금", "아까", "다시", "자세히", "구체적", "설명")):
+            return False
+        return any(term in compact for term in ("22시", "열시", "그시간", "그때", "행적", "동선", "어디", "알리바이"))
 
     def _recent_context_statement(self, case: Case, session: SessionState, suspect_id: str, message: str) -> dict[str, Any]:
         alibi_statement = next(

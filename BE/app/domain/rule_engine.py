@@ -33,7 +33,12 @@ class RuleEngine:
             session.newlyUnlockedIds = []
         answer = question.answer
         if repeated:
-            answer = f"이미 답한 질문입니다. {question.answer}"
+            repeat_prefixes = (
+                "이미 답한 질문입니다.",
+                "같은 질문에 다시 답하자면,",
+                "방금 확인한 내용과 같습니다.",
+            )
+            answer = f"{repeat_prefixes[(previous_count - 1) % len(repeat_prefixes)]} {question.answer}"
         return {
             "answer": answer,
             "newlyUnlockedIds": newly_unlocked,
@@ -153,9 +158,13 @@ class RuleEngine:
         required_contradictions = set(solution.requiredContradictionIds)
         required_statements = set(solution.requiredStatementIds)
 
-        evidence_ok = required_evidence.issubset(set(evidence_ids))
-        contradictions_ok = required_contradictions.issubset(set(contradiction_ids))
-        statements_ok = required_statements.issubset(set(statement_ids))
+        publicly_available_evidence = set(session.unlockedEvidenceIds)
+        publicly_available_contradictions = set(session.discoveredContradictionIds)
+        publicly_available_statements = set(session.unlockedStatementIds)
+
+        evidence_ok = required_evidence.issubset(set(evidence_ids)) and required_evidence.issubset(publicly_available_evidence)
+        contradictions_ok = required_contradictions.issubset(set(contradiction_ids)) and required_contradictions.issubset(publicly_available_contradictions)
+        statements_ok = required_statements.issubset(set(statement_ids)) and required_statements.issubset(publicly_available_statements)
         proof_complete = evidence_ok and contradictions_ok and statements_ok
 
         if suspect_match and proof_complete:

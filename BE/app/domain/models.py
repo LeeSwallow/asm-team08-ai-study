@@ -245,5 +245,7 @@ class SessionState(BaseModel):
     pressureBySuspect: Dict[str, int] = Field(default_factory=dict)
     newlyUnlockedIds: List[str] = Field(default_factory=list)
     accusation: Optional[Dict[str, Any]] = None
+    lastDialogueResult: Optional[Dict[str, Any]] = None
+    lastRuntimeDiagnostics: Optional[Dict[str, Any]] = None
     createdAt: datetime = Field(default_factory=datetime.utcnow)
     updatedAt: datetime = Field(default_factory=datetime.utcnow)

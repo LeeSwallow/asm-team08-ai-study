@@ -319,15 +319,14 @@ Goal: contradiction gameplay requires player selection of testimony/statement pl
 
 Browser flow:
 1. Ask Han Seo-yeon for her alibi to unlock `st_hanseoyeon_room_2200`.
-2. Open statement/testimony selection and choose `st_hanseoyeon_room_2200`.
-3. Choose evidence `ev_study_entry_log`.
-4. Submit contradiction.
-5. Confirm BE response/SSE updates contradiction detail, notes/notebook, pressure/tension, current objective, and visual state.
+2. Ask a natural-language follow-up that explicitly mentions the public evidence, e.g. `서재 출입 기록에는 왜 당신 이름이 남아 있나요?`.
+3. Confirm BE Dialogue API maps the utterance to public evidence/statement refs.
+4. Confirm GameMaster proposedEvents and BE EventProcessor/SSE update contradiction detail, notes/notebook, pressure/tension, current objective, and visual state.
 
 Acceptance:
-- FE does not use a single canned `증거 제시` action with preselected hidden IDs.
-- BE validates the submitted public IDs and returns deterministic result.
-- Candidate contradictions remain candidates until explicit submission.
+- FE does not expose a canned `증거 제시` action that bypasses natural-language interrogation.
+- BE validates public refs inferred from the dialogue turn and returns deterministic state updates.
+- Candidate contradictions remain candidates until the dialogue pipeline and EventProcessor validate them.
 - Discovered contradiction details are visible without FE inferring from IDs alone.
 
 ## 14. Comic/ImageGen asset gate
@@ -394,7 +393,7 @@ Acceptance:
 
 ## 16. AI failure/degraded semantics gate
 
-Goal: embedded AI/provider failure does not fabricate detective progress.
+Goal: embedded AI/provider failure does not fabricate hidden truth progress and is visibly degraded.
 
 Validation methods:
 - Disable provider config in a controlled test profile, or use a test that simulates embedded AI timeout/error.
@@ -402,9 +401,9 @@ Validation methods:
 
 Acceptance:
 - BE returns explicit failure or degraded response with `fallbackUsed=true` or `degraded=true`.
-- Question count is not decremented unless documented as a failed attempt.
-- No `NOTE_FACT_ADDED`, contradiction candidate, evidence unlock, tension progress, or objective advancement is created from AI failure.
-- FE diagnostics show degraded/API failure state instead of normal-looking character testimony.
+- Matched player turns may decrement the 12-question budget only when the response is produced by BE-owned deterministic fallback from public case/session state; unmatched/system failures must not silently consume progress.
+- No `NOTE_FACT_ADDED`, contradiction discovery, evidence unlock, tension progress, or objective advancement is created from AI failure unless the BE rule engine independently validates the public turn.
+- FE diagnostics show degraded/API failure state instead of normal-looking provider testimony.
 - Logs include `correlationId`/`requestId`, provider/fallback metadata, and no private story leakage.
 
 ## 17. TensionPolicy idempotency gate
@@ -415,7 +414,7 @@ Required BE tests:
 - Unlock-only event does not emit `TENSION_CHANGED` and does not change pressure.
 - First validated evidence + testimony/alibi contradiction emits exactly one `TENSION_CHANGED` for the suspect.
 - Duplicate proposed contradiction candidate, repeated question, SSE replay, or repeated direct contradiction submit does not increment pressure again.
-- AI-down/degraded dialogue creates no unlock progress, no contradiction discovery, and no `TENSION_CHANGED`.
+- AI-down/degraded dialogue creates no unvalidated unlock progress, no contradiction discovery, and no `TENSION_CHANGED`.
 
 API sketch:
 

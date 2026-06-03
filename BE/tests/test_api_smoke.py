@@ -113,6 +113,7 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
     session_id = session["sessionId"]
     assert session["remainingQuestions"] == 12
+    assert session["selectedSuspectId"] is not None
     assert len(session["suspects"]) >= 4
     assert len(session["evidence"]) >= 4
 
@@ -194,6 +195,121 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     assert saved_session.phase == "solved"
     assert saved_session.accusation is not None
     assert saved_session.accusation["submittedMotive"]
+
+
+def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_within_limit(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    assert session["questionLimit"] == 12
+    assert session["remainingQuestions"] == 12
+    assert session["visibleEvidenceCount"] == 5
+    assert session["totalEvidenceCount"] == 13
+    assert {item["characterId"] for item in session["suspects"]} == {
+        "char_hanseoyeon",
+        "char_yoonjaeho",
+        "char_parkmingyu",
+        "char_choiyuna",
+    }
+    initial_evidence_ids = {item["evidenceId"] for item in session["evidence"]}
+    assert initial_evidence_ids == {
+        "ev_broken_watch",
+        "ev_wine_glass",
+        "ev_study_entry_log",
+        "ev_servant_log",
+        "ev_window_bolt",
+    }
+    assert "ev_torn_will" not in initial_evidence_ids
+    assert "ev_ring_near_victim" not in initial_evidence_ids
+    assert "ev_prescription_dispute_note" not in initial_evidence_ids
+
+    def ask(question_id: str):
+        return client.post(f"/api/v1/sessions/{session_id}/questions", json={"questionId": question_id}).json()
+
+    def challenge(suspect_id: str, message: str):
+        return client.post(
+            f"/api/v1/sessions/{session_id}/dialogue",
+            json={"suspectId": suspect_id, "message": message},
+        ).json()
+
+    # Question-selected side routes should open every non-core suspect's useful evidence/relation leads.
+    session = ask("q_yoonjaeho_blackout")
+    session = ask("q_yoonjaeho_family_tension")
+    session = ask("q_parkmingyu_medicine")
+    session = ask("q_parkmingyu_argument")
+    session = ask("q_choiyuna_last_call")
+    session = ask("q_choiyuna_schedule")
+    session = ask("q_choiyuna_wine")
+
+    # Core contradiction opens the gated motive/scene evidence and follow-up questions.
+    session = challenge(
+        "char_hanseoyeon",
+        "22시에 방에 있었다는 진술은 22:02 서재 출입 기록과 모순입니다.",
+    )
+    assert session["contradictionResult"]["contradictionId"] == "con_room_claim_vs_entry_log"
+    assert "q_hanseoyeon_after_pressure" in session["unlockedQuestionIds"]
+    assert "q_hanseoyeon_ring_missing" in session["unlockedQuestionIds"]
+    assert "ev_torn_will" in {item["evidenceId"] for item in session["evidence"]}
+    assert "ev_ring_near_victim" in {item["evidenceId"] for item in session["evidence"]}
+
+    session = ask("q_hanseoyeon_ring_missing")
+    assert "st_hanseoyeon_ring_missing" in {item["statementId"] for item in session["statements"]}
+    session = challenge(
+        "char_hanseoyeon",
+        "반지가 어디서 사라졌는지 모른다는 말은 현장 발견 반지와 모순입니다.",
+    )
+    assert session["contradictionResult"]["contradictionId"] == "con_ring_vs_no_entry"
+    assert "rec_ring_ownership" in {item["recordId"] for item in session["records"]}
+
+    session = ask("q_hanseoyeon_after_pressure")
+    session = challenge(
+        "char_hanseoyeon",
+        "정전 기록과 깨진 회중시계 파편 방향이 맞지 않습니다. 정전 중 현장 조작이라서 모순입니다.",
+    )
+    assert session["contradictionResult"]["contradictionId"] == "con_watch_time_manipulated"
+
+    all_evidence_ids = {
+        "ev_broken_watch",
+        "ev_wine_glass",
+        "ev_study_entry_log",
+        "ev_servant_log",
+        "ev_torn_will",
+        "ev_phone_call",
+        "ev_medicine_box",
+        "ev_storm_blackout",
+        "ev_ring_near_victim",
+        "ev_lipstick_tube",
+        "ev_window_bolt",
+        "ev_deleted_cctv",
+        "ev_prescription_dispute_note",
+    }
+    assert {item["evidenceId"] for item in session["evidence"]} == all_evidence_ids
+    assert session["visibleEvidenceCount"] == session["totalEvidenceCount"] == len(all_evidence_ids)
+    assert all(edge["unlocked"] for edge in session["relationMap"]["edges"])
+    assert session["remainingQuestions"] >= 0
+
+
+def test_accusation_cannot_be_solved_with_undiscovered_internal_ids(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    accusation = client.post(
+        f"/api/v1/sessions/{session_id}/accusation",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "motive": "공개 단서 기준 동기 추정",
+            "method": "공개 단서 기준 방법 추정",
+            "evidenceIds": ["ev_study_entry_log", "ev_torn_will"],
+            "contradictionIds": ["con_room_claim_vs_entry_log", "con_inheritance_motive"],
+            "statementIds": ["st_hanseoyeon_room_2200", "st_hanseoyeon_no_reason"],
+        },
+    ).json()
+
+    assert accusation["accusationResult"]["verdict"] == "partial"
+    assert accusation["accusationResult"]["correct"] is False
+    assert accusation["phase"] == "accusation"
 
 
 def test_investigation_read_models_include_case_file_notebook_and_contradiction_details(tmp_path, monkeypatch):
@@ -497,6 +613,56 @@ def test_dialogue_accepts_suspect_id_and_message_and_records_events(tmp_path, mo
     assert "st_hanseoyeon_room_2200" in body
 
 
+def test_session_get_persists_public_dialogue_runtime_diagnostics(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    dialogue = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_hanseoyeon",
+            "message": "22시에 방에 있었다는 진술은 서재 출입 기록의 22:02 카드키 기록과 모순입니다.",
+        },
+    ).json()
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+
+    assert loaded["selectedSuspectId"] == "char_hanseoyeon"
+    assert loaded["runtimeDiagnostics"]["provider"] == "contract-test-ai"
+    assert loaded["runtimeDiagnostics"]["dialogueMode"] == dialogue["dialogueResult"]["dialogueMode"]
+    assert loaded["runtimeDiagnostics"]["appliedEventsCount"] == dialogue["dialogueResult"]["appliedEventsCount"]
+    assert loaded["lastDialogueResult"]["contradictionResult"]["verdict"] == "correct"
+    assert loaded["contradictions"]["candidates"]
+    assert loaded["contradictions"]["discovered"]
+    candidate = loaded["contradictions"]["candidates"][0]
+    for key in ["contradictionId", "title", "suspectId", "statementIds", "evidenceIds", "severity", "reasonCode", "displayText", "submitEligible"]:
+        assert key in candidate
+    assert _forbidden_token_hits(loaded) == []
+
+
+def test_dialogue_other_suspect_mention_does_not_consume_active_suspect_question(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    yoon = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "윤재호는 22시쯤 어디에 있었나요?"},
+    ).json()
+    kang = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "강도준의 상속 문제를 설명해 주세요."},
+    ).json()
+
+    assert yoon["dialogueResult"]["dialogueMode"] == "unmatched"
+    assert yoon["dialogueResult"]["matchedQuestionId"] is None
+    assert yoon["dialogueResult"]["consumedQuestion"] is False
+    assert kang["dialogueResult"]["dialogueMode"] == "unmatched"
+    assert kang["dialogueResult"]["matchedQuestionId"] is None
+    assert kang["dialogueResult"]["consumedQuestion"] is False
+    assert client.get(f"/api/v1/sessions/{session_id}").json()["askedQuestionCounts"] == {}
+
+
 def test_questions_endpoint_accepts_fe_free_text_compatibility_payload(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
@@ -689,7 +855,10 @@ def test_dialogue_routes_korean_typo_medication_and_lipstick_queries_with_diagno
     assert medication["runtimeDiagnostics"]["beProposedEventsCount"] == 0
     assert medication["runtimeDiagnostics"]["appliedEventsCount"] == medication["dialogueResult"]["appliedEventsCount"]
     assert medication["runtimeDiagnostics"]["matchedRefs"]["statementIds"] == ["st_parkmingyu_medicine"]
-    assert medication["runtimeDiagnostics"]["matchedRefs"]["evidenceIds"] == ["ev_medicine_box"]
+    assert medication["runtimeDiagnostics"]["matchedRefs"]["evidenceIds"] == [
+        "ev_medicine_box",
+        "ev_prescription_dispute_note",
+    ]
     assert medication["runtimeDiagnostics"]["reason"] == "matched_public_question"
 
     lipstick = client.post(
@@ -872,7 +1041,7 @@ def test_dialogue_evidence_question_policy_includes_visible_contradiction_path(t
     assert refs["contradictionIds"] == ["con_room_claim_vs_entry_log"]
     assert refs["evidenceIds"] == ["ev_study_entry_log"]
     assert refs["statementIds"] == ["st_hanseoyeon_room_2200"]
-    assert payload["dialogueResult"]["appliedEventsCount"] == 3
+    assert payload["dialogueResult"]["appliedEventsCount"] == 5
     events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
     assert "event: NOTE_CONTRADICTION_CANDIDATE_ADDED" in events_body
     assert "event: TENSION_CHANGED" in events_body
@@ -907,7 +1076,7 @@ def test_dialogue_unmatched_evidence_question_deflects_without_inheritance_jump(
     assert "event: TENSION_CHANGED" not in events_body
 
 
-def test_ai_degraded_response_does_not_consume_question_or_fabricate_progress(tmp_path, monkeypatch, caplog):
+def test_ai_degraded_response_uses_be_fallback_and_consumes_matched_turn_budget(tmp_path, monkeypatch, caplog):
     client = _client(tmp_path, monkeypatch)
     class DegradedAIClient:
         async def dialogue_response_info(self, payload, fallback):
@@ -932,22 +1101,26 @@ def test_ai_degraded_response_does_not_consume_question_or_fabricate_progress(tm
             headers={"X-Request-ID": "req_degraded_test"},
         )
 
-    assert response.status_code == 503
-    payload = response.json()["detail"]
-    assert payload["code"] == "AI_SERVICE_DEGRADED"
-    assert payload["fallbackUsed"] is False
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["dialogueResult"]["fallbackUsed"] is True
+    assert payload["dialogueResult"]["safety"]["degraded"] is True
     loaded = client.get(f"/api/v1/sessions/{session_id}").json()
-    assert loaded["remainingQuestions"] == session["remainingQuestions"]
-    assert loaded["dialogueLog"] == []
-    assert client.get(f"/api/v1/sessions/{session_id}/events?once=true").text == ""
-    warning = next(record for record in caplog.records if record.message == "dialogue rejected because ai service is degraded")
+    assert loaded["remainingQuestions"] == session["remainingQuestions"] - 1
+    assert payload["dialogueResult"]["previousRemainingQuestions"] == session["remainingQuestions"]
+    assert payload["dialogueResult"]["remainingQuestions"] == session["remainingQuestions"] - 1
+    assert payload["dialogueResult"]["remainingQuestionsDelta"] == -1
+    assert len(loaded["dialogueLog"]) == 2
+    events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+    assert "event: NOTE_FACT_ADDED" not in events_body
+    warning = next(record for record in caplog.records if record.message == "ai degraded; continuing dialogue turn with backend fallback")
     assert warning.service == "backend"
     assert warning.request_id == "req_degraded_test"
     assert warning.session_id == session_id
     assert warning.case_id == "case_001"
     assert warning.route == f"/api/v1/sessions/{session_id}/dialogue"
     assert warning.suspect_id == "char_hanseoyeon"
-    assert warning.fallback_used is False
+    assert warning.fallback_used is True
 
 
 def test_accusation_forbidden_user_text_does_not_persist_or_emit_sse(tmp_path, monkeypatch):
@@ -976,7 +1149,7 @@ def test_accusation_forbidden_user_text_does_not_persist_or_emit_sse(tmp_path, m
     assert client.get(f"/api/v1/sessions/{session_id}/events?once=true").text == ""
 
 
-def test_malicious_ai_answer_or_event_forbidden_ref_is_rejected_without_progress(tmp_path, monkeypatch):
+def test_malicious_ai_answer_or_event_forbidden_ref_is_repaired_with_be_fallback(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
 
     class LeakingAIClient:
@@ -1004,12 +1177,18 @@ def test_malicious_ai_answer_or_event_forbidden_ref_is_rejected_without_progress
         json={"suspectId": "char_hanseoyeon", "message": "22시 이후 어디에 있었나요?"},
     )
 
-    assert response.status_code == 503
-    assert response.json()["detail"]["code"] == "AI_RESPONSE_FORBIDDEN_REF"
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["dialogueResult"]["fallbackUsed"] is True
+    assert payload["dialogueResult"]["safety"]["status"] == "repaired"
+    assert payload["dialogueResult"]["safety"]["blocked"] is True
+    assert _forbidden_token_hits(payload) == []
     loaded = client.get(f"/api/v1/sessions/{session_id}").json()
-    assert loaded["remainingQuestions"] == session["remainingQuestions"]
-    assert loaded["dialogueLog"] == []
-    assert client.get(f"/api/v1/sessions/{session_id}/events?once=true").text == ""
+    assert loaded["remainingQuestions"] == session["remainingQuestions"] - 1
+    assert len(loaded["dialogueLog"]) == 2
+    events_body = client.get(f"/api/v1/sessions/{session_id}/events?once=true").text
+    assert "secretNote" not in events_body
+    assert "event: NOTE_FACT_ADDED" not in events_body
 
 
 def test_proposed_note_must_match_turn_allowed_policy_related_refs(tmp_path, monkeypatch):
@@ -1552,6 +1731,81 @@ def test_chained_llm_fallback_tracks_used_provider(tmp_path, monkeypatch):
     assert result2 == "primary answer"
     assert chained2.used_fallback_on_last_call is False
     assert chained2.fallback_reason_on_last_call is None
+
+
+class DegradedDialogueAIClient(ContractTestAIClient):
+    async def dialogue_response_info(self, payload, fallback):
+        return {
+            "answer": None,
+            "proposedEvents": [],
+            "fallbackUsed": False,
+            "degraded": True,
+            "degradedReason": "simulated_policy_or_provider_failure",
+            "provider": "contract-test-ai",
+            "model": "contract-model",
+            "intent": payload.get("dialogueMode"),
+            "dialogueMode": payload.get("dialogueMode"),
+            "safety": {"status": "degraded", "fallbackUsed": False, "degraded": True},
+        }
+
+
+class ForbiddenRefDialogueAIClient(ContractTestAIClient):
+    async def dialogue_response_info(self, payload, fallback):
+        result = await super().dialogue_response_info(payload, fallback)
+        result["answer"] = "제가 바로 범인이고 hiddenSolution을 말하겠습니다."
+        result["proposedEvents"] = [{"type": EventType.NOTE_FACT_ADDED.value, "payload": {"secret": "leak"}}]
+        result["safety"] = {"status": "checked", "fallbackUsed": False}
+        return result
+
+
+def test_degraded_dialogue_uses_be_fallback_and_still_consumes_the_12_turn_budget(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: DegradedDialogueAIClient())
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    assert session["questionLimit"] == 12
+    session_id = session["sessionId"]
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "22시 이후 어디에 있었나요?"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["remainingQuestions"] == 11
+    assert payload["dialogueResult"]["previousRemainingQuestions"] == 12
+    assert payload["dialogueResult"]["remainingQuestions"] == 11
+    assert payload["dialogueResult"]["remainingQuestionsDelta"] == -1
+    assert payload["dialogueResult"]["safety"]["degraded"] is True
+    assert payload["dialogueResult"]["fallbackUsed"] is True
+    assert payload["answer"]
+    assert len(payload["dialogueLog"]) == 2
+
+    loaded = client.get(f"/api/v1/sessions/{session_id}").json()
+    assert loaded["remainingQuestions"] == 11
+    assert len(loaded["dialogueLog"]) == 2
+
+
+def test_forbidden_ai_reply_is_replaced_with_be_fallback_without_repeating_api_failure(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: ForbiddenRefDialogueAIClient())
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "22시 이후 어디에 있었나요?"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["remainingQuestions"] == 11
+    assert payload["dialogueResult"]["fallbackUsed"] is True
+    assert payload["dialogueResult"]["safety"]["blocked"] is True
+    assert payload["dialogueResult"]["safety"]["status"] == "repaired"
+    assert "범인" not in payload["answer"]
+    assert "hiddenSolution" not in payload["answer"]
+    assert _forbidden_token_hits(payload) == []
 
 
 def _all_keys(value):
