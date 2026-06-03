@@ -2898,3 +2898,27 @@ Routed AI `[CROSS-FEEDBACK]` high contract/documentation to DOCS, BE, and `orche
 ### Next actions
 - Re-capture `codex:1.1` next tick to collect its completion report for the submitted critical blocker feedback; do not interrupt while it shows `Crafting`/active work.
 - After BE reports fixes: rerun BE compile/full tests, targeted regressions for accusation complete payload no-persist/no-SSE and note tag no-persist/no-SSE, independent no-edit review, Docker refresh, health checks, malicious accusation smoke, forbidden note smoke, provider fallback metadata smoke, and public/SSE forbidden-key scans before marking any BE milestone commit-ready.
+
+
+## 2026-06-03T16:07:17+09:00 FE/BE runtime dogfood blocker routed
+
+- User reported UI is still strange and BE/FE integration does not feel properly wired. Orchestrator performed live browser dogfood on `http://127.0.0.1:8080/`.
+- Reproduced FE blockers: after starting a case the central interrogation stage had no selected suspect and input was disabled; verbose AI/runtime diagnostics dominate the player stage; evidence/right column clips horizontally at 1280x720; right panel shows unreadable `자료 보드2 records 1메모2관계` summary instead of a visible contradiction loop; `ContradictionPanel` exists in source but is not rendered in `App`/`EvidencePanel`.
+- Reproduced integration issue: after manually selecting Han Seo-yeon and asking `22시 이후 어디에 있었나요?`, dialogue appears and session/SSE progresses (`lastEventId=evt_000002`), but `GET /sessions/{sid}` does not include persisted runtime diagnostics and the first-screen selected suspect was not BE-authoritative.
+- Sent `[ORCH-DIRECTIVE]` to `FE:1.1`: render contradiction panel in right column, declutter diagnostics, fix clipping/responsive CSS, make first active suspect usable, keep `/dialogue` BE-backed contradiction flow, run `npm run build` and browser dogfood.
+- Sent `[ORCH-DIRECTIVE]` to `BE:1.1`: default selected suspect on create, verify dialogue contradictionResult/session contradiction read models, consider safe persisted last public runtime diagnostics, run `pytest -q`, compileall, direct API/SSE/leakage smoke.
+- `orchest:1.1` pane is not present in current tmux session list, so directives were sent directly to FE/BE and recorded here as orchestrator copy.
+- Commit impact: FE runtime/UI and BE first-session contract are not commit-ready until code changes, Docker service refresh, and central browser/API/SSE dogfood pass.
+
+
+## 2026-06-03T16:18:47+09:00 FE page split directive routed
+
+- User rejected the current one-page FE structure and requested separate pages for sessions and each case.
+- Routed high `[ORCH-DIRECTIVE]` to `FE:1.1` requiring route/page split:
+  - `/cases` or `/` for case list.
+  - `/cases/:caseId` for case detail/public briefing/start CTA.
+  - `/sessions/:sessionId` for active noir investigation desk.
+  - Optional nested/URL state for case-file/evidence/notes/relations/accusation drawers.
+- Required `App.tsx` reduction to router/shell only and new page components such as `CaseListPage`, `CaseDetailPage`, `SessionDeskPage`.
+- Required session creation to navigate to `/sessions/{sessionId}`, refresh/restore to reload BE session by id, and browser dogfood across case list -> case detail -> session desk -> refresh.
+- Commit impact: FE runtime/UI remains blocked until page split, build, frontend Docker refresh, and browser dogfood pass.

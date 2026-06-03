@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { backgroundAsset, suspectAsset } from "../constants/presentation";
+import { backgroundAsset, defaultBackgroundIdForCase, suspectAsset } from "../constants/presentation";
 import type { DialogueLogItem, DialogueRuntimeDiagnostics, GameEventFeedItem, Suspect, VisualState } from "../types";
 
 type InterrogationStageProps = {
@@ -12,6 +12,7 @@ type InterrogationStageProps = {
   questionHint?: string;
   busy: boolean;
   remainingQuestions: number;
+  questionLimit: number;
   visualState?: VisualState;
   runtimeDiagnostics?: DialogueRuntimeDiagnostics;
   onDraftQuestionChange: (value: string) => void;
@@ -29,39 +30,28 @@ export function InterrogationStage({
   questionHint,
   busy,
   remainingQuestions,
+  questionLimit,
   visualState,
   runtimeDiagnostics,
   onDraftQuestionChange,
   onSubmitQuestion,
   onPresentEvidence,
 }: InterrogationStageProps) {
-  const tensionLevel = visualState?.tensionLevel ?? "unknown";
   const visualAppliesToSelected = Boolean(
     selectedSuspect && (!visualState?.suspectId || visualState.suspectId === selectedSuspect.id),
   );
+  const pressure = selectedSuspect?.pressure ?? 0;
+  const fallbackTensionLevel = selectedSuspect?.tensionLevel ?? (pressure >= 80 ? "critical" : pressure >= 55 ? "high" : pressure >= 20 ? "medium" : "low");
+  const tensionLevel = visualAppliesToSelected ? (visualState?.tensionLevel ?? fallbackTensionLevel) : fallbackTensionLevel;
   const expression = visualAppliesToSelected
     ? (visualState?.characterImageState ?? visualState?.expression ?? selectedSuspect?.expression ?? "neutral")
     : (selectedSuspect?.expression ?? "neutral");
   const emotion = visualAppliesToSelected ? (visualState?.emotionalState ?? selectedSuspect?.emotion ?? "guarded") : (selectedSuspect?.emotion ?? "guarded");
-  const pressure = selectedSuspect?.pressure ?? 0;
-  const stageBackground = backgroundAsset(visualState?.backgroundId);
+  const stageBackground = backgroundAsset(visualAppliesToSelected ? visualState?.backgroundId : defaultBackgroundIdForCase());
   const stageAsset = suspectAsset(selectedSuspect?.id, expression);
   const stageMood = `${emotion}-${expression}-${tensionLevel}`;
-  const diagnosticTone = runtimeDiagnostics?.source === "local" || runtimeDiagnostics?.fallbackUsed ? "fallback" : "api";
-  const diagnosticLabel = (value: string | number | null | undefined, fallback: string) => {
-    const missing = value === null || value === undefined || value === "";
-    return <span className={missing ? "diagnostic-missing" : undefined}>{missing ? fallback : value}</span>;
-  };
-  const matchedPublicRefs = [
-    runtimeDiagnostics?.matchedQuestionId,
-    ...(runtimeDiagnostics?.matchedEvidenceIds ?? []),
-    ...(runtimeDiagnostics?.matchedStatementIds ?? []),
-    ...(runtimeDiagnostics?.matchedRecordIds ?? []),
-    ...(runtimeDiagnostics?.matchedRefs ?? []),
-  ].filter((item): item is string => Boolean(item));
-  const proposedCount = runtimeDiagnostics?.proposedEventsCount;
-  const appliedCount = runtimeDiagnostics?.appliedEventsCount;
-  const noProgressEvents = proposedCount === 0 && appliedCount === 0;
+  const diagnosticTone = runtimeDiagnostics?.fallbackUsed || runtimeDiagnostics?.degraded ? "fallback" : "api";
+  const visibleProgressCount = runtimeDiagnostics?.appliedEventsCount ?? 0;
   const suspectById = new Map(suspects.map((suspect) => [suspect.id, suspect]));
   const suspectByName = new Map(suspects.map((suspect) => [suspect.name, suspect]));
   const isActiveSuspectTurn = (item: DialogueLogItem) => {
@@ -93,22 +83,21 @@ export function InterrogationStage({
   return (
     <section className="panel interrogation-panel" aria-labelledby="stage-title">
       <h2 id="stage-title">
-        심문 대상: <span>{selectedSuspect?.name ?? "용의자 선택 필요"}</span> <small>({selectedSuspect?.role ?? "미선택"})</small>
+        심문 대상: <span>{selectedSuspect?.name ?? "용의자 선택 필요"}</span>
       </h2>
-      <div className="interrogation-meta" aria-label="AI/세션 상태">
-        <span className={`runtime-badge ${diagnosticTone}`}>{runtimeDiagnostics?.source === "api" ? "API 연결" : "LOCAL/MOCK"}</span>
-        <span>intent: {diagnosticLabel(runtimeDiagnostics?.intent ?? runtimeDiagnostics?.dialogueMode, "AI intent 미분류")}</span>
-        <span>matched refs: {matchedPublicRefs.length > 0 ? matchedPublicRefs.join(", ") : <span className="diagnostic-missing">공개 근거 미연결</span>}</span>
-        <span>provider: {diagnosticLabel(runtimeDiagnostics?.provider, "provider 미수신")}{runtimeDiagnostics?.model ? `/${runtimeDiagnostics.model}` : ""}</span>
-        <span className={runtimeDiagnostics?.degraded ? "diagnostic-alert" : undefined}>degraded: {runtimeDiagnostics?.degraded ? "yes" : "no"}</span>
-        <span className={runtimeDiagnostics?.fallbackUsed ? "diagnostic-alert" : undefined}>fallback: {runtimeDiagnostics?.fallbackUsed ? "yes" : "no"}</span>
-        <span>safety: {diagnosticLabel(runtimeDiagnostics?.safety, "safety 미수신")}</span>
-        {runtimeDiagnostics?.blockedReason ? <span>blocked: {runtimeDiagnostics.blockedReason}</span> : null}
-        <span>remaining: {runtimeDiagnostics?.previousRemainingQuestions ?? "?"}→{runtimeDiagnostics?.remainingQuestions ?? remainingQuestions} ({runtimeDiagnostics?.remainingQuestionsDelta ?? 0})</span>
-        <span>state: {runtimeDiagnostics?.emotionalState ?? emotion}/{runtimeDiagnostics?.tensionLevel ?? tensionLevel}</span>
-        <span>events: {noProgressEvents ? <span className="diagnostic-missing">이 턴에서 진행 이벤트 없음</span> : <>{diagnosticLabel(proposedCount, "proposed ?")}/{diagnosticLabel(appliedCount, "applied ?")}</>}</span>
-        <span>eventId: {diagnosticLabel(runtimeDiagnostics?.lastEventId, "SSE event 미수신")}</span>
-      </div>
+      <details className="interrogation-meta" aria-label="수사 상태">
+        <summary>
+          <span className={`runtime-badge ${diagnosticTone}`}>수사 기록</span>
+          <span>{runtimeDiagnostics?.fallbackUsed || runtimeDiagnostics?.degraded ? "기록 확인 중" : "진행 정상"}</span>
+          <span>남은 질문 {remainingQuestions}/{questionLimit}</span>
+        </summary>
+        <div className="diagnostic-detail-row">
+          <span>최근 진행: {visibleProgressCount > 0 ? `${visibleProgressCount}건 기록됨` : "새 기록 없음"}</span>
+          <span>질문 사용: {runtimeDiagnostics?.previousRemainingQuestions ?? remainingQuestions}→{runtimeDiagnostics?.remainingQuestions ?? remainingQuestions}/{questionLimit}</span>
+          <span>분위기: {emotion}/{tensionLevel}</span>
+          {runtimeDiagnostics?.blockedReason ? <span className="diagnostic-alert">응답 보류: 공개 가능한 답변으로 조정 중</span> : null}
+        </div>
+      </details>
 
       <div
         className={`cinematic-stage reactive-stage tension-${tensionLevel} expression-${expression} ${visibleDialogue.length > 0 ? "has-dialogue" : "is-awaiting-first-turn"}`}
@@ -126,10 +115,10 @@ export function InterrogationStage({
         </div>
         <div className="interrogation-target-card" aria-label="현재 심문 대상">
           <span>질문 대상</span>
-          <strong>{selectedSuspect ? `${selectedSuspect.name} (${selectedSuspect.role})` : "미선택"}</strong>
-          <em>{selectedSuspect ? selectedSuspect.id : "왼쪽 용의자를 선택해야 질문할 수 있습니다."}</em>
+          <strong>{selectedSuspect ? selectedSuspect.name : "미선택"}</strong>
+          <em>{selectedSuspect ? selectedSuspect.role : "왼쪽 용의자를 선택해야 질문할 수 있습니다."}</em>
         </div>
-        <aside className="gm-event-feed" aria-label="GameMaster 이벤트 피드" aria-live="polite">
+        <aside className="gm-event-feed" aria-label="수사 진행 기록" aria-live="polite">
           {eventFeed.slice(-2).map((item) => (
             <article key={item.id} className={`gm-feed-item ${item.type.toLowerCase()}`}>
               <strong>{item.title}</strong>
@@ -174,12 +163,12 @@ export function InterrogationStage({
           id="question-input"
           value={draftQuestion}
           onChange={(event) => onDraftQuestionChange(event.target.value)}
-          placeholder="직접 질문을 입력하세요. 예: 22시 이후 어디에 있었나요?"
+          placeholder="직접 질문을 입력하세요."
           autoComplete="off"
           disabled={busy || remainingQuestions <= 0 || !selectedSuspect}
         />
         <button type="submit" aria-label="질문 보내기" disabled={busy || !draftQuestion.trim() || remainingQuestions <= 0 || !selectedSuspect}>➤</button>
-        <p>{selectedSuspect ? `다음 질문 대상: ${selectedSuspect.name} · 직접 관찰한 단서와 이전 답변을 바탕으로 질문하세요.` : "먼저 왼쪽에서 심문할 용의자를 선택하세요. FE는 용의자를 자동 선택하지 않습니다."}</p>
+        <p>{selectedSuspect ? "자연어로 직접 추궁하세요. 구체적인 질문 예시는 힌트 안에만 숨겨 둡니다." : "왼쪽 용의자를 선택하면 자연어 질문을 보낼 수 있습니다."}</p>
         {selectedSuspect && questionHint ? (
           <details className="question-hint">
             <summary>막혔을 때만 보기</summary>

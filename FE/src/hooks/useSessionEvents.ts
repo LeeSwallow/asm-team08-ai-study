@@ -40,18 +40,6 @@ export function useSessionEvents(
 ) {
   useEffect(() => {
     if (!session) return;
-    if (session.source === "local" || session.sessionId.startsWith("mock_")) {
-      logEvent({
-        level: "warn",
-        component: "SessionEvents",
-        action: "sse_skipped_for_local_fallback",
-        sessionId: session.sessionId,
-        caseId: session.caseId,
-        connectionState: "closed",
-        fallbackUsed: true,
-      });
-      return;
-    }
 
     let closed = false;
     let refreshQueued = false;

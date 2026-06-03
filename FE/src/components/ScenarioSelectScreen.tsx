@@ -7,11 +7,12 @@ type ScenarioSelectScreenProps = {
   statusMessage: string;
   busy: boolean;
   resumableSessionId: string | null;
-  onStartCase: (caseId: string) => void;
-  onResumeSession: () => void;
+  onOpenCase?: (caseId: string) => void;
+  onStartCase?: (caseId: string) => void;
+  onResumeSession?: () => void;
 };
 
-export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSessionId, onStartCase, onResumeSession }: ScenarioSelectScreenProps) {
+export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSessionId, onOpenCase, onStartCase, onResumeSession }: ScenarioSelectScreenProps) {
   const hasCases = cases.length > 0;
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const selectedCase = useMemo(
@@ -25,7 +26,7 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
         <div className="scenario-brand">
           <span className="brand-icon" aria-hidden="true">⚖</span>
           <div>
-            <p>Detective Agent MVP</p>
+            <p>DETECTIVE DOSSIER</p>
             <h1 id="scenario-title">알리바이 교차검증형 추리 게임</h1>
           </div>
         </div>
@@ -34,7 +35,7 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
           <span>사건 파일 선택</span>
           <h2>조사할 시나리오를 선택하세요.</h2>
           <p>
-            선택한 사건의 공개 정보로 새 세션을 만들고, 이후의 용의자·증거·대화 상태는 백엔드 세션 payload와 SSE 이벤트를 기준으로 갱신됩니다.
+            선택한 사건의 공개 브리핑으로 수사를 시작합니다. 용의자·증거·대화 기록은 진행 상황에 따라 갱신됩니다.
           </p>
         </div>
       </section>
@@ -84,8 +85,16 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
                     <dd>{caseFile.questionLimit}회</dd>
                   </div>
                 </dl>
-                <button type="button" disabled={busy} aria-pressed={selected} onClick={() => setSelectedCaseId(caseFile.id)}>
-                  {selected ? "선택됨" : "사건 읽어보기"}
+                <button
+                  type="button"
+                  disabled={busy}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setSelectedCaseId(caseFile.id);
+                    onOpenCase?.(caseFile.id);
+                  }}
+                >
+                  {onOpenCase ? "사건 상세" : selected ? "선택됨" : "사건 읽어보기"}
                 </button>
               </article>
             );
@@ -94,24 +103,26 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
         ) : (
           <div className="scenario-empty" role="status" aria-live="polite">
             <strong>공개 사건 파일을 불러오지 못했습니다.</strong>
-            <p>백엔드 사건 목록이 하나 이상 반환되어야 시작할 수 있습니다.</p>
+            <p>공개 사건 파일이 준비되어야 시작할 수 있습니다.</p>
           </div>
         )}
 
-        {selectedCase ? (
+        {(selectedCase && onStartCase) || (resumableSessionId && onResumeSession) ? (
           <aside className="scenario-start-bar" aria-label="선택한 사건 시작">
             <div>
-              <span>선택한 사건</span>
-              <strong>{selectedCase.title}</strong>
+              <span>{selectedCase ? "선택한 사건" : "저장된 수사"}</span>
+              <strong>{selectedCase?.title ?? resumableSessionId}</strong>
             </div>
-            {resumableSessionId ? (
+            {resumableSessionId && onResumeSession ? (
               <button type="button" className="resume-case-button" disabled={busy} onClick={onResumeSession}>
-                이전 세션 이어하기
+                이전 수사 이어하기
               </button>
             ) : null}
-            <button type="button" disabled={busy} onClick={() => onStartCase(selectedCase.id)}>
-              {busy ? "세션 준비 중" : "선택한 사건 시작"}
-            </button>
+            {selectedCase && onStartCase ? (
+              <button type="button" disabled={busy} onClick={() => onStartCase(selectedCase.id)}>
+                {busy ? "수사 준비 중" : "선택한 사건 시작"}
+              </button>
+            ) : null}
           </aside>
         ) : null}
 
