@@ -16,8 +16,6 @@ from app.ai_engine.schemas.agents import DialogueDirectorInput, GameMasterAgentI
 from app.ai_engine.schemas.common import Safety
 from app.ai_engine.schemas.dialogue import DialogueRequest, DialogueResponse
 
-from .common import run_langgraph_or_pipeline
-
 
 def _context(payload: DialogueRequest) -> AiLogContext:
     return AiLogContext(
@@ -300,26 +298,19 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _route_after_generate(state: dict[str, Any]) -> str:
+    director_plan = state.get("dialogue_director_plan")
+    if state.get("fallback_used") or (
+        director_plan and director_plan.strategy in {"defensive_pressure", "deflect_unmatched"}
+    ):
+        return "LightRuleCheck"
+    return "DialogueTonePolisher"
+
+
 def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
     draft_reply = state["draft_reply"]
-    director_plan = state.get("dialogue_director_plan")
-    if director_plan and director_plan.strategy in {"defensive_pressure", "deflect_unmatched"}:
-        emit_ai_node_log(
-            _context(payload),
-            node="DialogueTonePolisher",
-            started_at=started_at,
-            provider=state.get("provider"),
-            model=state.get("model"),
-            fallback_used=bool(state.get("fallback_used", False)),
-            repaired=False,
-        )
-        return {
-            "draft_reply": draft_reply,
-            "text": draft_reply.draftText,
-            "tone_polished": False,
-        }
     polished = DialogueTonePolisher().run(payload, draft_reply)
     tone_polished = polished.draftText != draft_reply.draftText
     emit_ai_node_log(
@@ -463,19 +454,103 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
     return {"result": response}
 
 
-def run_dialogue_graph(payload: DialogueRequest, knowledge_retriever: Any) -> DialogueResponse:
-    state = run_langgraph_or_pipeline(
-        {"payload": payload, "knowledge_retriever": knowledge_retriever},
-        [
-            ("load_context", load_context),
-            ("validate_scope", validate_scope),
-            ("KnowledgeRetriever", retrieve_context),
-            ("DialogueDirectorAgent", direct_dialogue),
-            ("CharacterAgent", generate_response),
-            ("DialogueTonePolisher", polish_tone),
-            ("LightRuleCheck", guard_response),
-            ("GameMasterAgent", propose_events),
-            ("format_response", format_response),
-        ],
+_logger = logging.getLogger("app.ai")
+
+_NODES_BEFORE_POLISH: list[tuple[str, Any]] = [
+    ("load_context", load_context),
+    ("validate_scope", validate_scope),
+    ("KnowledgeRetriever", retrieve_context),
+    ("DialogueDirectorAgent", direct_dialogue),
+    ("CharacterAgent", generate_response),
+]
+
+_NODES_AFTER_POLISH: list[tuple[str, Any]] = [
+    ("LightRuleCheck", guard_response),
+    ("GameMasterAgent", propose_events),
+    ("format_response", format_response),
+]
+
+
+def _run_dialogue_pipeline(initial_state: dict[str, Any], reason: str) -> dict[str, Any]:
+    _logger.warning(
+        "ai graph runner fallback selected",
+        extra={
+            "service": "ai",
+            "graph": "dialogue",
+            "node": "graph_runner",
+            "graph_runner": "pipeline",
+            "graph_fallback_reason": reason,
+        },
     )
-    return state["result"]
+    state: dict[str, Any] = {**initial_state, "graph_runner": "pipeline", "graph_fallback_reason": reason}
+    for _, node in _NODES_BEFORE_POLISH:
+        state.update(node(state))
+    if _route_after_generate(state) == "DialogueTonePolisher":
+        state.update(polish_tone(state))
+    for _, node in _NODES_AFTER_POLISH:
+        state.update(node(state))
+    return state
+
+
+def run_dialogue_graph(payload: DialogueRequest, knowledge_retriever: Any) -> DialogueResponse:
+    initial_state: dict[str, Any] = {"payload": payload, "knowledge_retriever": knowledge_retriever}
+
+    try:
+        from langgraph.graph import END, StateGraph
+        from typing_extensions import TypedDict
+    except ImportError as exc:
+        return _run_dialogue_pipeline(initial_state, f"langgraph_import_error:{type(exc).__name__}")["result"]
+
+    try:
+        class WorkflowState(TypedDict, total=False):
+            payload: Any
+            knowledge_retriever: Any
+            result: Any
+            text: str
+            character_context: Any
+            event_context: Any
+            retrieved_context: Any
+            dialogue_director_plan: Any
+            character_input: Any
+            draft_reply: Any
+            rule_check_input: Any
+            checked_reply: Any
+            gm_input: Any
+            game_master_proposal: Any
+            safety_findings: dict[str, Any]
+            meta: dict[str, Any]
+            fallback_used: bool
+            degraded: bool
+            proposed_events: Any
+            fallback_reason: str
+            error_type: str
+            provider: str
+            model: str
+            graph_runner: str
+            graph_fallback_reason: str
+            tone_polished: bool
+
+        graph: StateGraph = StateGraph(WorkflowState)
+
+        for name, node in [*_NODES_BEFORE_POLISH, ("DialogueTonePolisher", polish_tone), *_NODES_AFTER_POLISH]:
+            graph.add_node(name, node)
+
+        graph.set_entry_point(_NODES_BEFORE_POLISH[0][0])
+        for i in range(len(_NODES_BEFORE_POLISH) - 1):
+            graph.add_edge(_NODES_BEFORE_POLISH[i][0], _NODES_BEFORE_POLISH[i + 1][0])
+
+        graph.add_conditional_edges(
+            "CharacterAgent",
+            _route_after_generate,
+            {"DialogueTonePolisher": "DialogueTonePolisher", "LightRuleCheck": "LightRuleCheck"},
+        )
+        graph.add_edge("DialogueTonePolisher", "LightRuleCheck")
+
+        for i in range(len(_NODES_AFTER_POLISH) - 1):
+            graph.add_edge(_NODES_AFTER_POLISH[i][0], _NODES_AFTER_POLISH[i + 1][0])
+        graph.add_edge(_NODES_AFTER_POLISH[-1][0], END)
+
+        state = graph.compile().invoke({**initial_state, "graph_runner": "langgraph"})
+        return state["result"]
+    except Exception as exc:
+        return _run_dialogue_pipeline(initial_state, f"langgraph_runtime_error:{type(exc).__name__}")["result"]
