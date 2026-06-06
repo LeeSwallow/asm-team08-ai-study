@@ -10,6 +10,7 @@ from app.api.routes_agent_logs import router as agent_logs_router
 from app.api.routes_sessions import router as sessions_router
 from app.api import deps
 from app.core.config import get_settings
+from app.core.log_config import setup_agent_logging
 from app.core.logging import RequestIdLoggingMiddleware
 from app.infra.case_orm import CaseRecord
 from app.infra.db import ensure_schema, get_session_factory
@@ -17,6 +18,9 @@ from app.infra.db import ensure_schema, get_session_factory
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+# Enable readable agent pipeline logs (one line per agent node).
+setup_agent_logging()
 
 app = FastAPI(title=settings.app_name)
 app.add_middleware(RequestIdLoggingMiddleware)

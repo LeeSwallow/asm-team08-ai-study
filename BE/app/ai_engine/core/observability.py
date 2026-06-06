@@ -7,8 +7,8 @@ from typing import Any
 
 from app.ai_engine.core.llm import llm_status
 from app.ai_engine.core.trace_store import agent_trace_store
+from app.core.log_config import AI_LOGGER_NAME
 
-AI_LOGGER_NAME = "app.ai"
 logger = logging.getLogger(AI_LOGGER_NAME)
 
 
