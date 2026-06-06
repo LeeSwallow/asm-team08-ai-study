@@ -7,6 +7,7 @@ from app.ai_engine.application.character_agent import CharacterAgent, build_char
 from app.ai_engine.application.dialogue_director_agent import DialogueDirectorAgent
 from app.ai_engine.application.dialogue_tone_polisher import DialogueTonePolisher
 from app.ai_engine.application.game_master_agent import GameMasterAgent
+from app.ai_engine.application.grounding_check_agent import GroundingCheckAgent
 from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext
 from app.ai_engine.application.light_rule_check import LightRuleCheck
 from app.ai_engine.core.guard import extract_case_context_terms, normalize_text
@@ -338,6 +339,34 @@ def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def ground_response(state: dict[str, Any]) -> dict[str, Any]:
+    started_at = now_ms()
+    payload: DialogueRequest = state["payload"]
+    result = GroundingCheckAgent().run(
+        payload,
+        state["checked_reply"],
+        state.get("dialogue_director_plan"),
+    )
+    findings = result.diagnostics()
+    emit_ai_node_log(
+        _context(payload),
+        node="GroundingCheckAgent",
+        started_at=started_at,
+        provider=state.get("provider"),
+        model=state.get("model"),
+        fallback_used=bool(state.get("fallback_used", False)),
+        repaired=result.repaired,
+        blocked_reason="claim_grounding_repaired" if result.repaired else None,
+        level=logging.WARNING if result.repaired else logging.INFO,
+    )
+    return {
+        "checked_reply": result.checked_reply,
+        "text": result.checked_reply.finalText,
+        "safety_findings": result.checked_reply.safetyFindings,
+        "grounding_findings": findings,
+    }
+
+
 def propose_events(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
@@ -433,6 +462,7 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
             "dialogueDirector": state.get("dialogue_director_plan").model_dump()
             if state.get("dialogue_director_plan")
             else None,
+            "grounding": state.get("grounding_findings") or {},
         },
         safety=Safety(
             leaksSolution=bool(safety.get("leaksSolution", False)),
@@ -474,6 +504,7 @@ def run_dialogue_graph(payload: DialogueRequest, knowledge_retriever: Any) -> Di
             ("CharacterAgent", generate_response),
             ("DialogueTonePolisher", polish_tone),
             ("LightRuleCheck", guard_response),
+            ("GroundingCheckAgent", ground_response),
             ("GameMasterAgent", propose_events),
             ("format_response", format_response),
         ],

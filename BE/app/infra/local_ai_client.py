@@ -17,18 +17,30 @@ logger = logging.getLogger(__name__)
 
 
 def _public_runtime_diagnostics(diagnostics: Dict[str, Any]) -> Dict[str, Any]:
+    result: Dict[str, Any] = {}
     director = (diagnostics or {}).get("dialogueDirector")
     if isinstance(director, dict):
-        return {
-            "dialogueDirector": {
-                "strategy": director.get("strategy"),
-                "seedText": director.get("seedText"),
-                "allowedAdmissionLevel": director.get("allowedAdmissionLevel"),
-                "focusTerms": list(director.get("focusTerms") or []),
-                "reason": director.get("reason"),
-            }
+        result["dialogueDirector"] = {
+            "strategy": director.get("strategy"),
+            "seedText": director.get("seedText"),
+            "allowedAdmissionLevel": director.get("allowedAdmissionLevel"),
+            "focusTerms": list(director.get("focusTerms") or []),
+            "reason": director.get("reason"),
         }
-    return {}
+    grounding = (diagnostics or {}).get("grounding")
+    if isinstance(grounding, dict):
+        result["grounding"] = {
+            "checked": bool(grounding.get("checked", False)),
+            "repaired": bool(grounding.get("repaired", False)),
+            "basis": grounding.get("basis"),
+            "repairReason": grounding.get("repairReason"),
+            "finalTextSource": grounding.get("finalTextSource"),
+            "issues": list(grounding.get("issues") or []),
+            "missingAnchorFacts": list(grounding.get("missingAnchorFacts") or []),
+            "unsupportedFacts": list(grounding.get("unsupportedFacts") or []),
+            "anchorCoverage": grounding.get("anchorCoverage"),
+        }
+    return result
 
 
 class LocalAIClient:
