@@ -197,6 +197,38 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
     assert saved_session.accusation["submittedMotive"]
 
 
+def test_agent_logger_records_local_dialogue_graph_with_public_situation(tmp_path, monkeypatch):
+    from app.ai_engine.core.trace_store import agent_trace_store
+    from app.infra.local_ai_client import LocalAIClient
+
+    agent_trace_store.clear()
+    client = _client(tmp_path, monkeypatch, debug_tools=True)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: LocalAIClient())
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+
+    response = client.post(
+        f"/api/v1/sessions/{session['sessionId']}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "22시 이후 어디에 있었나요?"},
+    )
+    logs = client.get("/api/v1/agent-logs", params={"sessionId": session["sessionId"]})
+
+    assert response.status_code == 200
+    assert logs.status_code == 200
+    traces = logs.json()["traces"]
+    assert len(traces) == 1
+    trace = traces[0]
+    assert trace["suspectName"] == "한서연"
+    assert trace["dialogueMode"] == "timeline_question"
+    assert trace["questionPreview"] == "22시 이후 어디에 있었나요?"
+    nodes = [event["node"] for event in trace["events"]]
+    assert nodes[0] == "load_context"
+    assert "CharacterAgent" in nodes
+    assert "LightRuleCheck" in nodes
+    assert nodes[-1] == "format_response"
+    assert "draftText" not in str(trace)
+    assert "finalText" not in str(trace)
+
+
 def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_within_limit(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()

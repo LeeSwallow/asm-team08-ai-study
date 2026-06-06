@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CaseDetailPage } from "./pages/CaseDetailPage";
 import { CaseListPage } from "./pages/CaseListPage";
 import { SessionDeskPage } from "./pages/SessionDeskPage";
+import { AgentLoggerPage } from "./pages/AgentLoggerPage";
 import { parseRoute, type AppRoute } from "./routing";
 
 export default function App() {
@@ -28,6 +29,10 @@ export default function App() {
 
   if (route.name === "sessionDesk") {
     return <SessionDeskPage sessionId={route.sessionId} onNavigate={navigate} />;
+  }
+
+  if (route.name === "agentLogger") {
+    return <AgentLoggerPage onNavigate={navigate} />;
   }
 
   return <CaseListPage onNavigate={navigate} />;

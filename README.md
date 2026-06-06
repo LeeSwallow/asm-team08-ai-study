@@ -392,6 +392,16 @@ docker compose up --build
 
 Frontend 컨테이너는 `/api/` 요청을 `http://backend:8000`으로 프록시합니다. AI runtime은 Backend 프로세스 내부의 `BE/app/ai_engine`에서 실행됩니다.
 
+## Agent Logger 데모
+
+`BE_DEBUG_TOOLS_ENABLED=true`로 Backend를 실행한 뒤 플레이하면 Agent 실행 흐름을 별도 화면에서 실시간으로 확인할 수 있습니다.
+
+- Docker Compose: http://localhost:8080/logger
+- Frontend 개발 서버: http://localhost:5173/logger
+- 조회 API: http://localhost:8000/api/v1/agent-logs
+
+Logger는 플레이어 질문 미리보기, 용의자, 대화 유형, Agent/노드 실행 순서, 역할, 상태와 지연 시간만 메모리에 보관합니다. 프롬프트, LLM 응답 전문, 비공개 사건 정보는 기록하지 않습니다.
+
 ## 개별 검증
 
 ```bash

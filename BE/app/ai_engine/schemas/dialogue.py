@@ -81,6 +81,7 @@ class DialogueRequest(FlexibleModel):
     caseId: str
     suspect: Suspect
     question: Question = Field(validation_alias=AliasChoices("question", "playerMessage"))
+    playerMessage: str | None = Field(default=None, validation_alias=AliasChoices("playerMessage", "message"))
     allowedStatement: AllowedStatement
     style: DialogueStyle = Field(default_factory=DialogueStyle)
     visualState: VisualState = Field(default_factory=VisualState)
