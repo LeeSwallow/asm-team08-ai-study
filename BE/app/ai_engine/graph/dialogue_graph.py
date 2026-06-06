@@ -25,6 +25,10 @@ def _context(payload: DialogueRequest) -> AiLogContext:
         session_id=payload.sessionId,
         case_id=payload.caseId,
         graph="dialogue",
+        suspect_id=payload.suspect.id,
+        suspect_name=payload.suspect.name,
+        dialogue_mode=payload.dialogueMode,
+        question_preview=payload.playerMessage or payload.question.text,
     )
 
 

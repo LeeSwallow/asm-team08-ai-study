@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_cases import router as cases_router
+from app.api.routes_agent_logs import router as agent_logs_router
 from app.api.routes_sessions import router as sessions_router
 from app.api import deps
 from app.core.config import get_settings
@@ -61,3 +62,4 @@ def seed_case_files() -> None:
 
 app.include_router(cases_router, prefix=settings.api_prefix)
 app.include_router(sessions_router, prefix=settings.api_prefix)
+app.include_router(agent_logs_router, prefix=settings.api_prefix)
