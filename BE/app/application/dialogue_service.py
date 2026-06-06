@@ -980,7 +980,7 @@ class DialogueService:
         timeline_ids = self._timeline_ids_for_source(case, alibi_statement.statementId) if alibi_statement is not None else []
         compact = self._normalize_text(message).replace(" ", "")
         if any(term in compact for term in ("말이돼", "말이된다고", "납득", "이상하")):
-            context_text = "말이 안 된다고 해도 제 기억은 같습니다. 저는 방에 있었다고 기억합니다."
+            context_text = "말이 안 된다고 해도 제가 이미 말씀드린 내용은 같습니다."
         else:
             context_text = "답이 부족했다면 회피하려는 뜻은 아닙니다. 기억나는 범위를 말하고 있습니다."
         if alibi_statement is not None:
@@ -1042,8 +1042,8 @@ class DialogueService:
         if dialogue_mode == "pressure_followup":
             compact = self._normalize_text(message).replace(" ", "")
             if any(term in compact for term in ("말이돼", "말이된다고", "납득", "이상하")):
-                return "말이 안 된다고 몰아붙이셔도 제 기억은 같아요. 저는 22시쯤 방에 있었습니다."
-            return "피하려는 게 아닙니다. 저는 그 시간에 제 방에 있었다고 기억합니다."
+                return "말이 안 된다고 몰아붙이셔도 제가 이미 말씀드린 내용은 같습니다."
+            return "피하려는 게 아닙니다. 기억나는 범위는 이미 말씀드렸습니다."
         if dialogue_mode == "timeline_question":
             return "그 시간대라면 저는 제 방에 있었어요. 폭풍 때문에 방 밖으로 오래 나갈 상황도 아니었습니다."
         return "그 질문은 너무 넓어요. 그렇게 몰아가듯 묻지 마세요."

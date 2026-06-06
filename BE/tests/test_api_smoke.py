@@ -834,6 +834,42 @@ def test_dialogue_broad_time_range_and_meta_followups_are_timeline_grounded(tmp_
     assert all("조카로서 말씀드리자면" not in answer for answer in answers)
 
 
+def test_pressure_followup_reuses_public_statement_without_generic_room_alibi(tmp_path, monkeypatch):
+    captured_payloads = []
+
+    class CapturingAIClient:
+        async def dialogue_response_info(self, payload, fallback):
+            captured_payloads.append(payload)
+            return {
+                "answer": fallback,
+                "proposedEvents": [],
+                "fallbackUsed": False,
+                "provider": "pressure-test-ai",
+                "safety": {"status": "checked"},
+            }
+
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: CapturingAIClient())
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    discovery = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_yoonjaeho", "message": "피해자를 언제 발견했나요?"},
+    ).json()
+    challenge = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_yoonjaeho", "message": "그 말이 납득된다고 생각합니까?"},
+    ).json()
+
+    pressure_payload = captured_payloads[-1]
+    assert discovery["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_discovery"
+    assert challenge["dialogueResult"]["dialogueMode"] == "pressure_followup"
+    assert "22:10" in pressure_payload["allowedStatement"]["text"]
+    assert "방에 있었다" not in pressure_payload["allowedStatement"]["text"]
+    assert "방에 있었습니다" not in challenge["answer"]
+
+
 def test_local_ai_claim_grounding_repairs_new_alibi_but_keeps_registered_lie(tmp_path, monkeypatch):
     import app.ai_engine.application.character_agent as ca_mod
     import app.ai_engine.application.dialogue_tone_polisher as tone_mod
