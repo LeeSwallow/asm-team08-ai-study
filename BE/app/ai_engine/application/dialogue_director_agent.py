@@ -6,6 +6,10 @@ from app.ai_engine.schemas.agents import DialogueDirectorInput, DialogueDirector
 from app.ai_engine.schemas.dialogue import DialogueRequest
 
 
+NO_NEW_FACT_STRATEGIES = frozenset({"greet_without_case_facts", "deflect_unmatched"})
+DIRECTOR_SEED_STRATEGIES = frozenset({*NO_NEW_FACT_STRATEGIES, "defensive_pressure"})
+
+
 def _safe_short_text(value: object, max_length: int = 80) -> str:
     text = " ".join(str(value or "").split())
     if contains_secret(text)[0] or any(term in text.lower() for term in ("secret", "solution", "isculprit", "secretnote")):
@@ -97,6 +101,16 @@ def _contradiction_seed(payload: DialogueRequest, focus_terms: list[str]) -> str
     )
 
 
+def _no_new_fact_seed(payload: DialogueRequest, *, greeting: bool) -> str:
+    tone = str(payload.suspect.speechStyle.get("tone") or payload.style.tone or "").lower()
+    pressure_state = str(payload.suspect.pressureState or "").lower()
+    if pressure_state in {"pressed", "broken"}:
+        return "인사는 됐어요. 묻고 싶은 게 있으면 바로 물어보세요." if greeting else "그 질문에는 답하지 않겠습니다."
+    if tone in {"concise", "professional", "formal"}:
+        return "안녕하세요. 확인하실 내용이 있다면 말씀해 주세요." if greeting else "그 질문은 제가 확인해 드릴 수 있는 내용이 아닙니다."
+    return "안녕하세요. 묻고 싶은 게 있다면 물어보세요." if greeting else "그 질문이 지금 확인하려는 일과 무슨 상관이죠?"
+
+
 class DialogueDirectorAgent:
     """Deterministic turn planner that keeps pressured suspect replies safe and varied."""
 
@@ -106,10 +120,20 @@ class DialogueDirectorAgent:
         transition = payload.interrogationTransition or {}
         focus_terms = _mentioned_evidence_terms(payload, agent_input.retrieved_context)
 
+        if intent == "greeting":
+            return DialogueDirectorPlan(
+                strategy="greet_without_case_facts",
+                seedText=_no_new_fact_seed(payload, greeting=True),
+                allowedAdmissionLevel="no_new_fact",
+                styleDirectives=["인사만 자연스럽게 받고 사건 사실을 먼저 꺼내지 않는다."],
+                forbiddenClaims=["알리바이, 증거, 관계, 타임라인 사실을 먼저 말하지 않는다."],
+                reason="intent_greeting",
+            )
+
         if intent == "unmatched":
             return DialogueDirectorPlan(
                 strategy="deflect_unmatched",
-                seedText="그 질문에는 바로 답하기 어렵습니다.",
+                seedText=_no_new_fact_seed(payload, greeting=False),
                 allowedAdmissionLevel="no_new_fact",
                 styleDirectives=["질문을 되묻지 말고 짧게 방어한다."],
                 forbiddenClaims=["새 증거, 범행 방식, 범인 단정을 만들지 않는다."],

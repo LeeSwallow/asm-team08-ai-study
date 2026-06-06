@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from app.ai_engine.application.character_agent import CharacterAgent, build_character_agent_input, render_dialogue_seed
-from app.ai_engine.application.dialogue_director_agent import DialogueDirectorAgent
+from app.ai_engine.application.dialogue_director_agent import DIRECTOR_SEED_STRATEGIES, DialogueDirectorAgent
 from app.ai_engine.application.dialogue_tone_polisher import DialogueTonePolisher
 from app.ai_engine.application.game_master_agent import GameMasterAgent
 from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext
@@ -305,7 +305,7 @@ def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
     payload: DialogueRequest = state["payload"]
     draft_reply = state["draft_reply"]
     director_plan = state.get("dialogue_director_plan")
-    if director_plan and director_plan.strategy in {"defensive_pressure", "deflect_unmatched"}:
+    if director_plan and director_plan.strategy in DIRECTOR_SEED_STRATEGIES:
         emit_ai_node_log(
             _context(payload),
             node="DialogueTonePolisher",
