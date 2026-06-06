@@ -34,25 +34,6 @@ EVIDENCE_TOKENS = (
     "진료",
 )
 
-STRONG_EVIDENCE_TOKENS = (
-    "증거",
-    "단서",
-    "기록",
-    "와인잔",
-    "와인",
-    "립스틱",
-    "자국",
-    "약",
-    "약물",
-    "복용",
-    "처방",
-    "의사",
-    "의료",
-    "피해자",
-    "검사",
-    "진료",
-)
-
 PERSON_OR_RELATION_TOKENS = (
     "누가",
     "누구",
@@ -70,17 +51,12 @@ def normalize_dialogue_text(question_text: str) -> str:
     return normalized
 
 
-def has_concrete_public_clue(question_text: str) -> bool:
-    normalized = normalize_dialogue_text(question_text)
-    return any(token in normalized for token in STRONG_EVIDENCE_TOKENS)
-
-
 def classify_dialogue_intent(question_text: str, dialogue_mode: str | None = None) -> str:
     mode = (dialogue_mode or "").strip().lower()
     normalized = normalize_dialogue_text(question_text)
     if mode in {"greeting", "small_talk", "small-talk", "greeting/small_talk"}:
         return "greeting"
-    if mode in {"unmatched", "clarification", "unmatched/clarification"} and not has_concrete_public_clue(normalized):
+    if mode in {"unmatched", "clarification", "unmatched/clarification"}:
         return "unmatched"
     if mode in {"evidence", "evidence_question"}:
         return "evidence"

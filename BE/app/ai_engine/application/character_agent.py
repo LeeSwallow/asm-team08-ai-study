@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.ai_engine.application.dialogue_director_agent import DIRECTOR_SEED_STRATEGIES, NO_NEW_FACT_STRATEGIES
 from app.ai_engine.core.guard import contains_secret
 from app.ai_engine.core.llm import ChainedLLM, deterministic_clip, get_llm, llm_status
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent, normalize_dialogue_text
@@ -366,7 +367,8 @@ class CharacterAgent:
             text = _strip_outer_dialogue_quotes(text)
             refs = payload.allowedStatement.sourceRefs.model_copy()
             intent = agent_input.intent or classify_dialogue_intent(payload.question.text, payload.dialogueMode)
-            if intent in {"greeting", "unmatched"}:
+            director_strategy = agent_input.dialogueDirectorPlan.strategy if agent_input.dialogueDirectorPlan else None
+            if intent in {"greeting", "unmatched"} or director_strategy in NO_NEW_FACT_STRATEGIES:
                 refs.statementIds = []
                 refs.evidenceIds = []
                 refs.timelineIds = []
@@ -419,6 +421,16 @@ class CharacterAgent:
                 providerConfigured=bool(status.get("configured", provider not in {"provider-unavailable"})),
             )
 
+        if agent_input.dialogueDirectorPlan and agent_input.dialogueDirectorPlan.seedText:
+            strategy = agent_input.dialogueDirectorPlan.strategy
+            if strategy in DIRECTOR_SEED_STRATEGIES:
+                return draft(
+                    deterministic_clip(seed, max_length=payload.style.maxLength),
+                    fallback_used=False,
+                    degraded=False,
+                    provider_name="dialogue-director",
+                )
+
         if provider == "deterministic-fallback":
             return draft(
                 deterministic_clip(seed, max_length=payload.style.maxLength),
@@ -434,16 +446,6 @@ class CharacterAgent:
                 blocked_reason=str(status.get("degradedReason") or "provider_unavailable"),
                 error_type="provider_unavailable",
             )
-
-        if agent_input.dialogueDirectorPlan and agent_input.dialogueDirectorPlan.seedText:
-            strategy = agent_input.dialogueDirectorPlan.strategy
-            if strategy in {"defensive_pressure", "deflect_unmatched"}:
-                return draft(
-                    deterministic_clip(seed, max_length=payload.style.maxLength),
-                    fallback_used=False,
-                    degraded=False,
-                    provider_name="dialogue-director",
-                )
 
         try:
             prompt = (

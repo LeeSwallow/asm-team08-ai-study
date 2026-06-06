@@ -794,6 +794,114 @@ def test_dialogue_small_talk_does_not_consume_case_question_or_return_alibi(tmp_
     assert "event: VISUAL_STATE_CHANGED" in events_body
 
 
+def test_local_ai_director_keeps_authoritative_small_talk_and_unmatched_modes_fact_free(tmp_path, monkeypatch):
+    import app.ai_engine.application.character_agent as ca_mod
+    from app.infra.local_ai_client import LocalAIClient
+
+    class UnexpectedLLM:
+        provider_name = "upstage"
+
+        def __init__(self):
+            self.calls = 0
+
+        def complete(self, *args, **kwargs):
+            self.calls += 1
+            return "\uc81c \ubc29\uc5d0 \uc788\uc5c8\uace0 \uc640\uc778\uc794\uc740 \uc81c \uac81\ub2c8\ub2e4."
+
+    llm = UnexpectedLLM()
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: LocalAIClient())
+    monkeypatch.setattr(ca_mod, "get_llm", lambda: llm)
+    monkeypatch.setattr(
+        ca_mod,
+        "llm_status",
+        lambda: {
+            "provider": "provider-unavailable",
+            "model": "none",
+            "configured": False,
+            "serviceDegraded": True,
+            "degradedReason": "missing_provider_configuration",
+            "fallbackConfigured": False,
+            "timeoutMs": 8000,
+        },
+    )
+
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+    greeting = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "\uc548\ub155\ud558\uc138\uc694"},
+    ).json()
+    unmatched = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={
+            "suspectId": "char_choiyuna",
+            "message": "\ud53c\ud574\uc790\uc640 \ub9c8\uc9c0\ub9c9 \ud1b5\ud654\uc5d0\uc11c \ubb34\uc2a8 \uc774\uc57c\uae30\ub97c \ud588\uc2b5\ub2c8\uae4c?",
+        },
+    ).json()
+
+    assert greeting["dialogueResult"]["dialogueMode"] == "small_talk"
+    assert greeting["dialogueResult"]["aiIntent"] == "greeting"
+    assert greeting["dialogueResult"]["provider"] == "dialogue-director"
+    assert greeting["dialogueResult"]["fallbackUsed"] is False
+    assert greeting["dialogueResult"]["aiRuntimeDiagnostics"]["dialogueDirector"]["strategy"] == "greet_without_case_facts"
+    assert all(term not in greeting["answer"] for term in ("\uc81c \ubc29", "\uc640\uc778\uc794", "22:00"))
+
+    assert unmatched["dialogueResult"]["dialogueMode"] == "unmatched"
+    assert unmatched["dialogueResult"]["matchedQuestionId"] is None
+    assert unmatched["dialogueResult"]["aiIntent"] == "unmatched"
+    assert unmatched["dialogueResult"]["provider"] == "dialogue-director"
+    assert unmatched["dialogueResult"]["fallbackUsed"] is False
+    assert unmatched["dialogueResult"]["aiRuntimeDiagnostics"]["dialogueDirector"]["strategy"] == "deflect_unmatched"
+    assert all(term not in unmatched["answer"] for term in ("\uba74\ub2f4", "\uc77c\uc815\uc0c1", "\ud68c\uc7a5\ub2d8"))
+    assert llm.calls == 0
+
+
+def test_local_ai_light_rule_check_repairs_no_new_fact_director_draft(tmp_path, monkeypatch):
+    import app.ai_engine.application.character_agent as ca_mod
+    from app.infra.local_ai_client import LocalAIClient
+
+    original_run = ca_mod.CharacterAgent.run
+
+    def leaking_run(self, agent_input, retrieved_context=None):
+        draft = original_run(self, agent_input, retrieved_context)
+        return draft.model_copy(
+            update={
+                "draftText": "\uadf8\ub54c \uc81c \ubc29\uc5d0 \uc788\uc5c8\uace0 \uc640\uc778\uc794\uc740 \uc81c \uac81\ub2c8\ub2e4.",
+                "provider": "upstage",
+            }
+        )
+
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: LocalAIClient())
+    monkeypatch.setattr(ca_mod.CharacterAgent, "run", leaking_run)
+    monkeypatch.setattr(
+        ca_mod,
+        "llm_status",
+        lambda: {
+            "provider": "upstage",
+            "model": "solar-pro",
+            "configured": True,
+            "serviceDegraded": False,
+            "fallbackConfigured": False,
+            "timeoutMs": 8000,
+        },
+    )
+
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    response = client.post(
+        f"/api/v1/sessions/{session['sessionId']}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "\uc548\ub155\ud558\uc138\uc694"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["dialogueResult"]["dialogueMode"] == "small_talk"
+    assert payload["dialogueResult"]["safety"]["repaired"] is True
+    assert payload["dialogueResult"]["aiRuntimeDiagnostics"]["dialogueDirector"]["strategy"] == "greet_without_case_facts"
+    assert all(term not in payload["answer"] for term in ("\uc81c \ubc29", "\uc640\uc778\uc794", "22:00"))
+
+
 def test_dialogue_broad_time_range_and_meta_followups_are_timeline_grounded(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()

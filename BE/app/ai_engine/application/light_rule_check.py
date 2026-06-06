@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 
+from app.ai_engine.application.dialogue_director_agent import DIRECTOR_SEED_STRATEGIES, NO_NEW_FACT_STRATEGIES
 from app.ai_engine.core.guard import guard_dialogue_text, normalize_text
 from app.ai_engine.core.llm import ChainedLLM, get_llm
 from app.ai_engine.schemas.agents import CheckedCharacterReply, LightRuleCheckInput
@@ -169,13 +170,42 @@ class LightRuleCheck:
         # ── Phase 1: 보안 검사 (항상 실행, 재생성 후에도 반드시 통과해야 함) ──
         checked = self._security_check(agent_input, draft_text)
 
+        director_plan = agent_input.dialogueDirectorPlan
+        if director_plan and director_plan.strategy in NO_NEW_FACT_STRATEGIES and director_plan.seedText:
+            safe_seed = self._security_check(agent_input, director_plan.seedText)
+            if normalize_text(checked.finalText) != normalize_text(safe_seed.finalText):
+                safety = {
+                    **safe_seed.safetyFindings,
+                    "repaired": True,
+                    "blocked": False,
+                    "blockedReason": "no_new_fact_scope_repaired",
+                    "providerDraftRepaired": True,
+                    "providerDraftBlockedReason": "no_new_fact_scope_repaired",
+                    "finalTextSource": "dialogue_director_no_new_fact_seed",
+                }
+                return safe_seed.model_copy(
+                    update={
+                        "repaired": True,
+                        "blocked": False,
+                        "blockedReason": "no_new_fact_scope_repaired",
+                        "repairedText": safe_seed.finalText,
+                        "blockedText": draft_text,
+                        "safetyFindings": safety,
+                    }
+                )
+            safety = {
+                **checked.safetyFindings,
+                "finalTextSource": "dialogue_director_no_new_fact_seed",
+            }
+            return checked.model_copy(update={"safetyFindings": safety})
+
         # provider 장애나 완전 차단인 경우 즉시 반환
         if agent_input.draft.degraded or (checked.blocked and not checked.repaired):
             return checked
 
         if (
-            agent_input.dialogueDirectorPlan
-            and agent_input.dialogueDirectorPlan.strategy in {"defensive_pressure", "deflect_unmatched"}
+            director_plan
+            and director_plan.strategy in DIRECTOR_SEED_STRATEGIES
         ):
             return checked
 
