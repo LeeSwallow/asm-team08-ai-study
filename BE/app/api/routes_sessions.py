@@ -122,10 +122,12 @@ def stream_events(
     commands: SessionCommands = Depends(get_session_commands),
     event_repo: EventRepositoryPort = Depends(get_event_repository),
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    last_event_id_query: str | None = Query(default=None, alias="lastEventId"),
     once: bool = Query(default=False),
 ):
     session, case = commands.load_session_and_case(session_id)
-    replay = event_repo.list_for_session(session.sessionId, after_event_id=last_event_id)
+    replay_after_event_id = last_event_id or last_event_id_query
+    replay = event_repo.list_for_session(session.sessionId, after_event_id=replay_after_event_id)
     logger.info(
         "sse connected",
         extra={
@@ -134,13 +136,15 @@ def stream_events(
             "session_id": session.sessionId,
             "case_id": case.caseId,
             "route": str(request.url.path),
-            "last_event_id": last_event_id,
+            "last_event_id": replay_after_event_id,
+            "last_event_id_header": last_event_id,
+            "last_event_id_query": last_event_id_query,
             "event_count": len(replay),
             "fallback_used": False,
         },
     )
     return StreamingResponse(
-        session_event_stream(event_repo, session.sessionId, replay, last_event_id, once),
+        session_event_stream(event_repo, session.sessionId, replay, replay_after_event_id, once),
         media_type="text/event-stream",
     )
 
