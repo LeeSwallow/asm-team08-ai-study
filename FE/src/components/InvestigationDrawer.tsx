@@ -2,7 +2,7 @@ import { evidenceAsset, lockedEvidenceAssetPath, statusLabels, suspectAsset } fr
 import type { GameSessionView, RelationMapEdge, RelationMapNode, Statement, Suspect } from "../types";
 import { sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
-type DrawerMode = "case" | "evidence" | "notes" | "relations" | "accusation";
+type DrawerMode = "evidence" | "notes" | "relations" | "accusation";
 
 type InvestigationDrawerProps = {
   mode: DrawerMode;
@@ -70,7 +70,6 @@ export function InvestigationDrawer({
   const accusationReady = session.accusationReadiness;
   const unlockedEvidence = session.evidence.filter((item) => item.unlocked);
   const lockedEvidenceCount = Math.max(0, session.totalEvidenceCount - unlockedEvidence.length);
-  const unlockedRecords = session.records.filter((item) => item.unlocked);
   const statementsById = new Map(session.statements.map((item) => [item.id, item]));
 
   return (
@@ -83,44 +82,11 @@ export function InvestigationDrawer({
         <button type="button" onClick={onClose} aria-label="수사 자료 패널 닫기">×</button>
       </header>
       <nav aria-label="수사 자료 탭">
-        <button className={mode === "case" ? "active" : ""} type="button" onClick={() => onOpenMode("case")}>사건 파일</button>
         <button className={mode === "evidence" ? "active" : ""} type="button" onClick={() => onOpenMode("evidence")}>증거 목록</button>
         <button className={mode === "notes" ? "active" : ""} type="button" onClick={() => onOpenMode("notes")}>메모</button>
         <button className={mode === "relations" ? "active" : ""} type="button" onClick={() => onOpenMode("relations")}>관계도</button>
         <button className={mode === "accusation" ? "active" : ""} type="button" onClick={() => onOpenMode("accusation")}>최종 고발</button>
       </nav>
-
-      {mode === "case" ? (
-        <section className="drawer-scroll case-file-sheet clean-case-file">
-          <div className="drawer-hero-card">
-            <span>CASE FILE</span>
-            <h3>{session.opening.hook}</h3>
-            <p>{session.storyline.publicPremise}</p>
-          </div>
-          <dl className="case-facts-grid">
-            <div><dt>현재 목표</dt><dd>{session.currentObjective.objective}</dd></div>
-            <div><dt>승리 조건</dt><dd>{session.opening.victoryCondition}</dd></div>
-            <div><dt>남은 질문</dt><dd>{session.remainingQuestions}회</dd></div>
-            <div><dt>진행 상태</dt><dd>{session.phase}</dd></div>
-          </dl>
-          <div className="drawer-section-heading"><h4>공개 타임라인</h4><span>{session.visibleTimeline.length}</span></div>
-          <div className="clean-timeline-list">
-            {session.visibleTimeline.map((item) => (
-              <article key={`${item.time}-${item.sourceId}`} className="timeline-row">
-                <b>{item.time}</b>
-                <div><span>{item.title}</span><p>{item.description}</p></div>
-              </article>
-            ))}
-          </div>
-          <div className="drawer-section-heading"><h4>사건 기록</h4><span>{unlockedRecords.length}</span></div>
-          <div className="clean-record-grid">
-            {unlockedRecords.map((item) => (
-              <article key={item.id} className="record-row"><b>{item.time}</b><span>{item.title}</span><p>{item.description}</p></article>
-            ))}
-            {unlockedRecords.length === 0 ? <p className="empty-copy">아직 공개된 사건 기록이 없습니다.</p> : null}
-          </div>
-        </section>
-      ) : null}
 
       {mode === "evidence" ? (
         <section className="drawer-scroll evidence-detail-layout clean-evidence-layout">
@@ -422,7 +388,6 @@ function edgeForSuspect(edges: RelationMapEdge[], suspectId: string) {
 }
 
 function drawerTitle(mode: DrawerMode) {
-  if (mode === "case") return "사건 파일";
   if (mode === "evidence") return "증거 목록";
   if (mode === "notes") return "수사 메모";
   if (mode === "relations") return "인물 관계도";

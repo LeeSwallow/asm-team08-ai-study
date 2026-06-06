@@ -631,78 +631,94 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .section-title h2, .interrogation-panel h2, .system-flow h2 { margin: 0; font-size: 20px; font-weight: 650; }
 .section-title span { color: var(--muted); font-size: 13px; }
 
-.suspect-panel { min-height: 0; padding-bottom: 8px; overflow: hidden; background: linear-gradient(180deg, rgba(10,13,17,.94), rgba(5,7,10,.98)); }
-.suspect-list { display: grid; gap: 9px; padding: 0 10px 8px; }
-.suspect-card {
-  position: relative;
-  width: 100%;
-  height: clamp(86px, 12.6vh, 112px);
+/* Case File Panel — left sidebar */
+.case-file-panel { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; background: linear-gradient(180deg, rgba(10,13,17,.94), rgba(5,7,10,.98)); }
+.case-file-scroll {
   min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 10px;
+  scrollbar-width: thin;
+}
+.case-file-hero {
+  border: 1px solid rgba(230,191,108,.38);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background:
+    linear-gradient(90deg, rgba(97, 18, 20, .46), rgba(8,12,17,.86) 46%),
+    radial-gradient(circle at 88% 18%, rgba(230,191,108,.12), transparent 34%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.035), 0 12px 24px rgba(0,0,0,.30);
+}
+.case-file-hero h3 { margin: 0 0 8px; color: #ffe3a8; font-size: 15px; line-height: 1.22; letter-spacing: -.02em; }
+.case-file-hero p { margin: 0; color: #d3d9df; font-size: 13px; line-height: 1.55; word-break: keep-all; }
+.case-file-facts {
   display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 13px;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 10px 0;
+}
+.case-file-facts div {
+  border: 1px solid rgba(113,126,141,.30);
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: rgba(0,0,0,.22);
+}
+.case-file-facts dt { color: #ff625b; font-size: 10px; font-weight: 900; }
+.case-file-facts dd { margin: 3px 0 0; color: #edf1f4; font-size: 12px; line-height: 1.38; overflow-wrap: anywhere; }
+.case-file-section-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; border-bottom: 1px solid rgba(230,191,108,.20); padding-bottom: 4px; }
+.case-file-section-heading h4 { margin: 0; color: #f0d18b; font-size: 13px; }
+.case-file-section-heading span { color: #ffdf9c; font-weight: 900; font-size: 12px; }
+.case-file-timeline, .case-file-records { display: grid; gap: 6px; margin-top: 4px; }
+.case-file-timeline-row, .case-file-record-row {
+  padding: 7px 9px;
+  border: 1px solid rgba(210, 173, 99, .28);
+  border-radius: 8px;
+  background: rgba(10,14,19,.72);
+}
+.case-file-timeline-row b, .case-file-record-row b { color: #ff514b; margin-right: 6px; font-size: 12px; }
+.case-file-timeline-row span, .case-file-record-row span { color: #fff1d2; font-weight: 800; font-size: 12px; }
+.case-file-timeline-row p, .case-file-record-row p { margin: 3px 0 0; color: #d3d9df; font-size: 12px; line-height: 1.45; word-break: keep-all; }
+
+/* Suspect selection bar — inside InterrogationStage */
+.suspect-bar {
+  display: flex;
   align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-bottom: 1px solid rgba(84, 100, 119, .18);
+  background: linear-gradient(90deg, rgba(10, 15, 20, .94), rgba(38, 12, 13, .58), rgba(10, 15, 20, .92));
+  overflow-x: auto;
+}
+.suspect-bar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
   border: 1px solid rgba(109, 94, 75, .46);
-  border-radius: 7px;
-  padding: 6px 10px 6px 6px;
-  background:
-    linear-gradient(90deg, rgba(55, 23, 19, .22), transparent 44%),
-    linear-gradient(180deg, rgba(24, 25, 24, .90), rgba(8, 10, 12, .96));
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(24, 25, 24, .90), rgba(8, 10, 12, .96));
   color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
   text-align: left;
-  overflow: hidden;
+  flex-shrink: 0;
 }
-.suspect-card.active { border-color: var(--line-hot); box-shadow: 0 0 0 1px rgba(228, 58, 54, .38), inset 0 0 36px rgba(228, 58, 54, .12), 0 12px 26px rgba(0,0,0,.34); }
-.portrait {
-  width: 92px;
-  height: clamp(74px, 10.8vh, 96px);
-  align-self: center;
-  display: block;
-  border-radius: 12px;
-  border: 2px solid rgba(235, 191, 101, .46);
-  box-shadow: 4px 4px 0 rgba(0,0,0,.42), inset 0 0 0 2px rgba(255,255,255,.035), 0 8px 18px rgba(0,0,0,.42);
-  overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(237, 190, 91, .16), transparent 42%),
-    radial-gradient(circle at center 20%, rgba(148, 52, 43, .24), transparent 48%),
-    #0a0d11;
+.suspect-bar-chip.active {
+  border-color: var(--line-hot);
+  box-shadow: 0 0 0 1px rgba(228, 58, 54, .38), inset 0 0 16px rgba(228, 58, 54, .10);
 }
-.portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; filter: contrast(1.12) saturate(1.14); }
-.suspect-info { display: grid; gap: 5px; align-content: center; min-width: 0; }
-.suspect-info strong { font-size: 16px; font-weight: 820; }
-.suspect-info small { color: #d4d8dc; font-size: 13px; font-weight: 620; }
-.suspect-info span {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  overflow: hidden;
-  color: #c2c7cc;
-  font-size: 13px;
-  line-height: 1.3;
-}
-.suspect-info em { color: var(--red); font-size: 13px; font-style: normal; font-weight: 740; }
-.status-dot {
-  position: absolute;
-  top: 14px;
-  right: 12px;
-  width: 10px;
-  height: 10px;
+.suspect-bar-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: #a8afb6;
+  flex-shrink: 0;
 }
-.suspect-card.active .status-dot { background: var(--red); box-shadow: 0 0 14px rgba(228,58,54,.74); }
-.relation-button {
-  width: calc(100% - 20px);
-  margin: 0 10px;
-  height: 40px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(17, 24, 31, .70), rgba(8, 12, 16, .86));
-  color: #c8cdd2;
-  font-weight: 650;
-}
+.suspect-bar-dot.active { background: var(--red); box-shadow: 0 0 10px rgba(228,58,54,.74); }
+.suspect-bar-chip small { color: var(--red); font-size: 10px; font-weight: 600; }
 
-.interrogation-panel { min-height: 0; padding: 0; overflow: hidden; display: grid; grid-template-rows: 39px 30px minmax(0, 1fr) 112px; background: #05080b; }
+.interrogation-panel { min-height: 0; padding: 0; overflow: hidden; display: grid; grid-template-rows: auto 39px 30px minmax(0, 1fr) 112px; background: #05080b; }
 .interrogation-panel h2 { padding: 8px 16px 7px; border-bottom: 1px solid rgba(84, 100, 119, .18); }
 .interrogation-panel h2 span, .interrogation-panel h2 small { color: var(--red); }
 .interrogation-panel h2 small { font-size: 18px; font-weight: 610; }
@@ -1322,9 +1338,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
     grid-template-rows: auto auto;
     align-items: stretch;
   }
-  .suspect-panel { overflow: visible; }
-  .suspect-card { height: 92px; }
-  .interrogation-panel { min-height: 640px; grid-template-rows: 39px 32px minmax(420px, 1fr) 112px; }
+  .case-file-panel { overflow: visible; }
+  .interrogation-panel { min-height: 640px; grid-template-rows: auto 39px 32px minmax(420px, 1fr) 112px; }
   .evidence-panel { grid-column: 1 / -1; min-height: 380px; grid-template-rows: 38px 230px 150px; }
   .evidence-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(2, auto); }
   .system-flow { min-height: 92px; }
@@ -1412,25 +1427,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .header-actions .accusation-button { min-width: 0; font-size: 20px; }
   .header-actions .header-exit-button { min-width: 0; }
   .desk-grid { grid-template-columns: 1fr; gap: 8px; }
-  .suspect-panel {
-    display: grid;
-    grid-template-rows: auto auto auto;
-  }
-  .suspect-list {
-    display: flex;
-    overflow-x: auto;
-    padding-bottom: 10px;
-    scroll-snap-type: x proximity;
-  }
-  .suspect-card {
-    min-width: 244px;
-    height: 88px;
-    scroll-snap-align: start;
-  }
-  .relation-button { height: 38px; }
+  .case-file-panel { min-height: 240px; }
   .interrogation-panel {
     min-height: 680px;
-    grid-template-rows: auto auto 440px auto;
+    grid-template-rows: auto auto auto 440px auto;
   }
   .interrogation-panel h2 { font-size: 17px; }
   .interrogation-panel h2 small { font-size: 14px; }
@@ -1902,7 +1902,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .debug-action-grid button:last-child { grid-column: 1 / -1; }
 .reset-section button { border-color: rgba(230,191,108,.44); background: rgba(10,14,19,.9); color: #f2d58b; }
 
-.investigation-drawer > nav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.investigation-drawer > nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .relation-map-sheet { display: grid; gap: 12px; }
 .relation-map-stage {
   position: relative;

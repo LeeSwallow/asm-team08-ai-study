@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
-import { backgroundAsset, defaultBackgroundIdForCase, suspectAsset } from "../constants/presentation";
+import { backgroundAsset, defaultBackgroundIdForCase, suspectAsset, suspectStatusText } from "../constants/presentation";
 import type { DialogueLogItem, DialogueRuntimeDiagnostics, GameEventFeedItem, Suspect, VisualState } from "../types";
 
 type InterrogationStageProps = {
   selectedSuspect?: Suspect;
   suspects: Suspect[];
+  selectedSuspectId: string | null;
   latestAnswer: string;
   dialogueLog: DialogueLogItem[];
   eventFeed: GameEventFeedItem[];
@@ -18,11 +19,13 @@ type InterrogationStageProps = {
   onDraftQuestionChange: (value: string) => void;
   onSubmitQuestion: () => void;
   onPresentEvidence: () => void;
+  onSelectSuspect: (suspectId: string) => void;
 };
 
 export function InterrogationStage({
   selectedSuspect,
   suspects,
+  selectedSuspectId,
   latestAnswer,
   dialogueLog,
   eventFeed,
@@ -36,6 +39,7 @@ export function InterrogationStage({
   onDraftQuestionChange,
   onSubmitQuestion,
   onPresentEvidence,
+  onSelectSuspect,
 }: InterrogationStageProps) {
   const visualAppliesToSelected = Boolean(
     selectedSuspect && (!visualState?.suspectId || visualState.suspectId === selectedSuspect.id),
@@ -82,6 +86,24 @@ export function InterrogationStage({
 
   return (
     <section className="panel interrogation-panel" aria-labelledby="stage-title">
+      <div className="suspect-bar" aria-label="용의자 선택">
+        {suspects.map((suspect) => {
+          const isSelected = suspect.id === selectedSuspectId;
+          return (
+            <button
+              key={suspect.id}
+              type="button"
+              className={`suspect-bar-chip ${isSelected ? "active" : ""}`}
+              onClick={() => onSelectSuspect(suspect.id)}
+              aria-current={isSelected}
+            >
+              <i className={`suspect-bar-dot ${isSelected ? "active" : ""}`} aria-hidden="true" />
+              <span>{suspect.name}</span>
+              <small>{suspectStatusText(suspect.status, isSelected)}</small>
+            </button>
+          );
+        })}
+      </div>
       <h2 id="stage-title">
         심문 대상: <span>{selectedSuspect?.name ?? "용의자 선택 필요"}</span>
       </h2>

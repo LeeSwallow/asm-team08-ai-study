@@ -1,8 +1,8 @@
 import { AppHeader } from "../components/AppHeader";
+import { CaseFilePanel } from "../components/CaseFilePanel";
 import { EvidencePanel } from "../components/EvidencePanel";
 import { InterrogationStage } from "../components/InterrogationStage";
 import { InvestigationDrawer } from "../components/InvestigationDrawer";
-import { SuspectPanel } from "../components/SuspectPanel";
 import { useInvestigationSession } from "../hooks/useInvestigationSession";
 import { caseListPath } from "../routing";
 
@@ -34,7 +34,6 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
   return (
     <main className="noir-desk">
       <AppHeader
-        onOpenCaseFile={() => desk.setActiveDrawer("case")}
         onOpenEvidence={() => desk.setActiveDrawer("evidence")}
         onOpenNotes={() => desk.setActiveDrawer("notes")}
         onOpenRelations={() => desk.setActiveDrawer("relations")}
@@ -43,15 +42,11 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
       />
 
       <section className="desk-grid" aria-label="수사 데스크">
-        <SuspectPanel
-          suspects={desk.session.suspects}
-          selectedSuspectId={desk.session.selectedSuspectId}
-          onSelectSuspect={desk.selectSuspect}
-          onOpenRelations={() => desk.setActiveDrawer("relations")}
-        />
+        <CaseFilePanel session={desk.session} />
         <InterrogationStage
           selectedSuspect={desk.selectedSuspect}
           suspects={desk.session.suspects}
+          selectedSuspectId={desk.session.selectedSuspectId}
           latestAnswer={desk.latestAnswer}
           dialogueLog={desk.session.dialogueLog}
           eventFeed={desk.eventFeed}
@@ -65,6 +60,7 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           onDraftQuestionChange={desk.setDraftQuestion}
           onSubmitQuestion={desk.submitQuestion}
           onPresentEvidence={() => desk.setActiveDrawer("evidence")}
+          onSelectSuspect={desk.selectSuspect}
         />
         <EvidencePanel
           session={desk.session}
