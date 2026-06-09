@@ -48,6 +48,22 @@ export type VisualState = {
   tensionLevel?: "low" | "medium" | "high" | "critical" | string;
 };
 
+export type CharacterReactionDiagnostic = {
+  owner?: string;
+  suspectId?: string;
+  route?: string;
+  reactionRoute?: string;
+  label?: string;
+  effect?: string;
+  confidence?: number;
+  playerClaimAssessment?: string;
+  characterStance?: string;
+  responseIntent?: string;
+  playerFacingReason?: string;
+  publicOnly?: boolean;
+  appliedStateChange?: boolean;
+};
+
 export type DialogueRuntimeDiagnostics = {
   source: "api";
   dialogueMode?: string;
@@ -72,6 +88,8 @@ export type DialogueRuntimeDiagnostics = {
   remainingQuestionsDelta?: number;
   emotionalState?: string;
   tensionLevel?: string;
+  characterReaction?: CharacterReactionDiagnostic;
+  characterReactionRoute?: string;
 };
 
 export type GameEventFeedItem = {

@@ -204,10 +204,11 @@ export function useInvestigationSession(options: InvestigationSessionOptions = {
         diagnostic?.proposedEventsCount === 0 && diagnostic?.appliedEventsCount === 0
           ? "이 턴에서 진행 이벤트 없음"
           : `${diagnostic?.proposedEventsCount ?? "?"}/${diagnostic?.appliedEventsCount ?? "?"}`;
+      const routeSummary = diagnostic?.characterReaction?.label ?? diagnostic?.characterReactionRoute;
       setStatusMessage(
         diagnostic?.fallbackUsed || diagnostic?.degraded
-          ? `자연어 질문은 처리됐지만 진단 확인이 필요합니다 · events=${eventSummary}`
-          : `자연어 질문 접수 · events=${eventSummary} · matched=${matchedRefs.length}`,
+          ? `자연어 질문은 처리됐지만 진단 확인이 필요합니다 · route=${routeSummary ?? "unknown"} · events=${eventSummary}`
+          : `자연어 질문 접수 · route=${routeSummary ?? "none"} · events=${eventSummary} · matched=${matchedRefs.length}`,
       );
       done({
         level: diagnostic?.fallbackUsed || diagnostic?.degraded ? "warn" : "info",

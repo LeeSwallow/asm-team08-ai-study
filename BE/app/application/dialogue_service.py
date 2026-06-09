@@ -218,6 +218,7 @@ class DialogueService:
         self.event_repo.append_many(applied_events)
         public_safety = self._public_safety(ai_result["safety"])
         ai_runtime_diagnostics = ai_result.get("runtimeDiagnostics") or {}
+        character_reaction = ai_runtime_diagnostics.get("characterReaction")
         dialogue_result = {
             "messageId": npc_entry.id,
             "suspectId": suspect.characterId,
@@ -247,6 +248,8 @@ class DialogueService:
             "interrogationTransition": interrogation_transition.model_dump(),
             "contradictionResult": contradiction_result,
             "aiRuntimeDiagnostics": ai_runtime_diagnostics,
+            "characterReaction": character_reaction,
+            "characterReactionRoute": (character_reaction or {}).get("reactionRoute") or (character_reaction or {}).get("route") if isinstance(character_reaction, dict) else None,
             "proposedEventsCount": len(ai_proposed_events),
             "beProposedEventsCount": len(be_proposed_events),
             "stateProposedEventsCount": len(state_proposed_events),
@@ -273,6 +276,8 @@ class DialogueService:
             "turnInterpretation": turn_interpretation.model_dump(),
             "contradictionResult": contradiction_result,
             "aiRuntimeDiagnostics": ai_runtime_diagnostics,
+            "characterReaction": character_reaction,
+            "characterReactionRoute": (character_reaction or {}).get("reactionRoute") or (character_reaction or {}).get("route") if isinstance(character_reaction, dict) else None,
         }
         session.lastDialogueResult = self._last_dialogue_summary(dialogue_result)
         session.lastRuntimeDiagnostics = self._last_runtime_diagnostics(runtime_diagnostics)
@@ -473,6 +478,8 @@ class DialogueService:
             "emotionalState",
             "tensionLevel",
             "contradictionResult",
+            "characterReaction",
+            "characterReactionRoute",
             "proposedEventsCount",
             "beProposedEventsCount",
             "stateProposedEventsCount",
@@ -499,6 +506,8 @@ class DialogueService:
             "appliedEventsCount",
             "reason",
             "contradictionResult",
+            "characterReaction",
+            "characterReactionRoute",
         )
         return {key: runtime_diagnostics.get(key) for key in keys}
 

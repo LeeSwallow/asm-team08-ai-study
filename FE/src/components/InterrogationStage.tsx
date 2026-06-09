@@ -55,6 +55,10 @@ export function InterrogationStage({
   const stageAsset = suspectAsset(selectedSuspect?.id, expression);
   const stageMood = `${emotion}-${expression}-${tensionLevel}`;
   const diagnosticTone = runtimeDiagnostics?.fallbackUsed || runtimeDiagnostics?.degraded ? "fallback" : "api";
+  const reaction = runtimeDiagnostics?.characterReaction;
+  const reactionRoute = runtimeDiagnostics?.characterReactionRoute ?? reaction?.reactionRoute ?? reaction?.route;
+  const reactionLabel = reaction?.label ?? reactionRoute;
+  const reactionSummary = reactionLabel ? `${reactionLabel}${reaction?.effect ? ` → ${reaction.effect}` : ""}` : undefined;
   const visibleProgressCount = runtimeDiagnostics?.appliedEventsCount ?? 0;
   const suspectById = new Map(suspects.map((suspect) => [suspect.id, suspect]));
   const suspectByName = new Map(suspects.map((suspect) => [suspect.name, suspect]));
@@ -110,6 +114,7 @@ export function InterrogationStage({
       <details className="interrogation-meta" aria-label="수사 상태">
         <summary>
           <span className={`runtime-badge ${diagnosticTone}`}>수사 기록</span>
+          {reactionSummary ? <span className="reaction-route-badge">AI 판단: {reactionSummary}</span> : null}
           <span>{runtimeDiagnostics?.fallbackUsed || runtimeDiagnostics?.degraded ? "기록 확인 중" : "진행 정상"}</span>
           <span>남은 질문 {remainingQuestions}/{questionLimit}</span>
         </summary>
@@ -117,6 +122,8 @@ export function InterrogationStage({
           <span>최근 진행: {visibleProgressCount > 0 ? `${visibleProgressCount}건 기록됨` : "새 기록 없음"}</span>
           <span>질문 사용: {runtimeDiagnostics?.previousRemainingQuestions ?? remainingQuestions}→{runtimeDiagnostics?.remainingQuestions ?? remainingQuestions}/{questionLimit}</span>
           <span>분위기: {emotion}/{tensionLevel}</span>
+          {reactionRoute ? <span>분기: {reactionRoute}{typeof reaction?.confidence === "number" ? ` · ${Math.round(reaction.confidence * 100)}%` : ""}</span> : null}
+          {reaction?.playerFacingReason ? <span>판단 근거: {reaction.playerFacingReason}</span> : null}
           {runtimeDiagnostics?.blockedReason ? <span className="diagnostic-alert">응답 보류: 공개 가능한 답변으로 조정 중</span> : null}
         </div>
       </details>

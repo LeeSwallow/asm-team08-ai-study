@@ -1,5 +1,6 @@
 import type {
   CaseRecord,
+  CharacterReactionDiagnostic,
   CaseSummary,
   CluePath,
   CurrentObjective,
@@ -168,6 +169,8 @@ export type BackendSession = {
     emotionalState?: string;
     tensionLevel?: string;
     lastEventId?: string;
+    characterReaction?: CharacterReactionDiagnostic;
+    characterReactionRoute?: string;
   };
   lastEventId?: string;
   opening?: Opening;
@@ -255,6 +258,47 @@ function countEvents(value?: unknown[], explicit?: number): number | undefined {
   return value?.length;
 }
 
+const reactionLabels: Record<string, string> = {
+  answer_relevant: "관련 질문",
+  deflect_irrelevant: "관련 없는 발화",
+  reject_false_premise: "근거 없는 단정",
+  challenge_player_contradiction: "플레이어 발화 모순",
+  react_to_valid_pressure: "유효한 압박",
+  ask_clarification: "모호한 질문",
+  refuse_meta_or_private: "메타/비공개 요청",
+};
+
+const reactionEffects: Record<string, string> = {
+  answer_relevant: "공개 사실 답변",
+  deflect_irrelevant: "캐릭터식 회피",
+  reject_false_premise: "전제 반박",
+  challenge_player_contradiction: "공개 정보 기준 지적",
+  react_to_valid_pressure: "긴장 반응",
+  ask_clarification: "구체화 요청",
+  refuse_meta_or_private: "세계관 안에서 거절",
+};
+
+function normalizeCharacterReaction(value?: CharacterReactionDiagnostic): CharacterReactionDiagnostic | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const route = sanitizePublicDiagnosticValue(value.reactionRoute ?? value.route);
+  if (!route) return undefined;
+  return {
+    owner: sanitizePublicDiagnosticValue(value.owner),
+    suspectId: sanitizePublicDiagnosticValue(value.suspectId),
+    route,
+    reactionRoute: route,
+    label: sanitizePublicDiagnosticValue(value.label) ?? reactionLabels[route],
+    effect: sanitizePublicDiagnosticValue(value.effect) ?? reactionEffects[route],
+    confidence: typeof value.confidence === "number" ? value.confidence : undefined,
+    playerClaimAssessment: sanitizePublicDiagnosticValue(value.playerClaimAssessment),
+    characterStance: sanitizePublicDiagnosticValue(value.characterStance),
+    responseIntent: sanitizePublicDiagnosticValue(value.responseIntent),
+    playerFacingReason: sanitizePublicDiagnosticValue(value.playerFacingReason),
+    publicOnly: value.publicOnly !== false,
+    appliedStateChange: value.appliedStateChange === true,
+  };
+}
+
 function cleanDialogueText(text: string, speaker: string): string {
   if (speaker === "player") return text;
   let cleaned = text.trim();
@@ -281,6 +325,7 @@ function cleanDialogueText(text: string, speaker: string): string {
 
 function runtimeDiagnostics(session: BackendSession, source: "api"): DialogueRuntimeDiagnostics {
   const result = session.dialogueResult;
+  const characterReaction = normalizeCharacterReaction(result?.characterReaction);
   return {
     source,
     dialogueMode: sanitizePublicDiagnosticValue(result?.dialogueMode),
@@ -304,6 +349,8 @@ function runtimeDiagnostics(session: BackendSession, source: "api"): DialogueRun
     remainingQuestionsDelta: result?.remainingQuestionsDelta,
     emotionalState: sanitizePublicDiagnosticValue(result?.emotionalState),
     tensionLevel: sanitizePublicDiagnosticValue(result?.tensionLevel),
+    characterReaction,
+    characterReactionRoute: sanitizePublicDiagnosticValue(result?.characterReactionRoute ?? characterReaction?.reactionRoute ?? characterReaction?.route),
   };
 }
 

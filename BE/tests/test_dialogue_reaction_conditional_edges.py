@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.ai_engine.graph.dialogue_graph import run_dialogue_graph
+from app.infra.local_ai_client import _public_runtime_diagnostics
 from app.ai_engine.graph.dialogue_generation_nodes import (
     build_deflect_irrelevant_plan,
     build_react_to_valid_pressure_plan,
@@ -117,3 +118,30 @@ def test_dialogue_graph_uses_conditional_reaction_route_in_runtime_diagnostics()
     assert diagnostics["conditionalRouteOwner"] == "CharacterReactionJudgeAgent"
     assert diagnostics["functionTransition"]["name"] == "acknowledge_public_contradiction"
     assert diagnostics["characterReaction"]["stateIntent"]["appliedStateChange"] is False
+
+
+def test_public_runtime_diagnostics_exposes_reaction_without_internal_rationale() -> None:
+    public = _public_runtime_diagnostics(
+        {
+            "characterReaction": {
+                "owner": "CharacterReactionJudgeAgent",
+                "suspectId": "char_hanseoyeon",
+                "reactionRoute": "reject_false_premise",
+                "confidence": 0.84,
+                "playerClaimAssessment": "unsupported_claim",
+                "characterStance": "defensive",
+                "responseIntent": "reject_premise",
+                "playerFacingReason": "근거 없는 단정이라 캐릭터가 전제를 반박합니다.",
+                "rationale": "internal chain should not be exposed",
+                "referencedEvidenceIds": [],
+                "referencedStatementIds": ["stmt_visible_hanseoyeon"],
+                "stateIntent": None,
+                "validatorFindings": {"publicOnly": True, "appliedStateChange": False},
+            }
+        }
+    )
+
+    assert public["characterReactionRoute"] == "reject_false_premise"
+    assert public["conditionalRouteOwner"] == "CharacterReactionJudgeAgent"
+    assert public["characterReaction"]["playerFacingReason"] == "근거 없는 단정이라 캐릭터가 전제를 반박합니다."
+    assert "rationale" not in public["characterReaction"]

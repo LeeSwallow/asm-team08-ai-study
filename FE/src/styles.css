@@ -763,6 +763,22 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   color: #ffd18a;
   background: rgba(101, 57, 12, .34);
 }
+.reaction-route-badge {
+  overflow: hidden;
+  max-width: 360px;
+  padding: 2px 8px;
+  border: 1px solid rgba(224, 68, 58, .58);
+  border-radius: 999px;
+  color: #ffd4cf;
+  background: linear-gradient(90deg, rgba(111, 28, 26, .46), rgba(31, 43, 58, .24));
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diagnostic-detail-row span {
+  min-width: 0;
+}
 .diagnostic-missing {
   color: #ffd18a;
   font-weight: 800;
