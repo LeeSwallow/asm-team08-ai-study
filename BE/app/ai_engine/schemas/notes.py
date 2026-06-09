@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from pydantic import Field
-from app.ai_engine.schemas.common import CharacterTimelineContext, DialogueLog, EvidenceRef, FlexibleModel, Safety, StorylineContext, VisualState
+
+from app.ai_engine.schemas.base import FlexibleModel
+from app.ai_engine.schemas.evidence import EvidenceRef
+from app.ai_engine.schemas.knowledge_pack import DialogueLog
+from app.ai_engine.schemas.safety import Safety
+from app.ai_engine.schemas.storyline import CharacterTimelineContext, StorylineContext
+from app.ai_engine.schemas.visual import VisualState
 
 
 class NotesSummaryRequest(FlexibleModel):

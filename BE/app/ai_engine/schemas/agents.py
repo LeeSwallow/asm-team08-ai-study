@@ -4,11 +4,14 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import Field
 
-from app.ai_engine.schemas.common import AllowedEventPolicy, CharacterKnowledgePack, FlexibleModel, PersonaOverlay, PersonaVariant, ProposedEvent
+from app.ai_engine.schemas.base import FlexibleModel
+from app.ai_engine.schemas.events import AllowedEventPolicy, ProposedEvent
+from app.ai_engine.schemas.knowledge_pack import CharacterKnowledgePack
+from app.ai_engine.schemas.persona import PersonaOverlay, PersonaVariant
 from app.ai_engine.schemas.dialogue import AllowedStatement, DialogueRequest, SourceRefs
 
 if TYPE_CHECKING:
-    from app.ai_engine.application.knowledge_retriever import CharacterRetrievedContext, GameMasterEventContext
+    from app.ai_engine.schemas.retrieval import CharacterRetrievedContext, GameMasterEventContext
 
 
 class CharacterAgentInput(FlexibleModel):
@@ -69,6 +72,7 @@ class DialogueDirectorPlan(FlexibleModel):
     styleDirectives: list[str] = Field(default_factory=list)
     forbiddenClaims: list[str] = Field(default_factory=list)
     focusTerms: list[str] = Field(default_factory=list)
+    functionCall: dict[str, Any] | None = None
     reason: str | None = None
 
 

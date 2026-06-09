@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.ai_engine.core.guard import contains_secret
+from app.ai_engine.core.solution_guard import contains_secret
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent
 from app.ai_engine.schemas.agents import DialogueDirectorInput, DialogueDirectorPlan
 from app.ai_engine.schemas.dialogue import DialogueRequest
@@ -97,6 +97,21 @@ def _contradiction_seed(payload: DialogueRequest, focus_terms: list[str]) -> str
     )
 
 
+def _dialogue_function(name: str, *, reason: str, **arguments: object) -> dict[str, object]:
+    """Public, deterministic function transition selected before generation.
+
+    The function call is a routing/grounding hint only: it never mutates game
+    state, never reveals hidden truth, and is executed by CharacterAgent as a
+    bounded dialogue move before GameMasterAgent proposes BE-validated events.
+    """
+    return {
+        "name": name,
+        "arguments": arguments,
+        "transferTo": "CharacterAgent",
+        "reason": reason,
+    }
+
+
 class DialogueDirectorAgent:
     """Deterministic turn planner that keeps pressured suspect replies safe and varied."""
 
@@ -107,13 +122,40 @@ class DialogueDirectorAgent:
         focus_terms = _mentioned_evidence_terms(payload, agent_input.retrieved_context)
 
         if intent == "unmatched":
+            focus = focus_terms[:2]
             return DialogueDirectorPlan(
                 strategy="deflect_unmatched",
-                seedText="그 질문에는 바로 답하기 어렵습니다.",
+                seedText=None,
                 allowedAdmissionLevel="no_new_fact",
-                styleDirectives=["질문을 되묻지 말고 짧게 방어한다."],
+                styleDirectives=["질문을 되묻지 말고 짧게 방어하되, 같은 문장을 반복하지 않는다."],
                 forbiddenClaims=["새 증거, 범행 방식, 범인 단정을 만들지 않는다."],
+                focusTerms=focus,
+                functionCall=_dialogue_function(
+                    "deflect_unmatched_turn",
+                    reason="intent_unmatched",
+                    suspectName=payload.suspect.name,
+                    focusTerms=focus,
+                    playerMessage=payload.question.text,
+                    admissionLevel="no_new_fact",
+                ),
                 reason="intent_unmatched",
+            )
+
+        if intent == "greeting":
+            return DialogueDirectorPlan(
+                strategy="small_talk_boundary",
+                seedText=None,
+                allowedAdmissionLevel="no_new_fact",
+                styleDirectives=["인사는 받아도 사건 현장의 긴장을 유지한다.", "새 사건 사실을 만들지 않는다."],
+                forbiddenClaims=["비공개 해결 정보", "새 알리바이 창작"],
+                functionCall=_dialogue_function(
+                    "handle_small_talk_boundary",
+                    reason="intent_greeting",
+                    suspectName=payload.suspect.name,
+                    pressureState=payload.suspect.pressureState,
+                    emotionalState=payload.suspect.emotionalState,
+                ),
+                reason="intent_greeting",
             )
 
         if transition.get("decisiveEvidence"):
@@ -132,6 +174,13 @@ class DialogueDirectorAgent:
                     "허용되지 않은 장소 출입 인정",
                 ],
                 focusTerms=focus_terms,
+                functionCall=_dialogue_function(
+                    "acknowledge_public_contradiction",
+                    reason="decisive_evidence_pressure",
+                    focusTerms=focus_terms,
+                    suspectName=payload.suspect.name,
+                    admissionLevel="acknowledge_conflict_only",
+                ),
                 reason="decisive_evidence_pressure",
             )
 
@@ -143,6 +192,13 @@ class DialogueDirectorAgent:
                 styleDirectives=["이전 답변을 그대로 반복하지 말고 공개 사실 범위에서 방어한다."],
                 forbiddenClaims=["비공개 해결 정보", "범인 단정", "새 알리바이 창작"],
                 focusTerms=focus_terms,
+                functionCall=_dialogue_function(
+                    "answer_pressure_followup",
+                    reason="repeat_pressure",
+                    focusTerms=focus_terms,
+                    suspectName=payload.suspect.name,
+                    admissionLevel="public_fact_only",
+                ),
                 reason="repeat_pressure",
             )
 
@@ -153,5 +209,12 @@ class DialogueDirectorAgent:
             styleDirectives=["공개 사실을 벗어나지 않는다."],
             forbiddenClaims=["비공개 해결 정보", "범인 단정"],
             focusTerms=focus_terms,
+            functionCall=_dialogue_function(
+                "answer_public_fact",
+                reason="default",
+                focusTerms=focus_terms,
+                suspectName=payload.suspect.name,
+                admissionLevel="public_fact_only",
+            ),
             reason="default",
         )

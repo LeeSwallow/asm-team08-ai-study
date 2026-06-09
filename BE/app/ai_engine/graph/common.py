@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
+from app.ai_engine.schemas.graph import patch_to_raw_dict
+
 
 Node = Callable[[dict[str, Any]], dict[str, Any]]
 logger = logging.getLogger("app.ai")
@@ -11,7 +13,7 @@ logger = logging.getLogger("app.ai")
 def run_pipeline(initial_state: dict[str, Any], nodes: list[Node]) -> dict[str, Any]:
     state = dict(initial_state)
     for node in nodes:
-        state.update(node(state))
+        state.update(patch_to_raw_dict(node(state)))
     return state
 
 
@@ -69,7 +71,7 @@ def run_langgraph_or_pipeline(initial_state: dict[str, Any], nodes: list[tuple[s
 
         graph = StateGraph(WorkflowState)
         for name, node in nodes:
-            graph.add_node(name, node)
+            graph.add_node(name, lambda state, _node=node: patch_to_raw_dict(_node(state)))
         for index, (name, _) in enumerate(nodes):
             if index == 0:
                 graph.set_entry_point(name)

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 
-from app.ai_engine.core.guard import contains_secret, strip_forbidden_private_refs
+from app.ai_engine.core.private_ref_guard import strip_forbidden_private_refs
+from app.ai_engine.core.solution_guard import contains_secret
 from app.ai_engine.domain.proposed_events import AI_PROPOSABLE_EVENT_TYPES, propose_dialogue_events
 from app.ai_engine.schemas.agents import GameMasterAgentInput, GameMasterProposal
 

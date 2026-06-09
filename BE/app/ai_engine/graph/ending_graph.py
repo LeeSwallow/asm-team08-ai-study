@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.ai_engine.core.guard import redact_solution_terms
+from app.ai_engine.core.solution_guard import redact_solution_terms
 from app.ai_engine.prompts.ending import ENDING_SYSTEM_PROMPT
-from app.ai_engine.schemas.common import Safety
+from app.ai_engine.schemas.safety import Safety
 from app.ai_engine.schemas.endings import EndingExplainRequest, EndingExplainResponse
 
 from .common import run_langgraph_or_pipeline

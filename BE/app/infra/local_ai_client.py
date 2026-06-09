@@ -25,6 +25,7 @@ def _public_runtime_diagnostics(diagnostics: Dict[str, Any]) -> Dict[str, Any]:
                 "seedText": director.get("seedText"),
                 "allowedAdmissionLevel": director.get("allowedAdmissionLevel"),
                 "focusTerms": list(director.get("focusTerms") or []),
+                "functionCall": director.get("functionCall"),
                 "reason": director.get("reason"),
             }
         }
@@ -58,6 +59,7 @@ class LocalAIClient:
             logger.warning(
                 "local ai dialogue_response_info failed",
                 extra={"service": "backend", "reason": reason, "fallback_used": False},
+                exc_info=True,
             )
             return {
                 "answer": None,

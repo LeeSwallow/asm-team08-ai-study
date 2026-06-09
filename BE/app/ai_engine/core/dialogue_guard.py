@@ -1,102 +1,8 @@
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
+from app.ai_engine.core.solution_guard import SafetyResult, contains_secret, redact_solution_terms
+from app.ai_engine.core.text_normalization import normalize_text, sentence_parts
 
-
-SECRET_PATTERNS = [
-    "범인",
-    "진범",
-    "살해",
-    "살인",
-    "동기",
-    "흉기",
-    "결정적 증거",
-    "culprit",
-    "killer",
-    "motive",
-    "solution",
-    "secret",
-    "hidden truth",
-    "privateTimeline",
-    "privateEvents",
-    "privateMotive",
-    "privateRefs",
-    "secretNote",
-    "isCulprit",
-    "culpritId",
-    "finalDiscovery",
-    "finalVerdict",
-    "actualAction",
-    "actualLocation",
-    "privateNote",
-    "culpritInference",
-    "isLie",
-    "hidden",
-    "hiddenSolution",
-    "비밀",
-    "숨겨진 진실",
-]
-
-FORBIDDEN_PRIVATE_REF_KEYS = frozenset(
-    {
-        "secret",
-        "solution",
-        "privateTimeline",
-        "privateEvents",
-        "privateMotive",
-        "privateRefs",
-        "culprit",
-        "culpritId",
-        "isCulprit",
-        "finalDiscovery",
-        "finalVerdict",
-        "actualAction",
-        "actualLocation",
-        "secretNote",
-        "privateNote",
-        "culpritInference",
-        "isLie",
-        "hidden",
-        "hiddenSolution",
-    }
-)
-
-
-def _is_forbidden_private_key(key: object) -> bool:
-    normalized = str(key)
-    lowered = normalized.lower()
-    return (
-        normalized in FORBIDDEN_PRIVATE_REF_KEYS
-        or lowered.startswith("private")
-        or lowered.startswith("secret")
-        or lowered.startswith("hidden")
-        or "culprit" in lowered
-        or "solution" in lowered
-        or lowered in {"islie", "actualaction", "actuallocation", "finaldiscovery", "finalverdict"}
-    )
-
-
-def _is_hidden_private_item(value: object) -> bool:
-    if not isinstance(value, dict):
-        return False
-    visibility = str(value.get("visibility", "")).lower()
-    return bool(value.get("hidden") is True or visibility in {"hidden", "private", "secret"})
-
-
-def strip_forbidden_private_refs(value: object) -> object:
-    """Drop hidden-truth keys from BE-provided public context before agents see it."""
-    if isinstance(value, dict):
-        if _is_hidden_private_item(value):
-            return {}
-        return {
-            key: strip_forbidden_private_refs(item)
-            for key, item in value.items()
-            if not _is_forbidden_private_key(key)
-        }
-    if isinstance(value, list):
-        return [strip_forbidden_private_refs(item) for item in value if not _is_hidden_private_item(item)]
-    return value
 
 SAFE_DIALOGUE_PADDING = {
     "",
@@ -136,35 +42,8 @@ CASE_CONTEXT_TOKENS = (
 )
 
 
-@dataclass(frozen=True)
-class SafetyResult:
-    leaks_solution: bool = False
-    violates_case_facts: bool = False
-    blocked_terms: tuple[str, ...] = ()
-    fallback_used: bool = False
-    repaired: bool = False
-    blocked_reason: str | None = None
-
-
-def normalize_text(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def contains_secret(text: str, reveal_allowed: bool = False) -> tuple[bool, tuple[str, ...]]:
-    if reveal_allowed:
-        return False, ()
-    lowered = text.lower()
-    blocked = tuple(term for term in SECRET_PATTERNS if term.lower() in lowered)
-    return bool(blocked), blocked
-
-
-def sentence_parts(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?。！？])\s+|(?<=[요다죠까])\s+", normalize_text(text))
-    return [part.strip() for part in parts if part.strip()]
-
-
 def _normalize_padding(text: str) -> str:
-    return re.sub(r"^[\s,.!?。！？]+|[\s,.!?。！？]+$", "", text).strip()
+    return text.strip(" \t\n\r,.!?。！？")
 
 
 def extract_case_context_terms(text: str) -> tuple[str, ...]:
@@ -233,22 +112,6 @@ def enforce_allowed_statement(
         return " ".join(safe_parts), True
 
     return allowed, generated != allowed
-
-
-def redact_solution_terms(text: str, reveal_allowed: bool = False) -> tuple[str, SafetyResult]:
-    leaks, blocked_terms = contains_secret(text, reveal_allowed=reveal_allowed)
-    if not leaks:
-        return text, SafetyResult()
-
-    redacted = text
-    for term in sorted(blocked_terms, key=len, reverse=True):
-        redacted = re.sub(re.escape(term), "그 부분", redacted, flags=re.IGNORECASE)
-    return redacted, SafetyResult(
-        leaks_solution=True,
-        blocked_terms=blocked_terms,
-        repaired=True,
-        blocked_reason="solution_terms_redacted",
-    )
 
 
 def guard_dialogue_text(

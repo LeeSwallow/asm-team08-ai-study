@@ -1663,7 +1663,7 @@ def test_chained_llm_primary_failure_flows_through_character_agent_to_response_m
     """Blocker 3 follow-up: ChainedLLM primary 실패가 CharacterAgent → LocalAIClient → dialogue route
     전체 경로를 통해 흘러서 FE/BE 응답 메타데이터에 fallbackUsed=True, provider=fallback 프로바이더가
     정직하게 노출되어야 한다. degraded는 False여야 한다 (fallback이 유효한 응답을 반환했으므로)."""
-    import app.ai_engine.application.character_agent as ca_mod
+    import app.ai_engine.agents.character_agent as ca_mod
     from app.ai_engine.core.llm import ChainedLLM
     from app.infra.local_ai_client import LocalAIClient
 
