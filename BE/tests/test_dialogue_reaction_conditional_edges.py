@@ -117,3 +117,5 @@ def test_dialogue_graph_uses_conditional_reaction_route_in_runtime_diagnostics()
     assert diagnostics["conditionalRouteOwner"] == "CharacterReactionJudgeAgent"
     assert diagnostics["functionTransition"]["name"] == "acknowledge_public_contradiction"
     assert diagnostics["characterReaction"]["stateIntent"]["appliedStateChange"] is False
+    assert diagnostics["reactionReview"]["approved"] is True
+    assert diagnostics["reactionLibrarianCard"]["route"] == "react_to_valid_pressure"
