@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+import app.ai_engine.agents.character_agent as character_agent_module
 from app.ai_engine.graph.dialogue_graph import run_dialogue_graph
 from app.ai_engine.schemas.dialogue import DialogueRequest
 from app.infra.local_ai_client import _public_runtime_diagnostics
@@ -182,3 +183,52 @@ def test_scenario1_natural_language_queries_keep_game_feel_routes_and_public_bou
     public_reaction = public_diagnostics["characterReaction"]
     assert public_reaction["stateIntent"] is None or public_reaction["stateIntent"]["appliedStateChange"] is False
     assert public_reaction["stateIntent"] is None or public_reaction["stateIntent"]["requiresBEValidation"] is True
+
+
+class _DriftingLLM:
+    provider_name = "fake-provider"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        return "네, 그날 일정상 회의만 있었고 회장님 지시사항 확인했습니다."
+
+
+def test_matched_case_question_repairs_provider_drift_to_character_evidence_context(monkeypatch) -> None:
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: _DriftingLLM())
+
+    payload = _request(
+        message="와인잔의 립스틱 흔적은 당신과 관련 있나요?",
+        refs={"statementIds": ["st_choiyuna_no_wine"], "evidenceIds": ["ev_wine_glass"], "timelineIds": []},
+    ).model_dump()
+    payload.update(
+        {
+            "suspect": {
+                "id": "char_choiyuna",
+                "name": "최윤아",
+                "pressureState": "calm",
+                "emotionalState": "neutral",
+                "publicPersona": "일정과 기록에 집착하는 비서",
+            },
+            "question": {"id": "q_choiyuna_wine", "text": "서재의 와인잔을 알고 있나요?"},
+            "allowedStatement": {
+                "id": "st_choiyuna_no_wine",
+                "text": "네, 저는 그날 와인을 마시지 않았습니다. 립스틱 색도 제 것이 아닙니다.",
+                "sourceRefs": {"statementIds": ["st_choiyuna_no_wine"], "evidenceIds": ["ev_wine_glass"], "timelineIds": []},
+            },
+            "dialogueMode": "evidence_question",
+        }
+    )
+
+    response = run_dialogue_graph(
+        DialogueRequest.model_validate(payload),
+        _Retriever(),
+    )
+
+    assert response.runtimeDiagnostics["characterReactionRoute"] == "answer_relevant"
+    assert "와인을 마시지 않았습니다" in response.text
+    assert "립스틱 색도 제 것이 아닙니다" in response.text
+    assert "회의만" not in response.text

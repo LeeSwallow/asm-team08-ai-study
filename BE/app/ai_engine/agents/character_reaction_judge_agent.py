@@ -30,7 +30,8 @@ _ACCUSATION_TERMS = ("죽였", "살해", "범행", "범인이", "범인이지", 
 _IRRELEVANT_TERMS = ("춤", "노래", "점심", "저녁", "날씨", "농담", "게임하", "소문")
 _AMBIGUOUS_TERMS = ("그때", "그거", "그 사람", "그 장소", "그 일", "뭐였", "아까")
 _CONTRADICTION_TERMS = ("외출", "없었", "아니었", "다르", "모순", "안 맞", "거짓")
-_PRESSURE_TERMS = ("안 맞", "모순", "립스틱", "와인잔", "증거", "진술", "알리바이", "흔들")
+_PRESSURE_TERMS = ("안 맞", "모순", "증거", "진술", "알리바이", "흔들")
+_PRESSURE_CHALLENGE_TERMS = ("안 맞", "모순", "거짓", "증거", "진술", "알리바이", "흔들", "말이 안")
 
 
 def _unique(values: list[str]) -> list[str]:
@@ -356,9 +357,8 @@ class CharacterReactionJudgeAgent:
             )
             return validate_reaction_decision(payload, decision)
 
-        if payload.interrogationTransition.get("decisiveEvidence") or (
-            _has_any(text, _PRESSURE_TERMS) and bool(public["evidenceIds"])
-        ):
+        has_pressure_challenge = _has_any(text, _PRESSURE_CHALLENGE_TERMS)
+        if payload.interrogationTransition.get("decisiveEvidence") or (has_pressure_challenge and bool(public["evidenceIds"])):
             decision = CharacterReactionDecision(
                 suspectId=payload.suspect.id,
                 reactionRoute="react_to_valid_pressure",
