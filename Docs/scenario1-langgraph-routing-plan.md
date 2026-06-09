@@ -42,19 +42,20 @@ feedback.md는 부분 반영한다. `respond_only/propose_branch`의 철학 중 
   - route가 실제 route node/functionCall로 이어지는지 확인
   - LangGraph unavailable fallback도 동일 route를 탄다는 것 확인
 
-### Commit 4 — review/librarian 자기검증 루프
+### Commit 4 — external review/librarian 자기검증 루프
 - 추가/수정:
-  - `BE/app/ai_engine/agents/reaction_review_agent.py`
-  - `BE/app/ai_engine/agents/reaction_librarian_agent.py`
-  - `BE/app/ai_engine/graph/dialogue_generation_nodes.py`
-  - `BE/tests/test_reaction_review_librarian.py`
+  - `BE/tests/test_character_reaction_judge.py`
+  - `BE/tests/test_dialogue_reaction_conditional_edges.py`
+  - Codex CLI review 결과를 반영한 routing hardening commits
 - 기능:
-  - ReviewAgent: route/plan의 안전성, 공개 refs, route-plan 일관성 자체검증
-  - LibrarianAgent: route decision과 route plan을 안전한 public route card로 정리하여 diagnostics/FE가 읽을 수 있게 보존
-  - review 실패 시 safe route로 강등
-- 테스트:
-  - private/unknown refs 및 high-impact route without evidence가 review로 강등됨
-  - librarian card가 public-only이며 player-facing label/reason을 제공
+  - Reviewer 역할: diff 기준 blocking/high-signal finding 탐지
+  - Librarian 역할: feedback2/feedback.md 요구사항 추적 및 누락 확인
+  - product runtime에는 ReviewAgent/LibrarianAgent를 추가하지 않는다. 이 프로젝트에서 reviewer/librarian은 외부 개발 오케스트레이션 역할이며, runtime state/route 권한은 `CharacterReactionJudgeAgent`와 BE validator 경계에만 둔다.
+- 반영된 검증 finding:
+  - route-specific deterministic fallback 답변이 기본 진술로 덮이지 않게 보존
+  - `네가 범인이지?` 같은 in-world accusation은 meta/private가 아니라 `reject_false_premise`로 분기
+  - provider configured 상태에서는 LLM JSON judge가 route owner가 되고, deterministic classifier는 명시적 local fallback으로만 사용
+  - route functionCall이 있더라도 configured provider에서는 CharacterAgent LLM 대사 생성 경로를 탄다
 
 ### Commit 5 — FE/BE public contract + docs/scenario update
 - 추가/수정:
@@ -65,12 +66,15 @@ feedback.md는 부분 반영한다. `respond_only/propose_branch`의 철학 중 
   - `FE/src/hooks/useInvestigationSession.ts`
   - `Docs/agentic-interrogation-flow.md`
   - `Docs/Senario/case-001.md` 또는 별도 note
+  - `BE/scripts/scenario1_dialogue_probe.py`
 - 기능:
   - FE에 “AI 판단 route” badge/diagnostic 표시
   - scenario1 authoring docs에 route별 플레이 경험 및 안전 경계 명시
+  - deterministic/local 환경에서 여러 자연어 query를 직접 쏘고 route/answer preview를 표로 확인하는 gameplay probe 제공
 - 테스트:
   - BE pytest
   - FE `npm run build`
+  - `cd BE && python scripts/scenario1_dialogue_probe.py`
 
 ### Commit 6 — 최종 검증/정리
 - 검증:
@@ -90,6 +94,6 @@ feedback.md는 부분 반영한다. `respond_only/propose_branch`의 철학 중 
 4. CharacterAgent는 route별 plan을 받아 답변 전략을 바꾼다.
 5. LightRuleCheck와 GameMasterAgent는 downstream으로 유지된다.
 6. BE는 hidden/private refs와 권위 있는 state mutation을 계속 검증한다.
-7. ReviewAgent와 LibrarianAgent가 자기검증/피드백 루프를 수행한다.
+7. 외부 Reviewer/Librarian 자기검증 루프(Codex/Claude 역할)가 blocking finding을 만들면 수정 후 재검증한다.
 8. FE/diagnostics에서 route, confidence, public reason이 확인된다.
 9. feedback.md의 branch-owner 원칙은 safe proposal/stateIntent boundary로 반영된다.

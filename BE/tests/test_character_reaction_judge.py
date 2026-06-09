@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+
+import app.ai_engine.agents.character_reaction_judge_agent as reaction_module
 from app.ai_engine.agents.character_reaction_judge_agent import (
     CharacterReactionJudgeAgent,
     validate_reaction_decision,
@@ -48,6 +51,51 @@ def _request(
 
 def _judge(payload: DialogueRequest):
     return CharacterReactionJudgeAgent().run(CharacterReactionJudgeInput(payload=payload))
+
+
+class _FakeJudgeLLM:
+    provider_name = "fake-openai"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        assert "Allowed Routes" in prompt.render_prompt()
+        return json.dumps(
+            {
+                "owner": "CharacterReactionJudgeAgent",
+                "suspectId": "char_hanseoyeon",
+                "reactionRoute": "react_to_valid_pressure",
+                "confidence": 0.91,
+                "playerClaimAssessment": "valid_pressure",
+                "characterStance": "shaken_defensive",
+                "responseIntent": "acknowledge_conflict_without_confession",
+                "referencedEvidenceIds": ["ev_lipstick_glass", "ev_hidden_private"],
+                "referencedStatementIds": ["stmt_visible_hanseoyeon"],
+                "referencedTimelineIds": [],
+                "referencedContradictionIds": [],
+                "stateIntent": {"type": "raise_pressure_intent"},
+                "rationale": "LLM selected pressure branch from public evidence.",
+                "playerFacingReason": "공개 단서로 압박이 성립합니다.",
+            },
+            ensure_ascii=False,
+        )
+
+
+def test_llm_judge_owns_route_when_provider_is_configured(monkeypatch) -> None:
+    monkeypatch.setattr(reaction_module, "llm_status", lambda: {"provider": "openai", "model": "test-model"})
+    monkeypatch.setattr(reaction_module, "get_llm", lambda: _FakeJudgeLLM())
+
+    decision = _judge(
+        _request(
+            message="와인잔 립스틱 자국이 네 진술이랑 안 맞는데?",
+            allowed_refs={"statementIds": ["stmt_visible_hanseoyeon"], "timelineIds": [], "evidenceIds": ["ev_lipstick_glass"]},
+            event_policy={"relatedEvidenceIds": ["ev_lipstick_glass"]},
+        )
+    )
+
+    assert decision.source == "llm-character-reaction-judge"
+    assert decision.reactionRoute == "react_to_valid_pressure"
+    assert decision.referencedEvidenceIds == ["ev_lipstick_glass"]
+    assert decision.stateIntent is not None
+    assert decision.stateIntent["requiresBEValidation"] is True
 
 
 def test_normal_case_question_routes_to_answer_relevant() -> None:

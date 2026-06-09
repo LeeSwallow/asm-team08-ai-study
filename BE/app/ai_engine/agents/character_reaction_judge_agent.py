@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import json
+import re
 from typing import Any
 
+from pydantic import ValidationError
+
+from app.ai_engine.core.llm import ChainedLLM, get_llm, llm_status
 from app.ai_engine.core.solution_guard import contains_secret
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent
 from app.ai_engine.schemas.agents import CharacterReactionDecision, CharacterReactionJudgeInput
 from app.ai_engine.schemas.dialogue import DialogueRequest
+from app.ai_engine.schemas.prompts import LLMChatPrompt, PromptSection
 
 _META_PRIVATE_TERMS = (
     "시스템 프롬프트",
@@ -139,16 +145,179 @@ def validate_reaction_decision(payload: DialogueRequest, decision: CharacterReac
     )
 
 
-class CharacterReactionJudgeAgent:
-    """Character-owned public-context reaction branch selector.
+_REACTION_ROUTES = (
+    "answer_relevant",
+    "deflect_irrelevant",
+    "reject_false_premise",
+    "challenge_player_contradiction",
+    "react_to_valid_pressure",
+    "ask_clarification",
+    "refuse_meta_or_private",
+)
 
-    This is intentionally conservative. It can be replaced by an LLM JSON judge
-    later, but the public schema and validator already establish the agentic
-    branch boundary requested in feedback2: the selected character interprets the
-    utterance and selects a reaction route; BE validation protects state/truth.
+
+def _json_object(text: str) -> dict[str, Any] | None:
+    stripped = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, flags=re.DOTALL)
+    if fenced:
+        stripped = fenced.group(1)
+    else:
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start >= 0 and end > start:
+            stripped = stripped[start : end + 1]
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _retrieved_context_summary(retrieved_context: object | None) -> dict[str, Any]:
+    if retrieved_context is None:
+        return {}
+    return {
+        "matchedEvidence": getattr(retrieved_context, "matched_evidence", [])[:3],
+        "matchedStatements": getattr(retrieved_context, "matched_statements", [])[:3],
+        "matchedTimelineEvents": getattr(retrieved_context, "matched_timeline_events", [])[:3],
+        "alibiSummary": getattr(retrieved_context, "alibi_summary", None),
+    }
+
+
+def _build_reaction_judge_prompt(agent_input: CharacterReactionJudgeInput) -> LLMChatPrompt:
+    payload = agent_input.payload
+    public_refs = _public_refs(payload)
+    return LLMChatPrompt(
+        systemPrompt=(
+            "당신은 탐정 누아르 게임의 CharacterReactionJudgeAgent다. 현재 선택된 용의자 관점에서 "
+            "플레이어 발화가 어떤 반응 branch를 요구하는지만 판단한다. "
+            "비공개 정답/범인/숨겨진 타임라인은 절대 추론하거나 공개하지 않는다. "
+            "상태 변경은 직접 적용하지 않고 stateIntent 후보만 낸다."
+        ),
+        sections=[
+            PromptSection(
+                title="Allowed Routes",
+                kind="constraint",
+                content=[
+                    "answer_relevant: 사건/인물 맥락에 맞는 정상 질문",
+                    "deflect_irrelevant: 사건 밖 잡담/무관한 요구",
+                    "reject_false_premise: 공개 근거 없는 범행/사실 단정",
+                    "challenge_player_contradiction: 플레이어 말이 공개 타임라인/진술과 충돌",
+                    "react_to_valid_pressure: 공개 증거/모순으로 캐릭터를 유효하게 압박",
+                    "ask_clarification: 지시어가 모호하거나 대상이 불명확",
+                    "refuse_meta_or_private: 시스템/정답/비공개 정보 요구",
+                ],
+            ),
+            PromptSection(
+                title="Public Turn Context",
+                kind="input",
+                content={
+                    "suspect": {
+                        "id": payload.suspect.id,
+                        "name": payload.suspect.name,
+                        "emotionalState": payload.suspect.emotionalState,
+                        "tensionLevel": payload.suspect.tensionLevel,
+                        "pressureState": payload.suspect.pressureState,
+                    },
+                    "playerUtterance": payload.question.text,
+                    "dialogueMode": payload.dialogueMode,
+                    "allowedStatement": {
+                        "id": payload.allowedStatement.id,
+                        "text": payload.allowedStatement.text,
+                        "sourceFacts": getattr(payload.allowedStatement, "sourceFacts", []),
+                    },
+                    "publicRefs": public_refs,
+                    "turnInterpretation": payload.turnInterpretation,
+                    "interrogationTransition": payload.interrogationTransition,
+                    "retrievedContext": _retrieved_context_summary(agent_input.retrieved_context),
+                    "providerDegraded": agent_input.providerDegraded,
+                },
+            ),
+            PromptSection(
+                title="Output Contract",
+                kind="output",
+                content={
+                    "owner": "CharacterReactionJudgeAgent",
+                    "suspectId": payload.suspect.id,
+                    "reactionRoute": "one of allowed routes",
+                    "confidence": "0..1",
+                    "playerClaimAssessment": "grounded_question|irrelevant|unsupported_claim|contradicts_visible_context|valid_pressure|ambiguous|meta_or_private",
+                    "characterStance": "short public stance",
+                    "responseIntent": "answer_visible_fact|deflect_in_character|reject_premise|point_out_inconsistency|acknowledge_conflict_without_confession|ask_specific_followup|refuse_in_world",
+                    "referencedEvidenceIds": "only ids from publicRefs.evidenceIds",
+                    "referencedStatementIds": "only ids from publicRefs.statementIds",
+                    "referencedTimelineIds": "only ids from publicRefs.timelineIds",
+                    "referencedContradictionIds": "only ids from publicRefs.contradictionIds",
+                    "stateIntent": "null unless react_to_valid_pressure; if present it is only advisory",
+                    "rationale": "internal concise reason",
+                    "playerFacingReason": "safe one-sentence reason shown to player",
+                },
+            ),
+        ],
+        outputInstruction="JSON 객체만 출력하라. 설명, markdown, 코드블록 금지.",
+    )
+
+
+class CharacterReactionJudgeAgent:
+    """LLM-first character-owned public-context reaction branch selector.
+
+    The selected suspect owns the branch decision through an LLM JSON contract when
+    a provider is configured. The deterministic classifier is the explicit local
+    fallback for missing/failed providers and for tests. Every decision still goes
+    through validate_reaction_decision so BE remains authoritative for private
+    boundaries and state mutation.
     """
 
     def run(self, agent_input: CharacterReactionJudgeInput) -> CharacterReactionDecision:
+        llm_decision = self._run_llm_decision(agent_input)
+        if llm_decision is not None:
+            return validate_reaction_decision(agent_input.payload, llm_decision)
+        return self._run_deterministic_decision(agent_input)
+
+    def _run_llm_decision(self, agent_input: CharacterReactionJudgeInput) -> CharacterReactionDecision | None:
+        status = llm_status()
+        provider = str(status.get("provider") or "")
+        if provider in {"deterministic-fallback", "provider-unavailable"}:
+            return None
+        try:
+            prompt = _build_reaction_judge_prompt(agent_input)
+            llm = get_llm()
+            seed = json.dumps(
+                {
+                    "owner": "CharacterReactionJudgeAgent",
+                    "suspectId": agent_input.payload.suspect.id,
+                    "reactionRoute": "answer_relevant",
+                    "confidence": 0.65,
+                    "playerClaimAssessment": "grounded_question",
+                    "characterStance": "controlled",
+                    "responseIntent": "answer_visible_fact",
+                    "referencedEvidenceIds": [],
+                    "referencedStatementIds": [agent_input.payload.allowedStatement.id],
+                    "referencedTimelineIds": [],
+                    "referencedContradictionIds": [],
+                    "stateIntent": None,
+                    "rationale": "default seed; choose the correct route from public context",
+                    "playerFacingReason": "공개 맥락에 맞는 질문인지 판단합니다.",
+                    "source": "llm-character-reaction-judge",
+                },
+                ensure_ascii=False,
+            )
+            raw = llm.complete(prompt, seed_text=seed, max_length=900)
+            parsed = _json_object(raw)
+            if parsed is None:
+                return None
+            parsed["suspectId"] = agent_input.payload.suspect.id
+            parsed["owner"] = "CharacterReactionJudgeAgent"
+            parsed["source"] = "llm-character-reaction-judge"
+            if isinstance(llm, ChainedLLM) and llm.used_fallback_on_last_call:
+                parsed["source"] = "llm-character-reaction-judge:fallback-provider"
+            return CharacterReactionDecision.model_validate(parsed)
+        except (ValidationError, ValueError, TypeError, KeyError):
+            return None
+        except Exception:
+            return None
+
+    def _run_deterministic_decision(self, agent_input: CharacterReactionJudgeInput) -> CharacterReactionDecision:
         payload = agent_input.payload
         text = payload.question.text.strip()
         public = _public_refs(payload)
@@ -164,11 +333,15 @@ class CharacterReactionJudgeAgent:
                 characterStance="controlled",
                 responseIntent="refuse_in_world",
                 rationale="플레이어 발화가 메타/정답/비공개 정보 유도를 포함합니다.",
-                playerFacingReason="메타/비공개 정보 요청이라 세계관 안에서 거절합니다.",
+                playerFacingReason="대답할 수 없는 요청이라 세계관 안에서 거절합니다.",
             )
             return validate_reaction_decision(payload, decision)
 
-        if payload.turnInterpretation.get("contradictsVisibleContext"):
+        has_visible_context_contradiction = bool(payload.turnInterpretation.get("contradictsVisibleContext"))
+        if not has_visible_context_contradiction and public["timelineIds"] and _has_any(text, _CONTRADICTION_TERMS):
+            has_visible_context_contradiction = True
+
+        if has_visible_context_contradiction:
             decision = CharacterReactionDecision(
                 suspectId=payload.suspect.id,
                 reactionRoute="challenge_player_contradiction",

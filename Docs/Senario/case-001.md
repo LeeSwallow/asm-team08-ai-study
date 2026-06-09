@@ -116,7 +116,7 @@
 
 ## 11. Scenario1 Character Reaction Routes
 
-Scenario1 심문은 feedback2 기준으로 현재 선택된 용의자가 플레이어 발화를 직접 판단하는 route 구조를 사용한다. FE는 매 턴 `AI 판단` badge로 public-safe route를 보여주고, BE는 route가 제안한 `stateIntent`를 직접 적용하지 않고 기존 RuleEngine/EventProcessor 검증을 거친다.
+Scenario1 심문은 feedback2 기준으로 현재 선택된 용의자가 플레이어 발화를 직접 판단하는 route 구조를 사용한다. Provider configured 상태에서는 `CharacterReactionJudgeAgent`가 LLM JSON 계약으로 route를 고르고, local/degraded 상태에서는 같은 public schema의 deterministic fallback을 사용한다. FE는 매 턴 `AI 판단` badge로 public-safe route를 보여주고, BE는 route가 제안한 `stateIntent`를 직접 적용하지 않고 기존 RuleEngine/EventProcessor 검증을 거친다.
 
 | Route | 사용 조건 | 한서연 예시 반응 | 상태 권한 |
 | --- | --- | --- | --- |

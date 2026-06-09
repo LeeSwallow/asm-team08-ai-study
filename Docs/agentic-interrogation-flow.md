@@ -56,7 +56,8 @@ flowchart LR
 설계 포인트:
 
 - 생성은 LLM이 자율적으로 하되, 전이는 `InterrogationState`가 결정적으로 수행한다.
-- `CharacterReactionJudgeAgent`가 현재 선택된 용의자 관점에서 플레이어 발화의 관련성/근거성/모순성/압박성/메타성을 판단하고, LangGraph `add_conditional_edges`가 7개 reaction route 중 하나로 실제 분기한다.
+- `CharacterReactionJudgeAgent`는 provider configured 상태에서 LLM JSON 계약으로 현재 선택된 용의자 관점의 route를 고른다. provider 미설정/장애 시 deterministic public-context classifier로 명시적으로 fallback한다.
+- LangGraph `add_conditional_edges`가 7개 reaction route 중 하나로 실제 분기한다.
 - `KnowledgeRetriever`는 캐릭터 응답 컨텍스트와 GameMaster 이벤트 컨텍스트를 분리한다.
 - `EventProcessor`는 AI/BE 제안 이벤트를 세션 공개 정책에 맞춰 검증한 뒤에만 수첩과 SSE에 반영한다.
 - 최종 고발은 사용자가 선택한 근거뿐 아니라 사건 수첩에 쌓인 모순 note 링크를 자동 포함한다.
