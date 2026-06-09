@@ -232,3 +232,5 @@ def test_matched_case_question_repairs_provider_drift_to_character_evidence_cont
     assert "와인을 마시지 않았습니다" in response.text
     assert "립스틱 색도 제 것이 아닙니다" in response.text
     assert "회의만" not in response.text
+    assert response.fallbackUsed is True
+    assert response.safety.blockedReason == "provider_drift_repaired"
