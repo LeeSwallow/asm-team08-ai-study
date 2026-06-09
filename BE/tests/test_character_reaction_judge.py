@@ -98,6 +98,38 @@ def test_llm_judge_owns_route_when_provider_is_configured(monkeypatch) -> None:
     assert decision.stateIntent["requiresBEValidation"] is True
 
 
+def test_llm_pressure_route_is_downgraded_for_non_pressure_evidence_question(monkeypatch) -> None:
+    class _OvereagerPressureLLM:
+        provider_name = "fake-openai"
+
+        def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+            return json.dumps(
+                {
+                    "owner": "CharacterReactionJudgeAgent",
+                    "suspectId": "char_hanseoyeon",
+                    "reactionRoute": "react_to_valid_pressure",
+                    "confidence": 0.9,
+                    "playerClaimAssessment": "valid_pressure",
+                    "characterStance": "shaken_defensive",
+                    "responseIntent": "acknowledge_conflict_without_confession",
+                    "referencedEvidenceIds": [],
+                    "referencedStatementIds": ["stmt_visible_hanseoyeon"],
+                    "stateIntent": {"type": "raise_pressure_intent"},
+                    "playerFacingReason": "압박으로 판단했습니다.",
+                },
+                ensure_ascii=False,
+            )
+
+    monkeypatch.setattr(reaction_module, "llm_status", lambda: {"provider": "openai", "model": "test-model"})
+    monkeypatch.setattr(reaction_module, "get_llm", lambda: _OvereagerPressureLLM())
+
+    decision = _judge(_request(message="사건 당일 10시쯤 어디에 있었죠?"))
+
+    assert decision.reactionRoute == "answer_relevant"
+    assert decision.playerClaimAssessment == "grounded_question"
+    assert decision.stateIntent is None
+
+
 def test_normal_case_question_routes_to_answer_relevant() -> None:
     decision = _judge(_request(message="사건 당일 10시쯤 어디에 있었죠?"))
 

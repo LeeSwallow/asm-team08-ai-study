@@ -98,13 +98,23 @@ def validate_reaction_decision(payload: DialogueRequest, decision: CharacterReac
     stance = decision.characterStance
     reason = decision.playerFacingReason
 
-    has_public_pressure_basis = bool(evidence_ids or contradiction_ids or payload.interrogationTransition.get("decisiveEvidence"))
+    text = payload.question.text.strip()
+    pressure_challenge = _has_any(text, _PRESSURE_CHALLENGE_TERMS)
+    has_decisive_pressure = bool(payload.interrogationTransition.get("decisiveEvidence"))
+    has_public_pressure_basis = has_decisive_pressure or (pressure_challenge and bool(evidence_ids or contradiction_ids))
     if route == "react_to_valid_pressure" and not has_public_pressure_basis:
-        route = "reject_false_premise"
-        player_claim = "unsupported_claim"
-        response_intent = "reject_premise"
-        stance = "defensive"
-        reason = "공개 근거가 부족한 압박이라 캐릭터가 전제를 반박합니다."
+        if pressure_challenge:
+            route = "reject_false_premise"
+            player_claim = "unsupported_claim"
+            response_intent = "reject_premise"
+            stance = "defensive"
+            reason = "공개 근거가 부족한 압박이라 캐릭터가 전제를 반박합니다."
+        else:
+            route = "answer_relevant"
+            player_claim = "grounded_question"
+            response_intent = "answer_visible_fact"
+            stance = "controlled"
+            reason = "압박 표현이 아닌 사건 질문이라 공개 진술 범위에서 답합니다."
         state_intent = None
         downgraded = True
     elif route != "react_to_valid_pressure":
