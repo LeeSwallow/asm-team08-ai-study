@@ -9,8 +9,6 @@ from app.ai_engine.agents.dialogue_director_agent import DialogueDirectorAgent
 from app.ai_engine.agents.dialogue_tone_polisher import DialogueTonePolisher
 from app.ai_engine.agents.game_master_agent import GameMasterAgent
 from app.ai_engine.agents.light_rule_check_agent import LightRuleCheck
-from app.ai_engine.agents.reaction_librarian_agent import ReactionLibrarianAgent
-from app.ai_engine.agents.reaction_review_agent import ReactionReviewAgent
 from app.ai_engine.core.observability import emit_ai_node_log, now_ms
 from app.ai_engine.core.text_normalization import normalize_text
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent
@@ -201,48 +199,6 @@ def build_ask_clarification_plan(state: dict[str, Any]) -> dict[str, Any]:
 
 def build_refuse_meta_or_private_plan(state: dict[str, Any]) -> dict[str, Any]:
     return _build_reaction_plan(state, "refuse_meta_or_private")
-
-
-def review_character_reaction(state: dict[str, Any]) -> dict[str, Any]:
-    started_at = now_ms()
-    payload: DialogueRequest = state["payload"]
-    result = ReactionReviewAgent().run(
-        payload=payload,
-        decision=state["character_reaction_decision"],
-        plan=state["dialogue_director_plan"],
-    )
-    emit_ai_node_log(
-        dialogue_log_context(payload),
-        node="ReactionReviewAgent",
-        started_at=started_at,
-        repaired=bool(result.reviewFindings.get("downgradedByReview")),
-        blocked_reason=str(result.reviewFindings.get("approved")),
-        level=logging.WARNING if result.reviewFindings.get("downgradedByReview") else logging.INFO,
-    )
-    return {
-        "character_reaction_decision": result.decision,
-        "dialogue_director_plan": result.plan,
-        "reaction_review": result.reviewFindings,
-        "character_reaction_route": result.decision.reactionRoute,
-    }
-
-
-def archive_character_reaction(state: dict[str, Any]) -> dict[str, Any]:
-    started_at = now_ms()
-    payload: DialogueRequest = state["payload"]
-    card = ReactionLibrarianAgent().run(
-        payload=payload,
-        decision=state["character_reaction_decision"],
-        review_findings=state.get("reaction_review"),
-    )
-    emit_ai_node_log(
-        dialogue_log_context(payload),
-        node="ReactionLibrarianAgent",
-        started_at=started_at,
-        repaired=False,
-        blocked_reason=str(card.get("route")),
-    )
-    return {"reaction_librarian_card": card}
 
 
 def direct_dialogue(state: dict[str, Any]) -> dict[str, Any]:

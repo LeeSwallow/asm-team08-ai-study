@@ -76,8 +76,6 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
             "characterReactionRoute": getattr(reaction_decision, "reactionRoute", None),
             "conditionalRouteOwner": getattr(reaction_decision, "owner", None),
             "characterReactionRouteNode": state.get("character_reaction_route_node"),
-            "reactionReview": state.get("reaction_review"),
-            "reactionLibrarianCard": state.get("reaction_librarian_card"),
             "dialogueDirector": state.get("dialogue_director_plan").model_dump()
             if state.get("dialogue_director_plan")
             else None,

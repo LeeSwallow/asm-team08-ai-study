@@ -17,11 +17,9 @@ from .dialogue_nodes import (
     generate_response,
     guard_response,
     judge_character_reaction,
-    archive_character_reaction,
     load_context,
     polish_tone,
     propose_events,
-    review_character_reaction,
     retrieve_context,
     select_character_reaction_route,
     validate_character_reaction,
@@ -50,8 +48,6 @@ _PREFIX_NODES: list[tuple[str, Node]] = [
 ]
 
 _SUFFIX_NODES: list[tuple[str, Node]] = [
-    ("ReactionReviewAgent", review_character_reaction),
-    ("ReactionLibrarianAgent", archive_character_reaction),
     ("CharacterAgent", generate_response),
     ("DialogueTonePolisher", polish_tone),
     ("LightRuleCheck", guard_response),
@@ -102,8 +98,6 @@ def _run_langgraph(initial_state: dict[str, Any]) -> dict[str, Any]:
         character_reaction_decision: Any
         character_reaction_route: str
         character_reaction_route_node: str
-        reaction_review: dict[str, Any]
-        reaction_librarian_card: dict[str, Any]
         dialogue_director_plan: Any
         character_input: Any
         draft_reply: Any
@@ -138,9 +132,7 @@ def _run_langgraph(initial_state: dict[str, Any]) -> dict[str, Any]:
         {route: node_name for route, (node_name, _) in _ROUTE_NODES.items()},
     )
     for node_name, _ in _ROUTE_NODES.values():
-        graph.add_edge(node_name, "ReactionReviewAgent")
-    graph.add_edge("ReactionReviewAgent", "ReactionLibrarianAgent")
-    graph.add_edge("ReactionLibrarianAgent", "CharacterAgent")
+        graph.add_edge(node_name, "CharacterAgent")
     graph.add_edge("CharacterAgent", "DialogueTonePolisher")
     graph.add_edge("DialogueTonePolisher", "LightRuleCheck")
     graph.add_edge("LightRuleCheck", "GameMasterAgent")
