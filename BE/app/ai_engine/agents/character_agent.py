@@ -139,7 +139,17 @@ class CharacterAgent:
             agent_input.dialogueDirectorPlan.seedText or agent_input.dialogueDirectorPlan.functionCall
         ):
             strategy = agent_input.dialogueDirectorPlan.strategy
-            if strategy in {"defensive_pressure", "deflect_unmatched", "small_talk_boundary"}:
+            if strategy in {
+                "defensive_pressure",
+                "deflect_unmatched",
+                "small_talk_boundary",
+                "deflect_irrelevant",
+                "reject_false_premise",
+                "challenge_player_contradiction",
+                "react_to_valid_pressure",
+                "ask_clarification",
+                "refuse_meta_or_private",
+            }:
                 return draft(
                     deterministic_clip(seed, max_length=payload.style.maxLength),
                     fallback_used=False,

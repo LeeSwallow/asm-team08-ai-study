@@ -52,7 +52,7 @@ def _render_director_function_seed(payload: DialogueRequest, plan: DialogueDirec
         )
         return variants[_choice_index(suspect_name, message, modulo=len(variants))]
 
-    if function_name == "deflect_unmatched_turn":
+    if function_name == "deflect_unmatched_turn" or function_name == "deflect_irrelevant_turn":
         if focus_terms:
             focus = ", ".join(focus_terms[:2])
             variants = (
@@ -69,6 +69,22 @@ def _render_director_function_seed(payload: DialogueRequest, plan: DialogueDirec
 
     if function_name == "acknowledge_public_contradiction":
         return _public_contradiction_seed(focus_terms)
+
+    if function_name == "reject_false_premise":
+        variants = (
+            "그건 근거 없는 단정입니다. 제가 말한 범위와 공개된 단서로 다시 물어보세요.",
+            "그렇게 몰아붙인다고 제가 하지 않은 말을 인정하진 않습니다. 근거가 되는 단서를 먼저 대세요.",
+        )
+        return variants[_choice_index(suspect_name, message, modulo=len(variants))]
+
+    if function_name == "challenge_player_contradiction":
+        return "방금 말은 공개된 정황과 맞지 않습니다. 어느 시간과 단서를 근거로 묻는 건지 다시 짚어보시죠."
+
+    if function_name == "ask_clarification":
+        return "그렇게만 말하면 무엇을 묻는지 알 수 없습니다. 시간, 단서, 제 진술 중 어느 부분인지 구체적으로 말해 주세요."
+
+    if function_name == "refuse_meta_or_private":
+        return "그런 식의 답은 할 수 없습니다. 저는 이 사건에서 제가 공개적으로 겪고 본 일만 말하겠습니다."
 
     if function_name == "answer_pressure_followup" and focus_terms:
         focus = ", ".join(focus_terms[:2])

@@ -17,6 +17,8 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
     fallback_reason = state.get("fallback_reason")
     intent = classify_dialogue_intent(payload.question.text, payload.dialogueMode)
     checked_reply = state.get("checked_reply")
+    reaction_decision = state.get("character_reaction_decision")
+    reaction_dump = reaction_decision.model_dump() if reaction_decision is not None else None
     matched_refs = checked_reply.sourceRefs if checked_reply is not None else payload.allowedStatement.sourceRefs
     visual_state = payload.visualState.model_copy()
     if visual_state.suspectId is None:
@@ -70,6 +72,10 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
             },
             "graphRunner": state.get("graph_runner"),
             "graphFallbackReason": state.get("graph_fallback_reason"),
+            "characterReaction": reaction_dump,
+            "characterReactionRoute": getattr(reaction_decision, "reactionRoute", None),
+            "conditionalRouteOwner": getattr(reaction_decision, "owner", None),
+            "characterReactionRouteNode": state.get("character_reaction_route_node"),
             "dialogueDirector": state.get("dialogue_director_plan").model_dump()
             if state.get("dialogue_director_plan")
             else None,
