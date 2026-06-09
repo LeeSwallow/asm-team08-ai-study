@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from pydantic import Field
-from app.ai_engine.schemas.common import BackendVerdict, CharacterTimelineContext, FlexibleModel, Safety, StorylineContext, VisualState
+
+from app.ai_engine.schemas.base import FlexibleModel
+from app.ai_engine.schemas.safety import Safety
+from app.ai_engine.schemas.storyline import CharacterTimelineContext, StorylineContext
+from app.ai_engine.schemas.verdicts import BackendVerdict
+from app.ai_engine.schemas.visual import VisualState
 
 
 class EndingExplainRequest(FlexibleModel):

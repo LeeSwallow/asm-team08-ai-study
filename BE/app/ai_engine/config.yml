@@ -1,0 +1,23 @@
+# Prompt text stays in app/ai_engine/prompts/*.py.
+# This file owns non-secret AI engine configuration.
+# Environment variables still override these values, and API keys remain env-only.
+
+llm:
+  provider: fallback
+  request_timeout_seconds: 8.0
+  generation:
+    temperature: 0.35
+    min_tokens: 80
+    max_tokens: 420
+    max_tokens_multiplier: 2
+  upstage:
+    api_url: https://api.upstage.ai/v1/chat/completions
+    model_name: solar-pro
+  openai:
+    api_url: https://api.openai.com/v1/chat/completions
+    model_name: gpt-4o-mini
+    tone_model_name: gpt-4o-mini
+
+agents:
+  light_rule_check:
+    max_regen_attempts: 2

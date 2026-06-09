@@ -4,17 +4,13 @@ from typing import Any
 
 from pydantic import AliasChoices, Field, model_validator
 
-from app.ai_engine.core.guard import strip_forbidden_private_refs
-from app.ai_engine.schemas.common import (
-    AllowedEventPolicy,
-    CharacterKnowledgePack,
-    CharacterTimelineContext,
-    FlexibleModel,
-    ProposedEvent,
-    Safety,
-    StorylineContext,
-    VisualState,
-)
+from app.ai_engine.core.private_ref_guard import strip_forbidden_private_refs
+from app.ai_engine.schemas.base import FlexibleModel
+from app.ai_engine.schemas.events import AllowedEventPolicy, ProposedEvent
+from app.ai_engine.schemas.knowledge_pack import CharacterKnowledgePack
+from app.ai_engine.schemas.safety import Safety
+from app.ai_engine.schemas.storyline import CharacterTimelineContext, StorylineContext
+from app.ai_engine.schemas.visual import VisualState
 
 
 class SourceRefs(FlexibleModel):

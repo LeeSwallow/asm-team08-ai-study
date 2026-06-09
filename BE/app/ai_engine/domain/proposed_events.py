@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent
-from app.ai_engine.schemas.common import ProposedEvent
+from app.ai_engine.schemas.events import ProposedEvent
 from app.ai_engine.schemas.dialogue import DialogueRequest
 
 AI_PROPOSABLE_EVENT_TYPES = {

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
-from app.ai_engine.application.knowledge_retriever import KnowledgeRetriever
+from app.ai_engine.retrieval.knowledge_retriever import KnowledgeRetriever
 from app.core.config import get_settings
 from app.infra.case_graph import CaseGraph
 from app.infra.neo4j_knowledge_repository import Neo4jKnowledgeGraphRepository

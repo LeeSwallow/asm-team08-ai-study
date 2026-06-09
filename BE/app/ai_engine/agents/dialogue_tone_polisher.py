@@ -2,32 +2,15 @@ from __future__ import annotations
 
 import logging
 
-from app.ai_engine.core.guard import contains_secret
+from app.ai_engine.core.solution_guard import contains_secret
 from app.ai_engine.core.llm import deterministic_clip, get_tone_llm
+from app.ai_engine.prompts.tone_polish_builder import build_tone_polish_prompt
 from app.ai_engine.schemas.agents import DraftCharacterReply
 from app.ai_engine.schemas.dialogue import DialogueRequest
 
 logger = logging.getLogger(__name__)
 
 
-TONE_POLISH_PROMPT = """
-너는 현대 한국 추리 게임의 대사 편집자다.
-candidate answer를 용의자가 심문실에서 직접 말하는 자연스러운 한국어 대사로 다시 쓴다.
-
-사실 제한:
-- FACT ANCHOR의 공개 사실만 보존한다.
-- FACT ANCHOR에 없는 새 단서, 장소, 범인 암시, 동기, 해결, 비공개 사실은 삭제한다.
-- candidate answer에 시스템/피드 문구가 있으면 대사로 바꾸지 말고 제거한다.
-
-대화감:
-- 현대 한국어 구어체. 심문실에서 사람끼리 주고받는 말처럼 쓴다.
-- 따옴표, 화자명, 괄호 지문, 해설은 쓰지 않는다.
-- 사극/무협/고문서/노학자 말투와 보고서식 정리를 피한다.
-- 플레이어에게 더 구체적으로 물어보라고 요구하지 않는다.
-- Interrogation state가 강한 압박이면 문장이 짧아지고 감정이 드러나야 한다.
-- 용의자 본인이 말한다. 자기 이름을 제3자처럼 부르거나 "누나/형/씨" 같은 호칭으로 부르지 않는다.
-- 증거 주인, 범인, 관계자는 공개 사실에 명시된 경우에만 말한다. 없으면 모른다고 버틴다.
-"""
 
 
 class DialogueTonePolisher:
@@ -47,19 +30,22 @@ class DialogueTonePolisher:
             or refs.contradictionIds
             or public_facts
         )
-        prompt = (
-            TONE_POLISH_PROMPT
-            + "\n\nSuspect:\n"
-            + f"- name: {payload.suspect.name}\n"
-            + f"- role: {payload.suspect.role or '용의자'}\n"
-            + f"- tension: {payload.suspect.tensionLevel or 'unknown'} / {payload.suspect.pressureState or 'unknown'}\n"
-            + f"- emotion: {payload.suspect.emotionalState or 'unknown'}\n"
-            + f"- tone: {payload.style.tone}\n"
-            + f"- interrogation state: {payload.interrogationTransition or payload.interrogationState or {}}\n"
-            + f"- player question: {payload.question.text}\n"
-            + f"- FACT ANCHOR: {payload.allowedStatement.text}\n"
-            + f"- VISIBLE SOURCE FACTS: {' / '.join(public_facts[:4]) if public_facts else '(none)'}\n"
-            + f"- candidate answer: {draft.draftText}\n"
+        prompt = build_tone_polish_prompt(
+            suspect={
+                "name": payload.suspect.name,
+                "role": payload.suspect.role or "용의자",
+                "tensionLevel": payload.suspect.tensionLevel or "unknown",
+                "pressureState": payload.suspect.pressureState or "unknown",
+                "emotionalState": payload.suspect.emotionalState or "unknown",
+                "tone": payload.style.tone,
+            },
+            candidate_answer=draft.draftText,
+            public_context={
+                "interrogationState": payload.interrogationTransition or payload.interrogationState or {},
+                "playerQuestion": payload.question.text,
+                "factAnchor": payload.allowedStatement.text,
+                "visibleSourceFacts": public_facts[:4],
+            },
         )
         try:
             polished = get_tone_llm().complete(

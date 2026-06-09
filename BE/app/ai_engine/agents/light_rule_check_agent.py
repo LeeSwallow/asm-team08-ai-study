@@ -3,14 +3,15 @@ from __future__ import annotations
 import logging
 import re
 
-from app.ai_engine.core.guard import guard_dialogue_text, normalize_text
+from app.ai_engine.core.config import settings
+from app.ai_engine.core.dialogue_guard import guard_dialogue_text
+from app.ai_engine.core.text_normalization import normalize_text
 from app.ai_engine.core.llm import ChainedLLM, get_llm
+from app.ai_engine.prompts.rule_check_builder import build_rule_check_regen_prompt
 from app.ai_engine.schemas.agents import CheckedCharacterReply, LightRuleCheckInput
+from app.ai_engine.schemas.prompts import PromptInput
 
 logger = logging.getLogger(__name__)
-
-# 재생성을 최대 2번까지 시도한다
-_MAX_REGEN_ATTEMPTS = 2
 
 # 분위기를 깨는 패턴 (영어 정중 표현, 챗봇 투 등)
 _ATMOSPHERE_BREAK_PATTERNS = re.compile(
@@ -77,87 +78,6 @@ def _quality_issues(
     return issues
 
 
-def _build_regen_prompt(
-    agent_input: LightRuleCheckInput,
-    issues: list[str],
-    seed_text: str,
-    attempt: int,
-) -> tuple[str, str]:
-    """재생성 시스템 프롬프트와 seed를 반환한다."""
-    pack = agent_input.characterKnowledgePack
-    draft = agent_input.draft
-
-    # 캐릭터 정보
-    voice = getattr(draft, "voice", {}) or {}
-    speech_style = voice.get("speechStyle") or {}
-    tic = str(speech_style.get("tic") or speech_style.get("prefix") or "").strip()
-    vocab = speech_style.get("vocabulary") or []
-    if isinstance(vocab, list):
-        vocab_str = ", ".join(str(v) for v in vocab[:3])
-    else:
-        vocab_str = ""
-
-    tone_meta = getattr(draft, "tone", {}) or {}
-    persona_meta = getattr(draft, "persona", {}) or {}
-    base_persona = str(persona_meta.get("basePersona") or "").strip()
-    if len(base_persona) > 80:
-        base_persona = base_persona[:79] + "…"
-
-    # 품질 실패 이유 (한국어)
-    issue_map = {
-        "too_short": "답변이 너무 짧고 불완전합니다.",
-        "seed_verbatim": "LLM이 기본 텍스트를 그대로 반환했습니다. 캐릭터의 목소리로 자연스럽게 다시 표현해야 합니다.",
-        "no_style_tic": f"캐릭터의 말투 습관({tic})이 응답에 없습니다. 자연스럽게 포함하세요.",
-        "atmosphere_break": "응답이 탐정 누아르 분위기를 벗어났습니다. 용의자 심문 맥락으로 유지하세요.",
-        "self_third_person": "용의자가 자기 자신을 제3자나 가족 호칭으로 불렀습니다. 반드시 1인칭으로 말해야 합니다.",
-        "script_direction": "괄호 지문이나 대본식 행동 묘사가 섞였습니다. 말풍선 대사만 남겨야 합니다.",
-    }
-    fail_reasons = "\n".join(f"- {issue_map.get(i, i)}" for i in issues)
-
-    # 관련 맥락 요약 (retrieved_context가 있는 경우)
-    context_lines: list[str] = []
-    retrieved = getattr(agent_input, "retrieved_context", None)
-    if retrieved and not retrieved.is_empty():
-        if retrieved.matched_timeline_events:
-            for ev in retrieved.matched_timeline_events[:2]:
-                context_lines.append(f"- 공개 타임라인: {ev.get('time', '')} {ev.get('title', '')}")
-        if retrieved.matched_evidence:
-            for ev in retrieved.matched_evidence[:2]:
-                context_lines.append(f"- 언급된 증거: {ev.get('name', '')} — {ev.get('description', '')[:60]}")
-        if retrieved.matched_statements:
-            for st in retrieved.matched_statements[:1]:
-                context_lines.append(f"- 관련 진술: {st.get('text', '')[:80]}")
-
-    context_block = "\n".join(context_lines) if context_lines else "(없음)"
-    source_facts = getattr(agent_input.allowedStatement, "sourceFacts", None) or []
-    if isinstance(source_facts, list):
-        source_fact_lines = [f"- 공개 사실: {str(item)[:100]}" for item in source_facts[:3] if str(item or "").strip()]
-        if source_fact_lines:
-            context_block = "\n".join([context_block, *source_fact_lines]) if context_block != "(없음)" else "\n".join(source_fact_lines)
-    tic_directive = f"말투 습관: {tic}" if tic else ""
-    vocab_directive = f"주요 어휘: {vocab_str}" if vocab_str else ""
-    style_directives = "\n".join(d for d in [tic_directive, vocab_directive] if d) or "(기본 스타일)"
-    tension = tone_meta.get("tensionLevel", "normal")
-    pressure = tone_meta.get("pressureState", "normal")
-
-    system = f"""당신은 탐정 누아르 추리 게임의 용의자입니다.
-이전 답변에 다음 문제가 있었습니다:
-{fail_reasons}
-
-캐릭터 정보:
-- 이름: {getattr(agent_input, "suspectName", None) or "(미지정)"}
-- 페르소나: {base_persona or '(미지정)'}
-- {style_directives}
-- 긴장 수준: {tension}, 압박 상태: {pressure}
-
-공개 맥락:
-{context_block}
-
-허용된 공개 사실을 벗어나지 말고, 용의자가 심문 중 직접 말하는 대사로 다시 답하세요.
-자기 이름을 제3자처럼 말하지 말고, 증거 소유자를 공개 사실 없이 새로 만들지 마세요.
-재시도: {attempt + 1}"""
-
-    return system, seed_text
 
 
 class LightRuleCheck:
@@ -208,8 +128,8 @@ class LightRuleCheck:
 
         # ── Phase 3: LLM 재생성 루프 ────────────────────────────────────────
         best_checked = checked
-        for attempt in range(_MAX_REGEN_ATTEMPTS):
-            system_prompt, seed = _build_regen_prompt(agent_input, issues, seed_approx, attempt)
+        for attempt in range(settings.light_rule_check_max_regen_attempts):
+            system_prompt, seed = build_rule_check_regen_prompt(agent_input, issues, seed_approx, attempt)
             regen_text = self._regenerate(system_prompt, seed, agent_input.draft.model or "")
             if regen_text is None:
                 break
@@ -254,7 +174,7 @@ class LightRuleCheck:
             fallback_safety = {
                 **fallback_checked.safetyFindings,
                 "regenerated": True,
-                "regenerationAttempts": _MAX_REGEN_ATTEMPTS,
+                "regenerationAttempts": settings.light_rule_check_max_regen_attempts,
                 "qualityFallback": True,
                 "qualityIssuesResolved": list(_HARD_QUALITY_ISSUES & set(remaining_issues)),
                 "finalTextSource": "quality_fallback_after_regeneration",
@@ -265,7 +185,7 @@ class LightRuleCheck:
             "light_rule_check regeneration exhausted, using best version",
             extra={
                 "service": "backend",
-                "attempts": _MAX_REGEN_ATTEMPTS,
+                "attempts": settings.light_rule_check_max_regen_attempts,
                 "suspectId": agent_input.draft.suspectId,
             },
         )
@@ -312,7 +232,7 @@ class LightRuleCheck:
             errorType=agent_input.draft.errorType,
         )
 
-    def _regenerate(self, system_prompt: str, seed: str, model_hint: str) -> str | None:
+    def _regenerate(self, system_prompt: PromptInput, seed: str, model_hint: str) -> str | None:
         """LLM을 호출하여 재생성된 텍스트를 반환한다. 실패 시 None."""
         try:
             llm = get_llm()

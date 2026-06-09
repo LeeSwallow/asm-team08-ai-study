@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import Literal
 from pydantic import Field
 
-from app.ai_engine.schemas.common import CharacterTimelineContext, EvidenceRef, FlexibleModel, Safety, StorylineContext, VisualState
+from app.ai_engine.schemas.base import FlexibleModel
+from app.ai_engine.schemas.evidence import EvidenceRef
+from app.ai_engine.schemas.safety import Safety
+from app.ai_engine.schemas.storyline import CharacterTimelineContext, StorylineContext
+from app.ai_engine.schemas.visual import VisualState
 
 
 class HintRequest(FlexibleModel):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.ai_engine.application.knowledge_retriever import KnowledgeRetriever
+from app.ai_engine.retrieval.knowledge_retriever import KnowledgeRetriever
 from app.ai_engine.domain.proposed_events import propose_dialogue_events
 from app.ai_engine.schemas.dialogue import DialogueRequest
 
