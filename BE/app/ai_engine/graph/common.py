@@ -56,6 +56,7 @@ def run_langgraph_or_pipeline(initial_state: dict[str, Any], nodes: list[tuple[s
             gm_input: Any
             game_master_proposal: Any
             safety_findings: dict[str, Any]
+            grounding_findings: dict[str, Any]
             meta: dict[str, Any]
             fallback_used: bool
             degraded: bool

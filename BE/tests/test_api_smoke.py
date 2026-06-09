@@ -866,6 +866,106 @@ def test_dialogue_broad_time_range_and_meta_followups_are_timeline_grounded(tmp_
     assert all("조카로서 말씀드리자면" not in answer for answer in answers)
 
 
+def test_pressure_followup_reuses_public_statement_without_generic_room_alibi(tmp_path, monkeypatch):
+    captured_payloads = []
+
+    class CapturingAIClient:
+        async def dialogue_response_info(self, payload, fallback):
+            captured_payloads.append(payload)
+            return {
+                "answer": fallback,
+                "proposedEvents": [],
+                "fallbackUsed": False,
+                "provider": "pressure-test-ai",
+                "safety": {"status": "checked"},
+            }
+
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: CapturingAIClient())
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    discovery = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_yoonjaeho", "message": "피해자를 언제 발견했나요?"},
+    ).json()
+    challenge = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_yoonjaeho", "message": "그 말이 납득된다고 생각합니까?"},
+    ).json()
+
+    pressure_payload = captured_payloads[-1]
+    assert discovery["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_discovery"
+    assert challenge["dialogueResult"]["dialogueMode"] == "pressure_followup"
+    assert "22:10" in pressure_payload["allowedStatement"]["text"]
+    assert "방에 있었다" not in pressure_payload["allowedStatement"]["text"]
+    assert "방에 있었습니다" not in challenge["answer"]
+
+
+def test_local_ai_claim_grounding_repairs_new_alibi_but_keeps_registered_lie(tmp_path, monkeypatch):
+    import app.ai_engine.application.character_agent as ca_mod
+    import app.ai_engine.application.dialogue_tone_polisher as tone_mod
+    from app.infra.local_ai_client import LocalAIClient
+
+    class SeedLLM:
+        provider_name = "upstage"
+
+        def complete(self, prompt, *, seed_text, max_length=220):
+            return seed_text[:max_length]
+
+    def drift_or_keep_lie(self, payload, draft):
+        if payload.suspect.id == "char_choiyuna":
+            text = "\ub124, \uadf8\ub0a0 \uc77c\uc815\uc0c1 \ud68c\uc758 \ud6c4 \ubc14\ub85c \uadc0\uac00\ud588\uc2b5\ub2c8\ub2e4. \ud68c\uc7a5\ub2d8 \uc9c0\uc2dc\uc0ac\ud56d \ud655\uc778\ud588\uace0\uc694."
+        else:
+            text = "\u2026\uc0ac\uc2e4\uc740 \ubc24 10\uc2dc\ucbe4 \uc81c \ubc29\uc5d0 \uc788\uc5c8\uc5b4\uc694. \uc0ac\uc5c5 \uc2e4\ud328 \uc774\ud6c4 \uc7a0\ub3c4 \uc81c\ub300\ub85c \ubabb \uc794\uace0\uc694."
+        return draft.model_copy(update={"draftText": text})
+
+    client = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(deps, "get_ai_client", lambda: LocalAIClient())
+    monkeypatch.setattr(ca_mod, "get_llm", lambda: SeedLLM())
+    monkeypatch.setattr(
+        ca_mod,
+        "llm_status",
+        lambda: {
+            "provider": "upstage",
+            "model": "solar-pro",
+            "configured": True,
+            "serviceDegraded": False,
+            "fallbackConfigured": False,
+            "timeoutMs": 8000,
+        },
+    )
+    monkeypatch.setattr(tone_mod.DialogueTonePolisher, "run", drift_or_keep_lie)
+
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+    lie = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "\ubc24 10\uc2dc \uc804\ud6c4\uc5d0\ub294 \uc5b4\ub514\uc5d0 \uc788\uc5c8\uc5b4\uc694?"},
+    ).json()
+    drift = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_choiyuna", "message": "\uc11c\uc7ac\uc758 \uc640\uc778\uc794\uc744 \uc54c\uace0 \uc788\ub098\uc694?"},
+    ).json()
+
+    lie_grounding = lie["dialogueResult"]["aiRuntimeDiagnostics"]["grounding"]
+    assert lie_grounding["checked"] is True
+    assert lie_grounding["repaired"] is False
+    assert "\uc81c \ubc29" in lie["answer"]
+    assert "\uc7a0\ub3c4 \uc81c\ub300\ub85c \ubabb \uc794\uace0\uc694" in lie["answer"]
+
+    drift_grounding = drift["dialogueResult"]["aiRuntimeDiagnostics"]["grounding"]
+    assert drift_grounding["checked"] is True
+    assert drift_grounding["repaired"] is True
+    assert drift_grounding["basis"] == "allowed_statement_claim"
+    assert drift_grounding["repairReason"] == "claim_grounding_repaired"
+    assert drift_grounding["finalTextSource"] == "public_seed_after_claim_grounding"
+    assert "unsupported_concrete_claim" in drift_grounding["issues"]
+    assert "required_anchor_claim_missing" in drift_grounding["issues"]
+    assert drift["answer"] == "\ub124, \uc800\ub294 \uadf8\ub0a0 \uc640\uc778\uc744 \ub9c8\uc2dc\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4. \ub9bd\uc2a4\ud2f1 \uc0c9\ub3c4 \uc81c \uac83\uc774 \uc544\ub2d9\ub2c8\ub2e4."
+    assert "\uadc0\uac00" not in drift["answer"]
+
+
 def test_dialogue_routes_korean_typo_medication_and_lipstick_queries_with_diagnostics(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
