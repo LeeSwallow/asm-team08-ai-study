@@ -347,7 +347,17 @@ def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
     payload: DialogueRequest = state["payload"]
     draft_reply = state["draft_reply"]
     director_plan = state.get("dialogue_director_plan")
-    if director_plan and director_plan.strategy in {"defensive_pressure", "deflect_unmatched", "small_talk_boundary"}:
+    if director_plan and director_plan.strategy in {
+        "defensive_pressure",
+        "deflect_unmatched",
+        "small_talk_boundary",
+        "deflect_irrelevant",
+        "reject_false_premise",
+        "challenge_player_contradiction",
+        "react_to_valid_pressure",
+        "ask_clarification",
+        "refuse_meta_or_private",
+    }:
         emit_ai_node_log(
             dialogue_log_context(payload),
             node="DialogueTonePolisher",

@@ -11,7 +11,8 @@ _META_PRIVATE_TERMS = (
     "시스템 프롬프트",
     "system prompt",
     "프롬프트",
-    "범인",
+    "범인 알려",
+    "범인이 누구",
     "정답",
     "culprit",
     "solution",
@@ -153,7 +154,8 @@ class CharacterReactionJudgeAgent:
         public = _public_refs(payload)
         intent = classify_dialogue_intent(text, payload.dialogueMode)
 
-        if contains_secret(text)[0] or _has_any(text, _META_PRIVATE_TERMS):
+        in_world_accusation = _has_any(text, _ACCUSATION_TERMS)
+        if (contains_secret(text)[0] and not in_world_accusation) or _has_any(text, _META_PRIVATE_TERMS):
             decision = CharacterReactionDecision(
                 suspectId=payload.suspect.id,
                 reactionRoute="refuse_meta_or_private",
@@ -205,7 +207,7 @@ class CharacterReactionJudgeAgent:
             )
             return validate_reaction_decision(payload, decision)
 
-        if _has_any(text, _ACCUSATION_TERMS):
+        if in_world_accusation:
             decision = CharacterReactionDecision(
                 suspectId=payload.suspect.id,
                 reactionRoute="reject_false_premise",

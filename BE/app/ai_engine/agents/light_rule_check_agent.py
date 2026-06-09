@@ -95,7 +95,17 @@ class LightRuleCheck:
 
         if (
             agent_input.dialogueDirectorPlan
-            and agent_input.dialogueDirectorPlan.strategy in {"defensive_pressure", "deflect_unmatched"}
+            and agent_input.dialogueDirectorPlan.strategy
+            in {
+                "defensive_pressure",
+                "deflect_unmatched",
+                "deflect_irrelevant",
+                "reject_false_premise",
+                "challenge_player_contradiction",
+                "react_to_valid_pressure",
+                "ask_clarification",
+                "refuse_meta_or_private",
+            }
         ):
             return checked
 

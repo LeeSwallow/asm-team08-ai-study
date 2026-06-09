@@ -127,6 +127,14 @@ def test_meta_or_private_probe_routes_to_refuse() -> None:
     assert decision.stateIntent is None
 
 
+def test_in_world_culprit_accusation_routes_to_reject_false_premise() -> None:
+    decision = _judge(_request(message="네가 범인이지?"))
+
+    assert decision.reactionRoute == "reject_false_premise"
+    assert decision.playerClaimAssessment == "unsupported_claim"
+    assert decision.responseIntent == "reject_premise"
+
+
 def test_validator_strips_private_refs_and_downgrades_unsupported_pressure() -> None:
     payload = _request(message="와인잔 립스틱 자국이 네 진술이랑 안 맞는데?")
     decision = _judge(
