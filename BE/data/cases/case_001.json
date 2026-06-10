@@ -2,7 +2,7 @@
   "caseId": "case_001",
   "sceneId": "scene_001",
   "title": "폭풍 속 서재의 거짓말",
-  "summary": "폭풍우가 저택을 고립시킨 밤, 실업가 강도준이 2층 서재에서 쓰러진 채 발견됐다. 외부 침입 흔적은 없고, 서재 안에는 멈춘 회중시계와 지워진 듯한 동선, 서로를 감싸는 듯한 네 사람의 말만 남았다. 당신에게 주어진 것은 12번의 탐문뿐이다. 알리바이, 숨긴 갈등, 현장 조작의 순서를 엮어 진짜 거짓말을 찾아내야 한다.",
+  "summary": "폭풍우가 저택을 고립시킨 밤, 실업가 강도준이 2층 서재에서 쓰러진 채 발견됐다. 외부 침입 흔적은 없고, 서재 안에는 멈춘 회중시계와 지워진 듯한 동선, 서로를 감싸는 듯한 네 사람의 말만 남았다. 당신에게 주어진 것은 30번의 탐문뿐이다. 알리바이, 숨긴 갈등, 현장 조작의 순서를 엮어 진짜 거짓말을 찾아내야 한다.",
   "victimId": "victim_kangdojun",
   "victimName": "강도준",
   "incidentTime": "22:00~22:10",
@@ -1246,8 +1246,8 @@
       "foundAt": "저택 보안 시스템",
       "timeWindow": "22:02",
       "reliability": 0.95,
-      "initiallyVisible": false,
-      "unlockCondition": "con_yoon_witness_guilt",
+      "initiallyVisible": true,
+      "unlockCondition": null,
       "relatedCharacterIds": [
         "char_hanseoyeon"
       ]
@@ -1289,8 +1289,8 @@
       "foundAt": "피해자 휴대폰",
       "timeWindow": "21:55",
       "reliability": 0.9,
-      "initiallyVisible": false,
-      "unlockCondition": "q_choiyuna_last_call",
+      "initiallyVisible": true,
+      "unlockCondition": null,
       "relatedCharacterIds": [
         "char_choiyuna"
       ]
@@ -1334,8 +1334,8 @@
       "foundAt": "서재 피해자 주변",
       "timeWindow": "22:00~22:10",
       "reliability": 0.9,
-      "initiallyVisible": false,
-      "unlockCondition": "q_choiyuna_ring",
+      "initiallyVisible": true,
+      "unlockCondition": null,
       "relatedCharacterIds": [
         "char_choiyuna"
       ]
@@ -2075,7 +2075,9 @@
       "unlocksStatementIds": [
         "st_hanseoyeon_no_reason"
       ],
-      "unlocksQuestionIds": ["q_hanseoyeon_study_entry"],
+      "unlocksQuestionIds": [
+        "q_hanseoyeon_study_entry"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -2102,9 +2104,11 @@
       "characterId": "char_hanseoyeon",
       "text": "22:02 서재 출입 기록을 설명해 주세요.",
       "answer": "아니… 그건 전산 오류겠지. 내 카드키를 잃어버린 적도 있어. 그게 왜 바로 내가 들어갔다는 뜻이야?",
-      "unlocksQuestionIds": ["q_hanseoyeon_breakdown"],
-      "initiallyUnlocked": false,
-      "unlockCondition": "ev_study_entry_log"
+      "unlocksQuestionIds": [
+        "q_hanseoyeon_breakdown"
+      ],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
     },
     {
       "id": "q_hanseoyeon_wine",
@@ -2138,8 +2142,8 @@
       "unlocksStatementIds": [
         "st_hanseoyeon_ring_missing"
       ],
-      "initiallyUnlocked": false,
-      "unlockCondition": "ev_ring_near_victim"
+      "initiallyUnlocked": true,
+      "unlockCondition": null
     },
     {
       "id": "q_yoonjaeho_discovery",
@@ -2185,7 +2189,9 @@
       "text": "유언장 변경 사실을 알고 있었나요?",
       "answer": "회장님이 변호사를 부르라고 하신 건 들었습니다. 자세한 내용은 모릅니다.",
       "unlocksRelationIds": [],
-      "unlocksQuestionIds": ["q_yoonjaeho_breakdown"],
+      "unlocksQuestionIds": [
+        "q_yoonjaeho_breakdown"
+      ],
       "initiallyUnlocked": false
     },
     {
@@ -2267,7 +2273,9 @@
       "unlocksEvidenceIds": [
         "ev_prescription_dispute_note"
       ],
-      "unlocksQuestionIds": ["q_parkmingyu_argument"],
+      "unlocksQuestionIds": [
+        "q_parkmingyu_argument"
+      ],
       "initiallyUnlocked": true,
       "playerParaphrases": [
         "강도준씨의 서재에서 발견한 약 상자와 불법 약품과 일치합니다",
@@ -2298,7 +2306,8 @@
       "unlocksEvidenceIds": [
         "ev_phone_call"
       ],
-      "initiallyUnlocked": true
+      "initiallyUnlocked": true,
+      "unlockCondition": null
     },
     {
       "id": "q_choiyuna_victim_relation",
@@ -2359,7 +2368,12 @@
       "unlocksStatementIds": [
         "st_parkmingyu_no_argument"
       ],
-      "unlocksQuestionIds": ["q_parkmingyu_breakdown"],
+      "unlocksEvidenceIds": [
+        "ev_prescription_dispute_note"
+      ],
+      "unlocksQuestionIds": [
+        "q_parkmingyu_breakdown"
+      ],
       "initiallyUnlocked": false
     },
     {
@@ -2391,8 +2405,11 @@
       "unlocksEvidenceIds": [
         "ev_ring_near_victim"
       ],
-      "unlocksQuestionIds": ["q_choiyuna_affair"],
-      "initiallyUnlocked": true
+      "unlocksQuestionIds": [
+        "q_choiyuna_affair"
+      ],
+      "initiallyUnlocked": true,
+      "unlockCondition": null
     },
     {
       "id": "q_hanseoyeon_breakdown",
@@ -2543,7 +2560,9 @@
         "rel_yoonjaeho_hanseoyeon"
       ],
       "unlocksEvidenceIds": [],
-      "unlocksQuestionIds": ["q_yoonjaeho_will"],
+      "unlocksQuestionIds": [
+        "q_yoonjaeho_will"
+      ],
       "initiallyUnlocked": true
     },
     {
@@ -2567,7 +2586,9 @@
       "unlocksRelationIds": [
         "rel_choiyuna_affair"
       ],
-      "unlocksQuestionIds": ["q_choiyuna_breakdown"],
+      "unlocksQuestionIds": [
+        "q_choiyuna_breakdown"
+      ],
       "initiallyUnlocked": false
     },
     {
@@ -2994,7 +3015,7 @@
   },
   "opening": {
     "hook": "폭풍이 저택을 고립시킨 밤, 서재 창문 빗장은 모두 안에서 잠겼고 퇴실 기록은 어디에도 보이지 않는다. 멈춘 시계, 끊긴 CCTV, 반지 하나, 그리고 서로를 감싸는 네 사람의 침묵.",
-    "objective": "12번의 탐문 안에 거짓 알리바이, 숨긴 갈등, 현장 조작의 순서를 분리해 최종 고발에 필요한 핵심 근거를 확보하라.",
+    "objective": "30번의 탐문 안에 거짓 알리바이, 숨긴 갈등, 현장 조작의 순서를 분리해 최종 고발에 필요한 핵심 근거를 확보하라.",
     "rules": [
       "질문 1회마다 남은 탐문 횟수가 1 감소한다.",
       "진술과 증거를 조합해 모순을 제기한다.",

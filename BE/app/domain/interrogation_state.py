@@ -258,6 +258,8 @@ def transition_interrogation_state(
     previous_contradiction_count = len(suspect_discovered_contradiction_ids(case, session, suspect_id))
     evidence_ids = _visible_evidence_ids_mentioned(case, session, player_message)
     statement_ids = list(allowed_event_policy.get("relatedStatementIds") or [])
+    if move == "ask_case_fact" and evidence_ids:
+        move = "present_evidence"
     newly_discovered: list[str] = []
     turn_contradiction_ids: list[str] = []
     decisive = False
