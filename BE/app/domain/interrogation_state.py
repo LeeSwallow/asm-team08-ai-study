@@ -25,46 +25,46 @@ def clamp_pressure(value: int | float | None) -> int:
 
 def pressure_state(pressure: int | float | None) -> str:
     score = clamp_pressure(pressure)
-    if score >= 70:
+    if score >= 75:
         return "broken"
-    if score >= 30:
+    if score >= 32:
         return "pressed"
     return "normal"
 
 
 def emotional_state(pressure: int | float | None) -> str:
     score = clamp_pressure(pressure)
-    if score >= 70:
+    if score >= 75:
         return "breakdown"
-    if score >= 45:
+    if score >= 52:
         return "shocked"
-    if score >= 30:
+    if score >= 32:
         return "defensive"
-    if score >= 15:
+    if score >= 16:
         return "wary"
     return "neutral"
 
 
 def tension_level(pressure: int | float | None) -> str:
     score = clamp_pressure(pressure)
-    if score >= 70:
+    if score >= 75:
         return "critical"
-    if score >= 45:
+    if score >= 52:
         return "high"
-    if score >= 30:
+    if score >= 32:
         return "medium"
     return "low"
 
 
 def composure_state(pressure: int | float | None) -> str:
     score = clamp_pressure(pressure)
-    if score >= 70:
+    if score >= 75:
         return "broken"
-    if score >= 55:
+    if score >= 58:
         return "breaking"
-    if score >= 35:
+    if score >= 38:
         return "rattled"
-    if score >= 15:
+    if score >= 16:
         return "guarded"
     return "calm"
 
@@ -75,10 +75,13 @@ def disclosure_stage(
     has_core_contradiction: bool = False,
 ) -> str:
     score = clamp_pressure(pressure)
-    if discovered_contradiction_count >= 3 or (has_core_contradiction and discovered_contradiction_count >= 2) or score >= 70:
+    # public_break: core 포함 2개+, 또는 3개+, 또는 압박 70+
+    if (has_core_contradiction and discovered_contradiction_count >= 2) or discovered_contradiction_count >= 3 or score >= 70:
         return "public_break"
-    if has_core_contradiction or discovered_contradiction_count >= 2 or score >= 55:
+    # forced_explanation: 2개+, 또는 압박 55+
+    if discovered_contradiction_count >= 2 or score >= 55:
         return "forced_explanation"
+    # partial_admission: 1개+, 또는 압박 35+
     if discovered_contradiction_count >= 1 or score >= 35:
         return "partial_admission"
     if score >= 15:
@@ -90,10 +93,10 @@ def pressure_for_stage(stage: str) -> int:
     """Compatibility score for existing UI/API surfaces; not a transition rule."""
     return {
         "denial": 0,
-        "deflection": 20,
-        "partial_admission": 42,
-        "forced_explanation": 62,
-        "public_break": 82,
+        "deflection": 12,
+        "partial_admission": 30,
+        "forced_explanation": 50,
+        "public_break": 72,
     }.get(stage, 0)
 
 
