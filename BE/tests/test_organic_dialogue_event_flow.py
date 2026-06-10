@@ -58,6 +58,35 @@ def test_hanseoyeon_polish_keeps_generated_dialogue_in_banmal():
     assert "죠" not in polished
 
 
+def test_yoonjaeho_free_text_relationship_and_after_22_questions_are_contextual(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    relationship = _post_dialogue(client, session_id, "char_yoonjaeho", "너랑 회장님이랑 어떤 관계지?").json()
+    print("\n[YOO-FREETEXT] relationship:", relationship["answer"])
+    assert relationship["dialogueResult"]["consumedQuestion"] is True
+    assert relationship["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_victim_relation"
+    assert "30년" in relationship["answer"] or "모신" in relationship["answer"]
+    assert "사건과 관련된 것만" not in relationship["answer"]
+    assert any(item["relationshipId"] == "rel_yoonjaeho_loyalty" for item in relationship["relations"])
+
+    vague = _post_dialogue(client, session_id, "char_yoonjaeho", "뭐야?").json()
+    print("[YOO-FREETEXT] vague:", vague["answer"])
+    assert vague["dialogueResult"]["consumedQuestion"] is False
+    assert vague["dialogueResult"]["matchedQuestionId"] is None
+    assert vague["remainingQuestions"] == relationship["remainingQuestions"]
+    assert "어떤 시간을" not in vague["answer"]
+    assert "어떤 증거" not in vague["answer"]
+
+    after_22 = _post_dialogue(client, session_id, "char_yoonjaeho", "너는 22시 이후에 어디있었어?").json()
+    print("[YOO-FREETEXT] after_22:", after_22["answer"])
+    assert after_22["dialogueResult"]["consumedQuestion"] is True
+    assert after_22["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_discovery"
+    assert "22:10" in after_22["answer"] or "서재" in after_22["answer"]
+    assert "그런 이야기를 나눌 상황" not in after_22["answer"]
+
+
 @pytest.mark.parametrize("suspect_id", sorted(SUSPECT_DIALOGUE_MESSAGES))
 def test_each_suspect_has_a_stable_12_turn_dialogue_budget_and_exhaustion_nudge(
     tmp_path,

@@ -86,6 +86,28 @@ def _character_group(payload: DialogueRequest) -> str:
 def _human_deflection_variants(payload: DialogueRequest) -> tuple[str, ...]:
     band = _seed_pressure_band(payload)
     group = _character_group(payload)
+    player_text = " ".join(payload.question.text.strip().split())
+    compact_player_text = player_text.replace(" ", "")
+    if compact_player_text in {"뭐야", "뭐죠", "뭔데", "무슨말"}:
+        by_group = {
+            "butler": (
+                "무슨 말씀인지 분명하지 않습니다. 제가 본 일이라면 구체적으로 물어봐 주십시오.",
+                "질문이 너무 짧습니다. 회장님 일이나 제 동선을 묻는 거라면 분명히 말씀해 주십시오.",
+            ),
+            "niece": (
+                "뭐가 뭔데? 물을 거 있으면 제대로 물어.",
+                "그렇게 던지지 말고, 뭘 묻는 건지 똑바로 말해.",
+            ),
+            "doctor": (
+                "무슨 의미인지 모호합니다. 의학 기록인지 그날 동선인지 분명히 물어보시죠.",
+                "그렇게만 말하면 답할 수 없습니다. 확인하려는 대상을 말해 주세요.",
+            ),
+            "secretary": (
+                "무슨 말씀인지 모르겠습니다. 일정인지 연락 기록인지 구체적으로 물어봐 주세요.",
+                "질문을 조금만 분명히 해 주세요. 제가 확인한 업무 기록 범위에서 답하겠습니다.",
+            ),
+        }
+        return by_group.get(group, ("무엇을 묻는지 분명하지 않습니다. 구체적으로 말해 주세요.",))
     if band == "critical":
         by_group = {
             "niece": (

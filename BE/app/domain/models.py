@@ -134,6 +134,7 @@ class Question(BaseModel):
     characterId: str
     text: str
     answer: str
+    playerParaphrases: List[str] = Field(default_factory=list)
     unlocksStatementIds: List[str] = Field(default_factory=list)
     unlocksEvidenceIds: List[str] = Field(default_factory=list)
     unlocksRecordIds: List[str] = Field(default_factory=list)

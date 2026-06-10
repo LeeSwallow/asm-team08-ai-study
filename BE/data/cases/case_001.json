@@ -1329,6 +1329,13 @@
       "characterId": "char_yoonjaeho",
       "text": "피해자를 언제 발견했나요?",
       "answer": "22:10쯤 순찰 중 서재 문이 열려 있는 걸 보고 안을 확인했습니다.",
+      "playerParaphrases": [
+        "너는 22시 이후에 어디 있었어?",
+        "22시 이후 어디에 있었나요?",
+        "22시 뒤 동선을 말해 주세요.",
+        "밤 10시 이후 행적은 어떻게 됩니까?",
+        "서재 문을 발견하기 전후 어디 있었나요?"
+      ],
       "unlocksStatementIds": [
         "st_yoonjaeho_found_2210"
       ],
@@ -1354,6 +1361,24 @@
       "characterId": "char_yoonjaeho",
       "text": "유언장 변경 사실을 알고 있었나요?",
       "answer": "회장님이 변호사를 부르라고 하신 건 들었습니다. 자세한 내용은 모릅니다.",
+      "unlocksRelationIds": [
+        "rel_yoonjaeho_loyalty"
+      ],
+      "initiallyUnlocked": true
+    },
+    {
+      "id": "q_yoonjaeho_victim_relation",
+      "questionId": "q_yoonjaeho_victim_relation",
+      "characterId": "char_yoonjaeho",
+      "text": "회장님과 어떤 관계였나요?",
+      "answer": "30년 동안 회장님을 모신 집사입니다. 가족은 아니지만, 이 집안의 일은 오래 지켜봤습니다.",
+      "playerParaphrases": [
+        "너랑 회장님이랑 어떤 관계지?",
+        "너랑 회장님은 무슨 사이입니까?",
+        "회장님과는 어떤 사이였나요?",
+        "강도준 회장과 무슨 관계입니까?",
+        "집사로서 회장님을 얼마나 오래 모셨나요?"
+      ],
       "unlocksRelationIds": [
         "rel_yoonjaeho_loyalty"
       ],

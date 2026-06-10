@@ -185,6 +185,11 @@ def build_character_dialogue_prompt(
 ) -> LLMChatPrompt:
     """Build the CharacterAgent prompt as typed sections, not ad-hoc concatenated text."""
     sections: list[PromptSection] = []
+    terse_vague = False
+    if plan and plan.functionCall:
+        raw_args = plan.functionCall.get("arguments")
+        args = raw_args if isinstance(raw_args, dict) else {}
+        terse_vague = bool(args.get("terseVague"))
     interrogation = interrogation_prompt_context(payload, plan).strip()
     if interrogation:
         sections.append(PromptSection(title="Interrogation State", kind="context", content=interrogation))
@@ -199,7 +204,7 @@ def build_character_dialogue_prompt(
                 "playerQuestion": payload.question.text,
                 "dialogueMode": payload.dialogueMode,
                 "turnIntent": (payload.turnInterpretation or {}).get("intent"),
-                "responseRequirement": "사용자의 이번 발화에 직접 반응하라. 단, 공개 사실 범위 안에서만 답하고 모르면 모른다고/구체화해 달라고 말하라.",
+                "responseRequirement": "사용자의 이번 발화에 직접 반응하라. 단, 공개 사실 범위 안에서만 답하고 모르면 모른다고/구체화해 달라고 말하라. 플레이어가 '뭐야'처럼 매우 짧게 물으면 임의로 시간/증거/진술 축을 만들지 말고, FACT ANCHOR에 가깝게 인물의 말투로 무엇을 묻는지 특정해 달라고 하라.",
             },
         )
     )
@@ -222,8 +227,11 @@ def build_character_dialogue_prompt(
                 },
             )
         )
+    output_instruction = "따옴표 없이, 현대 한국어 구어체로, 용의자의 다음 대사 한 줄만 출력하라."
+    if terse_vague:
+        output_instruction += " 이번 턴은 모호한 짧은 발화이므로 FACT ANCHOR를 거의 유지하고, '시간/증거/진술 중' 같은 선택지 나열을 추가하지 마라."
     return LLMChatPrompt(
         systemPrompt=DIALOGUE_SYSTEM_PROMPT,
         sections=sections,
-        outputInstruction="따옴표 없이, 현대 한국어 구어체로, 용의자의 다음 대사 한 줄만 출력하라.",
+        outputInstruction=output_instruction,
     )

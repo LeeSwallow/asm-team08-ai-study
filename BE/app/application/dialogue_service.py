@@ -969,8 +969,11 @@ class DialogueService:
             term in question_compact for term in ("약", "복용", "처방", "수면제")
         ):
             score += 3
-
-        search_texts = [question.text]
+        search_texts = [question.text, *getattr(question, "playerParaphrases", [])]
+        for paraphrase in getattr(question, "playerParaphrases", []):
+            paraphrase_compact = self._normalize_text(paraphrase).replace(" ", "")
+            if paraphrase_compact and (paraphrase_compact in compact or compact in paraphrase_compact):
+                score += 4
         search_texts.extend(
             statement.text
             for statement in case.statements
@@ -1019,7 +1022,10 @@ class DialogueService:
             or any(term in compact for term in ("그시간", "그때", "밤10시", "열시", "22시까지"))
         ):
             return None
-        return next((item for item in candidates if item.questionId.endswith("alibi")), None)
+        alibi = next((item for item in candidates if item.questionId.endswith("alibi")), None)
+        if alibi is not None:
+            return alibi
+        return next((item for item in candidates if item.questionId.endswith("discovery")), None)
 
     def _is_meta_pressure_followup(self, session: SessionState, suspect_id: str, normalized_message: str) -> bool:
         compact = normalized_message.replace(" ", "")
@@ -1120,8 +1126,12 @@ class DialogueService:
 
     def _fallback_answer_for_intent(self, dialogue_mode: str, suspect, message: str) -> str:
         if dialogue_mode == "small_talk":
+            if suspect.characterId == "char_yoonjaeho":
+                return "인사는 나중에 하겠습니다. 확인하실 일을 분명히 말씀해 주십시오."
             return "인사는 됐어요. 정말 묻고 싶은 게 있잖아요."
         if dialogue_mode == "evidence_question":
+            if suspect.characterId == "char_yoonjaeho":
+                return "그 단서와 제 진술을 어떻게 연결하시는지 분명히 말씀해 주십시오. 제가 본 범위에서 답하겠습니다."
             return "그 얘기를 제게 돌리시려는 건가요. 쉽게 인정할 수는 없습니다."
         if dialogue_mode == "pressure_followup":
             compact = self._normalize_text(message).replace(" ", "")
@@ -1129,7 +1139,11 @@ class DialogueService:
                 return "말이 안 된다고 몰아붙이셔도 제 기억은 같아요. 저는 22시쯤 방에 있었습니다."
             return "피하려는 게 아닙니다. 저는 그 시간에 제 방에 있었다고 기억합니다."
         if dialogue_mode == "timeline_question":
+            if suspect.characterId == "char_yoonjaeho":
+                return "22시 이후라면 저는 순찰 중이었고, 22:10쯤 서재 문이 열려 있는 것을 확인했습니다."
             return "그 시간대라면 저는 제 방에 있었어요. 폭풍 때문에 방 밖으로 오래 나갈 상황도 아니었습니다."
+        if suspect.characterId == "char_yoonjaeho":
+            return "무슨 말씀인지 분명하지 않습니다. 회장님 주변에서 제가 본 일이라면 구체적으로 물어봐 주십시오."
         return "그 질문은 너무 넓어요. 그렇게 몰아가듯 묻지 마세요."
 
     def _neutral_allowed_statement(self, case: Case, suspect) -> str:

@@ -36,6 +36,11 @@ def _join_two_korean_terms(left: str, right: str) -> str:
     return f"{left}{particle} {right}"
 
 
+def _is_terse_vague_turn(text: str) -> bool:
+    compact = " ".join(str(text or "").strip().split()).replace(" ", "")
+    return compact in {"뭐야", "뭐죠", "뭔데", "무슨말"}
+
+
 def _mentioned_evidence_terms(payload: DialogueRequest, retrieved_context: object | None) -> list[str]:
     terms: list[str] = []
     matched_ids = set(payload.turnInterpretation.get("mentionedEvidenceIds") or [])
@@ -123,12 +128,23 @@ class DialogueDirectorAgent:
 
         if intent == "unmatched":
             focus = focus_terms[:2]
+            terse_vague = _is_terse_vague_turn(payload.question.text)
             return DialogueDirectorPlan(
                 strategy="deflect_unmatched",
                 seedText=None,
                 allowedAdmissionLevel="no_new_fact",
-                styleDirectives=["질문을 되묻지 말고 짧게 방어하되, 같은 문장을 반복하지 않는다."],
-                forbiddenClaims=["새 증거, 범행 방식, 범인 단정을 만들지 않는다."],
+                styleDirectives=(
+                    [
+                        "플레이어 발화가 너무 짧아 의미가 비어 있다. 시간/증거/진술 같은 축을 새로 제안하지 말고, 무엇을 묻는지 한 문장으로 특정 요청만 한다.",
+                        "FACT ANCHOR의 모호 질문 대응 문장을 가깝게 따른다.",
+                    ]
+                    if terse_vague
+                    else ["질문을 되묻지 말고 짧게 방어하되, 같은 문장을 반복하지 않는다."]
+                ),
+                forbiddenClaims=[
+                    "새 증거, 범행 방식, 범인 단정을 만들지 않는다.",
+                    *(["'시간, 증거, 진술 중 무엇인지'처럼 선택지를 임의 생성하지 않는다."] if terse_vague else []),
+                ],
                 focusTerms=focus,
                 functionCall=_dialogue_function(
                     "deflect_unmatched_turn",
@@ -136,6 +152,7 @@ class DialogueDirectorAgent:
                     suspectName=payload.suspect.name,
                     focusTerms=focus,
                     playerMessage=payload.question.text,
+                    terseVague=terse_vague,
                     admissionLevel="no_new_fact",
                 ),
                 reason="intent_unmatched",
