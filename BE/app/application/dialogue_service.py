@@ -829,7 +829,7 @@ class DialogueService:
     ) -> str:
         prior_answers = [
             entry.text
-            for entry in session.dialogueLog[-12:]
+            for entry in session.dialogueLog[-24:]
             if entry.suspectId == suspect_id and entry.speaker != "player"
         ]
         if question_result.get("repeated") is True:
@@ -901,6 +901,11 @@ class DialogueService:
             repeat_count = sum(1 for prior_answer in prior_answers if answer in prior_answer)
             return f"{options[(repeat_count - 1) % len(options)]} {answer}"
         variants = {
+            "pressure_followup": (
+                "그 부분을 다시 밀어붙이셔도 제 말은 여기까지입니다.",
+                "같은 압박이라는 건 압니다. 그래도 제가 바로 고개 숙일 수는 없습니다.",
+                "그 말이 불편한 건 맞습니다. 하지만 아직 전부 말할 수는 없습니다.",
+            ),
             "unmatched": (
                 "그 질문은 지금 제게 확인할 수 있는 범위를 벗어납니다.",
                 "그건 제가 바로 답할 수 있는 질문이 아닙니다.",
@@ -1167,9 +1172,26 @@ class DialogueService:
             return "그 단서가 불편한 건 압니다. 그래도 확인된 범위를 넘겨 말하진 않겠습니다."
         if dialogue_mode == "pressure_followup":
             compact = self._normalize_text(message).replace(" ", "")
-            if any(term in compact for term in ("말이돼", "말이된다고", "납득", "이상하")):
-                return "말이 안 된다고 몰아붙이셔도 제 기억은 같아요. 저는 22시쯤 방에 있었습니다."
-            return "피하려는 게 아닙니다. 저는 그 시간에 제 방에 있었다고 기억합니다."
+            disbelief = any(term in compact for term in ("말이돼", "말이된다고", "납득", "이상하"))
+            if suspect.characterId == "char_hanseoyeon":
+                if disbelief:
+                    return "말이 안 된다고 해도… 지금은 그 이상 말 못 해. 내가 흔들린 건 맞아."
+                return "피하는 거 아니야. 그냥 네가 원하는 식으로 다 인정하긴 싫은 거야."
+            if suspect.characterId == "char_yoonjaeho":
+                if disbelief:
+                    return "납득하기 어렵다는 건 압니다. 그래도 회장님 일이라 말을 가릴 수밖에 없습니다."
+                return "회피하려는 뜻은 아닙니다. 제가 본 것과 숨긴 것을 구분하려는 겁니다."
+            if suspect.characterId == "char_parkmingyu":
+                if disbelief:
+                    return "납득이 안 된다는 건 압니다. 하지만 기록과 사망 원인을 같은 말로 묶을 수는 없습니다."
+                return "회피가 아니라 방어입니다. 기록을 고친 이유와 사망 원인은 다른 문제입니다."
+            if suspect.characterId == "char_choiyuna":
+                if disbelief:
+                    return "납득하기 어렵겠죠. 그래도 일정과 서재 일을 한 문장으로 묶으면 제가 무너집니다."
+                return "피하려는 건 아닙니다. 다만 제가 받은 지시를 전부 말하면 제 책임도 같이 드러납니다."
+            if disbelief:
+                return "말이 안 된다고 몰아붙이셔도 지금은 확인된 범위만 말하겠습니다."
+            return "피하려는 게 아닙니다. 아직 말할 수 있는 범위를 고르는 중입니다."
         if dialogue_mode == "timeline_question":
             if suspect.characterId == "char_yoonjaeho":
                 return "22시 이후라면 저는 순찰 중이었고, 22:10쯤 서재 문이 열려 있는 것을 확인했습니다."
