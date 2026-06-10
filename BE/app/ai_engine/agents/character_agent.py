@@ -69,11 +69,49 @@ def _salient_terms(text: str) -> set[str]:
     return terms
 
 
-def _llm_answer_drifted_from_allowed_statement(payload: DialogueRequest, text: str) -> bool:
-    if not payload.allowedStatement.id.startswith("st_"):
-        return False
+_REF_TERM_LABELS = {
+    "ev_lipstick_glass": "와인잔 립스틱 자국",
+    "ev_wine_glass": "와인잔 립스틱",
+    "ev_study_entry_log": "서재 출입 기록",
+    "st_choiyuna_no_wine": "와인 와인잔 립스틱",
+    "st_hanseoyeon_wine_deny": "와인 와인잔",
+    "neutral_unmatched": "1층 식당 회장님 서재 와인 와인잔 립스틱 기록",
+    "neutral_small_talk": "1층 식당 회장님 서재 와인 와인잔 립스틱 기록",
+}
+
+
+def _statement_scope_text(payload: DialogueRequest, plan: DialogueDirectorPlan | None = None) -> str:
+    refs = payload.allowedStatement.sourceRefs
+    labels = [payload.allowedStatement.text]
+    for ref in [*refs.evidenceIds, *refs.statementIds, *refs.timelineIds, *refs.contradictionIds]:
+        labels.append(_REF_TERM_LABELS.get(ref, ref.replace("_", " ")))
+    if plan:
+        for ref in plan.focusTerms:
+            labels.append(_REF_TERM_LABELS.get(ref, ref.replace("_", " ")))
+        function_call = plan.functionCall or {}
+        raw_args = function_call.get("arguments") if isinstance(function_call, dict) else None
+        args = raw_args if isinstance(raw_args, dict) else {}
+        for ref in args.get("focusTerms") or []:
+            ref_text = str(ref)
+            labels.append(_REF_TERM_LABELS.get(ref_text, ref_text.replace("_", " ")))
+    return " ".join(labels)
+
+
+def _llm_answer_drifted_from_allowed_statement(
+    payload: DialogueRequest,
+    text: str,
+    plan: DialogueDirectorPlan | None = None,
+) -> bool:
     intent = classify_dialogue_intent(payload.question.text, payload.dialogueMode)
     if intent in {"greeting", "unmatched", "small_talk"}:
+        allowed_terms = _salient_terms(_statement_scope_text(payload, plan))
+        if not allowed_terms:
+            return False
+        player_terms = _salient_terms(payload.question.text)
+        generated_terms = _salient_terms(text)
+        dragged_terms = generated_terms & allowed_terms - player_terms
+        return bool(dragged_terms)
+    if not payload.allowedStatement.id.startswith("st_"):
         return False
     route = None
     if payload.interrogationTransition:
@@ -189,7 +227,7 @@ class CharacterAgent:
             )
             llm = get_llm()
             text = llm.complete(prompt, seed_text=seed, max_length=payload.style.maxLength)
-            if _llm_answer_drifted_from_allowed_statement(payload, text):
+            if _llm_answer_drifted_from_allowed_statement(payload, text, agent_input.dialogueDirectorPlan):
                 return draft(
                     deterministic_clip(seed, max_length=payload.style.maxLength),
                     fallback_used=True,

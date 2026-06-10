@@ -192,6 +192,64 @@ class _DriftingLLM:
         return "네, 그날 일정상 회의만 있었고 회장님 지시사항 확인했습니다."
 
 
+class _OffTopicEvidenceDriftLLM:
+    provider_name = "fake-provider"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        return "그 와인잔과 립스틱 얘기라면 제가 본 범위에서는 답하기 어렵습니다."
+
+
+class _NeutralContextDriftLLM:
+    provider_name = "fake-provider"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        return "그 시간엔 1층 식당에 있었습니다. 회장님 일과는 직접 관여하지 않아요."
+
+
+def test_unmatched_neutral_context_drift_repairs_to_light_deflection(monkeypatch) -> None:
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: _NeutralContextDriftLLM())
+
+    payload = _request(
+        message="갑자기 춤춰봐요.",
+        mode="unmatched",
+        refs={"statementIds": ["neutral_unmatched"], "evidenceIds": [], "timelineIds": []},
+    )
+    response = run_dialogue_graph(payload, _Retriever())
+
+    assert response.runtimeDiagnostics["characterReactionRoute"] == "deflect_irrelevant"
+    assert "1층" not in response.text
+    assert "식당" not in response.text
+    assert "회장님" not in response.text
+    assert response.fallbackUsed is True
+
+
+def test_unmatched_provider_drift_repairs_back_to_light_deflection(monkeypatch) -> None:
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: _OffTopicEvidenceDriftLLM())
+
+    payload = _request(
+        message="갑자기 춤춰봐요.",
+        mode="unmatched",
+        refs={"statementIds": ["st_choiyuna_no_wine"], "evidenceIds": ["ev_wine_glass"], "timelineIds": []},
+    )
+    response = run_dialogue_graph(payload, _Retriever())
+
+    assert response.runtimeDiagnostics["characterReactionRoute"] == "deflect_irrelevant"
+    assert "와인" not in response.text
+    assert "립스틱" not in response.text
+    assert response.fallbackUsed is True
+    assert response.safety.blockedReason == "provider_drift_repaired"
+
+
 def test_matched_case_question_repairs_provider_drift_to_character_evidence_context(monkeypatch) -> None:
     monkeypatch.setattr(
         character_agent_module,

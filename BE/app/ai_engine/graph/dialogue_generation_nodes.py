@@ -121,6 +121,7 @@ def _build_reaction_plan(state: dict[str, Any], route: str) -> dict[str, Any]:
             characterStance=decision.characterStance,
             focusTerms=focus_terms,
             suspectName=payload.suspect.name,
+            playerMessage=payload.question.text,
             admissionLevel=str(config["admission"]),
             stateIntent=decision.stateIntent,
         ),

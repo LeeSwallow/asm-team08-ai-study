@@ -29,6 +29,27 @@ def knowledge_prompt_context(payload: DialogueRequest, retrieved_context: object
     vocabulary = speech_style.get("vocabulary")
     if isinstance(vocabulary, list):
         voice_parts.append("preferred words=" + ", ".join(str(item) for item in vocabulary[:4]))
+    register = speech_style.get("register")
+    if isinstance(register, str) and register.strip():
+        voice_parts.append("register=" + _safe_short_text(register, max_length=60))
+    address_style = speech_style.get("addressStyle") or speech_style.get("formality")
+    if isinstance(address_style, str) and address_style.strip():
+        voice_parts.append("address style=" + _safe_short_text(address_style, max_length=120))
+    rhythm = speech_style.get("sentenceRhythm") or speech_style.get("rhythm")
+    if isinstance(rhythm, str) and rhythm.strip():
+        voice_parts.append("sentence rhythm=" + _safe_short_text(rhythm, max_length=100))
+    avoid = speech_style.get("avoid") or speech_style.get("avoidPhrases")
+    if isinstance(avoid, list):
+        safe_avoid = [_safe_short_text(item, max_length=40) for item in avoid[:4]]
+        safe_avoid = [item for item in safe_avoid if item]
+        if safe_avoid:
+            voice_parts.append("avoid=" + ", ".join(safe_avoid))
+    sample_lines = speech_style.get("sampleLines") or speech_style.get("samples")
+    if isinstance(sample_lines, list):
+        safe_samples = [_safe_short_text(item, max_length=80) for item in sample_lines[:2]]
+        safe_samples = [item for item in safe_samples if item]
+        if safe_samples:
+            voice_parts.append("sample lines=" + " / ".join(safe_samples))
     if overlay:
         if overlay.tone:
             voice_parts.append(f"state tone={overlay.tone}")
@@ -170,6 +191,18 @@ def build_character_dialogue_prompt(
     knowledge = knowledge_prompt_context(payload, retrieved_context).strip()
     if knowledge:
         sections.append(PromptSection(title="Public Character Context", kind="context", content=knowledge))
+    sections.append(
+        PromptSection(
+            title="Player Turn",
+            kind="input",
+            content={
+                "playerQuestion": payload.question.text,
+                "dialogueMode": payload.dialogueMode,
+                "turnIntent": (payload.turnInterpretation or {}).get("intent"),
+                "responseRequirement": "사용자의 이번 발화에 직접 반응하라. 단, 공개 사실 범위 안에서만 답하고 모르면 모른다고/구체화해 달라고 말하라.",
+            },
+        )
+    )
     if plan:
         sections.append(
             PromptSection(
@@ -178,7 +211,10 @@ def build_character_dialogue_prompt(
                 content={
                     "strategy": plan.strategy,
                     "allowedAdmissionLevel": plan.allowedAdmissionLevel,
-                    "styleDirectives": plan.styleDirectives,
+                    "styleDirectives": [
+                        *plan.styleDirectives,
+                        "사용자 원문 질문의 대상/시간/증거에 먼저 반응한 뒤 캐릭터 말투를 입힌다.",
+                    ],
                     "forbiddenClaims": plan.forbiddenClaims,
                     "focusTerms": plan.focusTerms,
                     "functionCall": plan.functionCall,

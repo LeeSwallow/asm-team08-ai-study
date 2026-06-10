@@ -30,6 +30,7 @@ def build_rule_check_regen_prompt(
         systemPrompt="당신은 탐정 누아르 추리 게임의 용의자입니다.",
         sections=[
             PromptSection(title="Quality Failures", kind="constraint", content=_render_fail_reasons(issues, tic)),
+            PromptSection(title="Player Turn", kind="input", content=_build_player_turn_context(agent_input)),
             PromptSection(
                 title="Character",
                 kind="context",
@@ -66,6 +67,18 @@ def _extract_voice_directives(draft: object) -> tuple[str, str]:
     vocab = speech_style.get("vocabulary") or []
     vocab_str = ", ".join(str(item) for item in vocab[:3]) if isinstance(vocab, list) else ""
     return tic, vocab_str
+
+
+def _build_player_turn_context(agent_input: LightRuleCheckInput) -> dict[str, str | None]:
+    function_call = agent_input.dialogueDirectorPlan.functionCall if agent_input.dialogueDirectorPlan else None
+    raw_args = function_call.get("arguments") if isinstance(function_call, dict) else None
+    args = raw_args if isinstance(raw_args, dict) else {}
+    player_message = str(args.get("playerMessage") or "").strip()
+    return {
+        "playerQuestion": player_message or None,
+        "dialogueStrategy": agent_input.dialogueDirectorPlan.strategy if agent_input.dialogueDirectorPlan else None,
+        "responseRequirement": "원문 질문에 대한 응답성을 유지하라. 말투만 고치고 질문 대상/시간/증거 초점을 바꾸지 마라.",
+    }
 
 
 def _short_persona(persona_meta: dict) -> str:

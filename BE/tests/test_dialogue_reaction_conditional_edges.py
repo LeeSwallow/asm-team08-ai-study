@@ -109,7 +109,12 @@ def test_dialogue_graph_preserves_route_specific_seed_in_deterministic_fallback(
     )
 
     assert response.runtimeDiagnostics["characterReactionRoute"] == "deflect_irrelevant"
-    assert "바로 이어지지" in response.text or "단정할 수" in response.text or "진술이 흐려" in response.text
+    assert (
+        "장난" in response.text
+        or "말에 맞춰줄" in response.text
+        or "똑바로" in response.text
+        or "이상한 소리" in response.text
+    )
     assert response.text != response.statementId
     assert "응접실에 있었다고 진술했다" not in response.text
 

@@ -9,6 +9,24 @@ from app.ai_engine.schemas.dialogue import DialogueRequest, DialogueResponse
 from app.ai_engine.schemas.safety import Safety
 
 
+def _sanitize_function_transition(function_call: Any) -> Any:
+    if not isinstance(function_call, dict):
+        return function_call
+    sanitized = dict(function_call)
+    args = sanitized.get("arguments")
+    if isinstance(args, dict):
+        sanitized["arguments"] = {k: v for k, v in args.items() if k != "playerMessage"}
+    return sanitized
+
+
+def _public_director_dump(plan: Any) -> dict[str, Any] | None:
+    if plan is None:
+        return None
+    dump = plan.model_dump()
+    dump["functionCall"] = _sanitize_function_transition(dump.get("functionCall"))
+    return dump
+
+
 def format_response(state: dict[str, Any]) -> dict[str, Any]:
     started_at = now_ms()
     payload: DialogueRequest = state["payload"]
@@ -76,10 +94,10 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
             "characterReactionRoute": getattr(reaction_decision, "reactionRoute", None),
             "conditionalRouteOwner": getattr(reaction_decision, "owner", None),
             "characterReactionRouteNode": state.get("character_reaction_route_node"),
-            "dialogueDirector": state.get("dialogue_director_plan").model_dump()
-            if state.get("dialogue_director_plan")
-            else None,
-            "functionTransition": getattr(state.get("dialogue_director_plan"), "functionCall", None),
+            "dialogueDirector": _public_director_dump(state.get("dialogue_director_plan")),
+            "functionTransition": _sanitize_function_transition(
+                getattr(state.get("dialogue_director_plan"), "functionCall", None)
+            ),
         },
         safety=Safety(
             leaksSolution=bool(safety.get("leaksSolution", False)),
