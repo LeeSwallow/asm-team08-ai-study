@@ -537,10 +537,11 @@ class DialogueService:
             return None
         statement_ids = list(allowed_event_policy.get("relatedStatementIds") or [])
         evidence_ids = list(allowed_event_policy.get("relatedEvidenceIds") or [])
+        mentioned_evidence_ids = list(turn_interpretation.get("mentionedEvidenceIds") or [])
         contradiction_terms = ("모순", "안 맞", "안맞", "거짓", "이상", "충돌", "입증", "증명")
         normalized = self._normalize_text(message)
         explicit_challenge = any(term in normalized for term in contradiction_terms)
-        if not evidence_ids and not explicit_challenge:
+        if not mentioned_evidence_ids and not explicit_challenge:
             return None
         result = self.rule_engine.judge_contradiction(
             session,
@@ -776,6 +777,30 @@ class DialogueService:
         }
         for old, new in replacements.items():
             polished = polished.replace(old, new)
+        if suspect_name == "한서연":
+            han_replacements = {
+                "문제죠": "문제야",
+                "거죠": "거야",
+                "그렇죠": "그렇지",
+                "아니죠": "아니야",
+                "있었습니다": "있어",
+                "있습니다": "있어",
+                "없습니다": "없어",
+                "했습니다": "했어",
+                "했습니다만": "했지만",
+                "합니다": "해",
+                "됩니다": "돼",
+                "입니다": "이야",
+                "겁니다": "거야",
+                "했어요": "했어",
+                "있어요": "있어",
+                "없어요": "없어",
+                "이에요": "이야",
+                "예요": "야",
+            }
+            for old, new in han_replacements.items():
+                polished = polished.replace(old, new)
+            polished = re.sub(r"습니까([?!.])?", "어?", polished)
         polished = re.sub(r"(?<![가-힣])소([.?!,]|$)", r"습니다\1", polished)
         polished = self._strip_dialogue_quotes(polished)
         polished = re.sub(r"\s{2,}", " ", polished).strip()
@@ -808,13 +833,39 @@ class DialogueService:
             if entry.suspectId == suspect_id and entry.speaker != "player"
         ]
         if question_result.get("repeated") is True:
-            prefixes = (
-                "다시 정리하면,",
-                "앞서 말한 내용과 같지만,",
-                "한 번 더 확인하자면,",
+            prefixes_by_suspect = {
+                "char_hanseoyeon": (
+                    "또 묻는 거야?",
+                    "아까 말했잖아.",
+                    "몇 번을 말해.",
+                ),
+                "char_yoonjaeho": (
+                    "다시 말씀드리겠습니다.",
+                    "앞서 드린 말씀과 같습니다.",
+                    "한 번 더 확인해 드리겠습니다.",
+                ),
+                "char_parkmingyu": (
+                    "의학적으로 다시 말씀드리면,",
+                    "기록 기준으로는 같습니다.",
+                    "같은 소견입니다.",
+                ),
+                "char_choiyuna": (
+                    "다시 확인드리면,",
+                    "앞서 말씀드린 내용과 같습니다.",
+                    "업무 기록상 같은 답입니다.",
+                ),
+            }
+            prefixes = prefixes_by_suspect.get(
+                suspect_id,
+                (
+                    "다시 확인하면,",
+                    "앞서 답한 내용과 같습니다.",
+                    "한 번 더 말하면,",
+                ),
             )
+            stripped_answer = self._strip_repeated_answer_prefix(answer)
             ask_count = int(question_result.get("askCount") or 2)
-            return f"{prefixes[(ask_count - 2) % len(prefixes)]} {answer}"
+            return f"{prefixes[(ask_count - 2) % len(prefixes)]} {stripped_answer}"
         evidence_template = "제 말이 흔들린다는 건 알겠습니다"
         if dialogue_mode == "evidence_question" and evidence_template in answer and any(evidence_template in item for item in prior_answers):
             return answer.replace(
@@ -844,6 +895,22 @@ class DialogueService:
             )
         repeat_count = prior_answers.count(answer)
         return f"{options[(repeat_count - 1) % len(options)]} {answer}"
+
+    def _strip_repeated_answer_prefix(self, answer: str) -> str:
+        stripped = answer.strip()
+        repeated_prefixes = (
+            "이미 답한 질문입니다.",
+            "같은 질문에 다시 답하자면,",
+            "방금 확인한 내용과 같습니다.",
+        )
+        changed = True
+        while changed:
+            changed = False
+            for prefix in repeated_prefixes:
+                if stripped.startswith(prefix):
+                    stripped = stripped[len(prefix) :].lstrip(" ,.")
+                    changed = True
+        return stripped or answer
 
     def _allowed_statement_for_question(self, case: Case, question, fallback_answer: str) -> dict[str, Any]:
         for statement_id in question.unlocksStatementIds:

@@ -854,7 +854,7 @@ def test_dialogue_broad_time_range_and_meta_followups_are_timeline_grounded(tmp_
     assert broad_time["dialogueResult"]["consumedQuestion"] is True
     assert broad_time["dialogueResult"]["fallbackUsed"] is False
     assert broad_time["dialogueResult"]["provider"] == "contract-test-ai"
-    assert "제 방" in broad_time["answer"]
+    assert "방" in broad_time["answer"]
     assert why["dialogueResult"]["dialogueMode"] == "pressure_followup"
     assert why["dialogueResult"]["matchedQuestionId"] is None
     assert why["dialogueResult"]["remainingQuestions"] == broad_time["dialogueResult"]["remainingQuestions"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.application.dialogue_service import DialogueService
 from app.domain.event_types import EventType
 from tests.test_api_smoke import _client
 
@@ -32,12 +33,29 @@ SUSPECT_DIALOGUE_MESSAGES = {
     ],
 }
 
+SUSPECT_NAMES = {
+    "char_hanseoyeon": "한서연",
+    "char_yoonjaeho": "윤재호",
+    "char_parkmingyu": "박민규",
+    "char_choiyuna": "최윤아",
+}
+
 
 def _post_dialogue(client, session_id: str, suspect_id: str, message: str):
     return client.post(
         f"/api/v1/sessions/{session_id}/dialogue",
         json={"suspectId": suspect_id, "message": message},
     )
+
+
+def test_hanseoyeon_polish_keeps_generated_dialogue_in_banmal():
+    service = DialogueService.__new__(DialogueService)
+
+    polished = service._polish_answer("아니… 제 방에 있었습니다. 그게 왜 문제죠?", "한서연")
+
+    assert polished == "아니… 제 방에 있어. 그게 왜 문제야?"
+    assert "습니다" not in polished
+    assert "죠" not in polished
 
 
 @pytest.mark.parametrize("suspect_id", sorted(SUSPECT_DIALOGUE_MESSAGES))
@@ -51,11 +69,21 @@ def test_each_suspect_has_a_stable_12_turn_dialogue_budget_and_exhaustion_nudge(
     session_id = session["sessionId"]
     messages = SUSPECT_DIALOGUE_MESSAGES[suspect_id]
 
+    print(f"\n[DIALOGUE-PROBE] suspect={SUSPECT_NAMES[suspect_id]}({suspect_id})")
+
     for turn in range(1, 13):
-        response = _post_dialogue(client, session_id, suspect_id, messages[(turn - 1) % len(messages)])
+        player_message = messages[(turn - 1) % len(messages)]
+        response = _post_dialogue(client, session_id, suspect_id, player_message)
         assert response.status_code == 200, response.text
         payload = response.json()
         dialogue = payload["dialogueResult"]
+        event_types = [event["type"] for event in payload.get("appliedEvents", [])]
+        print(
+            f"  turn={turn:02d} remaining={payload['remainingQuestions']:02d} "
+            f"mode={dialogue['dialogueMode']} helper={payload['helperSuggestion']['helperRoute']} events={event_types}\n"
+            f"    player: {player_message}\n"
+            f"    {SUSPECT_NAMES[suspect_id]}: {payload['answer']}"
+        )
         assert dialogue["consumedQuestion"] is True
         assert dialogue["previousRemainingQuestions"] == 13 - turn
         assert dialogue["remainingQuestions"] == 12 - turn
@@ -65,6 +93,11 @@ def test_each_suspect_has_a_stable_12_turn_dialogue_budget_and_exhaustion_nudge(
         assert payload["answer"].strip()
         expected_helper_route = "silent" if turn < 12 else "nudge_accusation_ready"
         assert payload["helperSuggestion"]["helperRoute"] == expected_helper_route
+        if suspect_id == "char_hanseoyeon":
+            assert "습니다" not in payload["answer"]
+            assert "어요" not in payload["answer"]
+        assert "다시 정리하면, 이미 답한 질문입니다" not in payload["answer"]
+        assert "앞서 말한 내용과 같지만, 같은 질문에 다시 답하자면" not in payload["answer"]
 
     exhausted = _post_dialogue(client, session_id, suspect_id, messages[0])
     assert exhausted.status_code == 400
@@ -95,6 +128,13 @@ def test_dialogue_events_progress_organically_from_statement_to_unlock_to_contra
     assert EventType.NOTE_FACT_ADDED.value in yoon_types
     assert EventType.EVIDENCE_UNLOCKED.value in yoon_types
     assert any(item["evidenceId"] == "ev_storm_blackout" for item in yoon["evidence"])
+
+    secretary = _post_dialogue(client, session_id, "char_choiyuna", "피해자와 마지막으로 연락한 때는?").json()
+    secretary_types = {event["type"] for event in secretary["appliedEvents"]}
+    assert EventType.EVIDENCE_UNLOCKED.value in secretary_types
+    assert EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value not in secretary_types
+    assert EventType.TENSION_CHANGED.value not in secretary_types
+    assert secretary["contradictionResult"] is None
 
     pressure = _post_dialogue(
         client,

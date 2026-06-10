@@ -1063,7 +1063,7 @@
       "statementId": "st_hanseoyeon_room_2200",
       "characterId": "char_hanseoyeon",
       "questionText": "22:00에 어디 있었나요?",
-      "text": "저는 22:00에 제 방에 있었어요.",
+      "text": "나는 22:00에 내 방에 있었어.",
       "timeWindow": "22:00",
       "location": "자기 방",
       "initiallyVisible": true
@@ -1073,7 +1073,7 @@
       "statementId": "st_hanseoyeon_no_reason",
       "characterId": "char_hanseoyeon",
       "questionText": "상속 문제로 다툰 적 있나요?",
-      "text": "상속 문제로 다툰 적은 있지만 죽일 이유는 없었어요.",
+      "text": "상속 문제로 다툰 적은 있어. 그래도 죽일 이유는 없었어.",
       "timeWindow": "불명",
       "location": "불명",
       "initiallyVisible": true
@@ -1083,7 +1083,7 @@
       "statementId": "st_hanseoyeon_wine_deny",
       "characterId": "char_hanseoyeon",
       "questionText": "서재의 와인잔을 알고 있나요?",
-      "text": "와인잔은 제 것이 아니에요. 그날 저는 와인을 마시지 않았습니다.",
+      "text": "와인잔은 내 것이 아니야. 그날 나는 와인을 마시지 않았어.",
       "timeWindow": "불명",
       "location": "불명",
       "initiallyVisible": true
@@ -1093,7 +1093,7 @@
       "statementId": "st_hanseoyeon_ring_missing",
       "characterId": "char_hanseoyeon",
       "questionText": "반지를 잃어버린 적 있나요?",
-      "text": "…반지가 없어졌는데, 어디서 잃어버렸는지 모르겠어요.",
+      "text": "…반지가 없어진 건 맞아. 어디서 잃어버렸는지는 몰라.",
       "timeWindow": "불명",
       "location": "불명",
       "initiallyVisible": false,
@@ -1104,7 +1104,7 @@
       "statementId": "st_hanseoyeon_pressure",
       "characterId": "char_hanseoyeon",
       "questionText": "서재 출입 기록을 제시한다",
-      "text": "잠깐 들어갔을 뿐이에요. 그때 이미 상황이 이상했습니다.",
+      "text": "잠깐 들어갔을 뿐이야. 그때 이미 상황이 이상했어.",
       "timeWindow": "22:02",
       "location": "서재",
       "initiallyVisible": false,
@@ -1263,7 +1263,7 @@
       "questionId": "q_hanseoyeon_alibi",
       "characterId": "char_hanseoyeon",
       "text": "22:00에 어디 있었나요?",
-      "answer": "제 방에 있었습니다. 폭풍 때문에 밖으로 나갈 생각도 못 했어요.",
+      "answer": "내 방에 있었어. 폭풍 때문에 밖으로 나갈 생각도 못 했고.",
       "unlocksStatementIds": [
         "st_hanseoyeon_room_2200"
       ],
@@ -1274,7 +1274,7 @@
       "questionId": "q_hanseoyeon_inheritance",
       "characterId": "char_hanseoyeon",
       "text": "상속 문제로 다툰 적 있나요?",
-      "answer": "말다툼은 있었지만 가족끼리 그럴 수 있잖아요. 죽일 이유는 없었습니다.",
+      "answer": "말다툼은 있었어. 가족끼리 그런 일은 있잖아. 하지만 죽일 이유는 없어.",
       "unlocksStatementIds": [
         "st_hanseoyeon_no_reason"
       ],
@@ -1285,7 +1285,7 @@
       "questionId": "q_hanseoyeon_study_entry",
       "characterId": "char_hanseoyeon",
       "text": "22:02 서재 출입 기록을 설명해 주세요.",
-      "answer": "정확히 기억나지 않습니다. 문이 열려 있었는지 확인만 했을 수도 있어요.",
+      "answer": "정확히 기억 안 나. 문이 열려 있었는지 확인만 했을 수도 있어.",
       "initiallyUnlocked": true
     },
     {
@@ -1293,7 +1293,7 @@
       "questionId": "q_hanseoyeon_wine",
       "characterId": "char_hanseoyeon",
       "text": "서재의 와인잔을 알고 있나요?",
-      "answer": "와인잔은 제 것이 아닙니다. 그날 와인을 마시지 않았어요.",
+      "answer": "그 와인잔 내 거 아니야. 그날 와인 안 마셨어.",
       "unlocksStatementIds": [
         "st_hanseoyeon_wine_deny"
       ],
@@ -1304,7 +1304,7 @@
       "questionId": "q_hanseoyeon_after_pressure",
       "characterId": "char_hanseoyeon",
       "text": "서재에 들어갔다면 무엇을 봤나요?",
-      "answer": "이미 회장님이 쓰러진 것처럼 보였습니다. 겁이 나서 바로 나왔어요.",
+      "answer": "이미 회장님이 쓰러진 것처럼 보였어. 겁이 나서 바로 나왔고.",
       "unlocksStatementIds": [
         "st_hanseoyeon_pressure"
       ],
@@ -1316,7 +1316,7 @@
       "questionId": "q_hanseoyeon_ring_missing",
       "characterId": "char_hanseoyeon",
       "text": "현장에서 발견된 반지는 왜 거기에 있었나요?",
-      "answer": "…그 반지가 제 것처럼 보인다는 건 알아요. 그런데 어디서 잃어버렸는지는 정말 모르겠습니다.",
+      "answer": "…그 반지가 내 것처럼 보인다는 건 알아. 그런데 어디서 잃어버렸는지는 정말 몰라.",
       "unlocksStatementIds": [
         "st_hanseoyeon_ring_missing"
       ],
