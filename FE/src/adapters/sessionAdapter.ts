@@ -194,6 +194,14 @@ export type BackendSession = {
     missingContradictionIds?: string[];
     missingStatementIds?: string[];
   };
+  accusation?: {
+    verdict?: Verdict;
+    correct?: boolean;
+    message?: string;
+    missingEvidenceIds?: string[];
+    missingContradictionIds?: string[];
+    missingStatementIds?: string[];
+  };
   contradictions?: PublicContradictionReadModel;
 };
 
@@ -619,7 +627,17 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     important: item.speaker !== "player",
   }));
   const contradictionResult = session.contradictionResult;
-  const accusationResult = session.accusationResult;
+  const accusationResult = session.accusationResult ?? (
+    session.accusation?.verdict || typeof session.accusation?.correct === "boolean" || session.accusation?.message
+      ? {
+          verdict: session.accusation.verdict ?? (session.accusation.correct ? "correct" : "wrong"),
+          message: session.accusation.message ?? (session.accusation.correct ? "사건이 해결되었습니다." : "잘못된 범인을 지목했습니다."),
+          missingEvidenceIds: session.accusation.missingEvidenceIds,
+          missingContradictionIds: session.accusation.missingContradictionIds,
+          missingStatementIds: session.accusation.missingStatementIds,
+        }
+      : undefined
+  );
   const foundContradictionIds = session.discoveredContradictionIds ?? session.foundContradictionIds ?? [];
   const storyline = normalizeStoryline(session.storyline);
   const currentActId = session.currentActId ?? storyline.acts[0]?.actId ?? "intro";
