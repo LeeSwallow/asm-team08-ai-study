@@ -11,6 +11,7 @@ from app.core.errors import bad_request, not_found, service_unavailable
 from app.core.leak_guard import assert_no_forbidden_refs
 from app.core.observability import RequestContext
 from app.domain.case_engine import (
+    apply_unlocks,
     character_public_timeline,
     current_story_progress,
     emotional_state,
@@ -60,7 +61,10 @@ class DialogueService:
     ) -> dict:
         started_at = time.perf_counter()
         session, case = self._load_session_and_case(session_id)
+        if session.remainingQuestions <= 0:
+            raise bad_request("QUESTION_LIMIT_EXHAUSTED")
         previous_remaining_questions = session.remainingQuestions
+        session.remainingQuestions -= 1
         match = self._classify_dialogue(case, session, suspect_id, message, question_id)
         suspect = next(item for item in case.suspects if item.characterId == suspect_id)
 
@@ -78,7 +82,7 @@ class DialogueService:
             session.selectedSuspectId = suspect_id
             session.newlyUnlockedIds = []
             question_result = {"newlyUnlockedIds": [], "repeated": False, "askCount": 0}
-            fallback_answer = match.fallback_answer or self._fallback_answer_for_intent(match.dialogue_mode, suspect, message)
+            fallback_answer = match.fallback_answer or self._fallback_answer_for_intent(match.dialogue_mode, suspect, message, case, session)
             allowed_statement = match.allowed_statement or {
                 "id": f"neutral_{match.dialogue_mode}",
                 "text": self._neutral_allowed_statement(case, suspect),
@@ -118,6 +122,7 @@ class DialogueService:
             allowed_event_policy=allowed_event_policy,
         )
         self._merge_contradiction_result_into_transition(contradiction_result, interrogation_transition)
+        self._apply_breakdown_question_pressure(session, suspect.characterId, match, interrogation_transition)
         self._augment_allowed_statement_for_transition(case, allowed_statement, interrogation_transition.model_dump())
         decisive_pressure_hit = interrogation_transition.decisive_evidence
         interrogation_snapshot = build_interrogation_snapshot(session, suspect.characterId, case)
@@ -178,14 +183,30 @@ class DialogueService:
             started_at=started_at,
         )
         answer = self._polish_answer(ai_result["answer"], suspect.name)
-        answer = self._differentiate_repeated_reply(session, suspect.characterId, match.dialogue_mode, question_result, answer)
+        answer = self._differentiate_repeated_reply(
+            session,
+            case,
+            suspect.characterId,
+            match.dialogue_mode,
+            question_result,
+            allowed_statement,
+            answer,
+        )
         question_id_for_log = match.question.questionId if match.question is not None else None
         npc_entry = self._append_dialogue_entries(session, suspect.characterId, question_id_for_log, suspect.name, message, answer)
-        session.newlyUnlockedIds = combined_unlocked_ids
 
         processor = EventProcessor(start_index=self.event_repo.next_index(session.sessionId))
         ai_proposed_events = list(ai_result["proposedEvents"])
         be_proposed_events = self._contradiction_candidate_events(case, session, message, suspect.characterId, match.dialogue_mode)
+        for _cand_event in be_proposed_events:
+            _cid = (_cand_event.get("payload") or {}).get("contradictionId")
+            if _cid and _cid not in session.discoveredContradictionIds:
+                _c = next((x for x in case.contradictions if x.contradictionId == _cid), None)
+                if _c:
+                    _new = apply_unlocks(session, case, _c.unlockedIds)
+                    combined_unlocked_ids = self._dedupe([*combined_unlocked_ids, *_new])
+                    session.discoveredContradictionIds.append(_cid)
+        session.newlyUnlockedIds = combined_unlocked_ids
         state_proposed_events = [
             *self._contradiction_note_events_from_result(contradiction_result),
             *self._contradiction_note_events_from_transition(interrogation_transition.model_dump()),
@@ -584,6 +605,30 @@ class DialogueService:
         transition.decisive_evidence = True
         transition.reason = "dialogue_rule_engine_validated"
 
+    def _apply_breakdown_question_pressure(self, session: SessionState, suspect_id: str, match: DialogueMatch, transition) -> None:
+        """Authorized collapse questions should visibly put the suspect in 체념/resigned state.
+
+        The question being unlocked is already BE-owned progression authority. This does
+        not reveal new facts; it makes the public pressure/disclosure UI match the
+        authored breakdown answer that is about to be delivered.
+        """
+        question_id = match.question.questionId if match.question is not None else ""
+        if not question_id.endswith("_breakdown"):
+            return
+        target_pressure = 82
+        before = session.pressureBySuspect.get(suspect_id, 0)
+        if before < target_pressure:
+            session.pressureBySuspect[suspect_id] = target_pressure
+        transition.to_pressure = max(transition.to_pressure, target_pressure)
+        transition.pressure_delta = max(0, transition.to_pressure - transition.from_pressure)
+        transition.pressure_state = pressure_state(transition.to_pressure)
+        transition.tension_level = tension_level(transition.to_pressure)
+        transition.emotional_state = emotional_state(transition.to_pressure)
+        transition.composure = "broken"
+        transition.disclosure_stage = "public_break"
+        transition.response_strategy = "stop_evasion_and_disclose_visible_scope"
+        transition.reason = "authorized_breakdown_question"
+
     def _deterministic_contradiction_events(
         self,
         *,
@@ -639,44 +684,64 @@ class DialogueService:
             return DialogueMatch(dialogue_mode="case_question", question=question, consumed_question=True)
 
         normalized_message = self._normalize_text(message)
+        exact = next((item for item in candidates if self._normalize_text(item.text) == normalized_message), None)
+        if exact:
+            return DialogueMatch(dialogue_mode="case_question", question=exact, consumed_question=True)
+
         if self._is_small_talk(normalized_message):
             return DialogueMatch(dialogue_mode="small_talk", fallback_answer=self._fallback_answer_for_intent("small_talk", self._suspect(case, suspect_id), message))
+
+        if self._is_culprit_accusation_pressure(normalized_message):
+            return DialogueMatch(
+                dialogue_mode="pressure_followup",
+                allowed_statement=self._recent_context_statement(case, session, suspect_id, message),
+                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message, case, session),
+            )
 
         if self._is_meta_pressure_followup(session, suspect_id, normalized_message):
             return DialogueMatch(
                 dialogue_mode="pressure_followup",
                 allowed_statement=self._recent_context_statement(case, session, suspect_id, message),
-                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message),
+                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message, case, session),
             )
-
-        if self._is_repeat_detail_followup(session, suspect_id, normalized_message):
-            return DialogueMatch(
-                dialogue_mode="pressure_followup",
-                allowed_statement=self._recent_context_statement(case, session, suspect_id, message),
-                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message),
-            )
-
-        if self._mentions_non_active_character_only(case, suspect_id, normalized_message):
-            return DialogueMatch(
-                dialogue_mode="unmatched",
-                fallback_answer=self._fallback_answer_for_intent("unmatched", self._suspect(case, suspect_id), message),
-            )
-
-        exact = next((item for item in candidates if self._normalize_text(item.text) == normalized_message), None)
-        if exact:
-            return DialogueMatch(dialogue_mode="case_question", question=exact, consumed_question=True)
 
         evidence_context = self._visible_evidence_context(case, session, normalized_message)
         if evidence_context is not None and self._looks_like_contradiction_challenge(normalized_message):
             return DialogueMatch(
                 dialogue_mode="evidence_question",
                 allowed_statement=evidence_context,
-                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message),
+                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message, case, session),
+            )
+
+        if self._mentions_non_active_character_only(case, suspect_id, normalized_message) and not self._looks_like_relationship_question(normalized_message):
+            return DialogueMatch(
+                dialogue_mode="unmatched",
+                fallback_answer=self._fallback_answer_for_intent("unmatched", self._suspect(case, suspect_id), message),
+            )
+
+        victim_relation = self._victim_relation_question(candidates, normalized_message)
+        if victim_relation is not None:
+            return DialogueMatch(dialogue_mode="case_question", question=victim_relation, consumed_question=True)
+
+        if self._looks_like_contradiction_challenge(normalized_message):
+            return DialogueMatch(
+                dialogue_mode="pressure_followup",
+                allowed_statement=self._recent_context_statement(case, session, suspect_id, message),
+                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message, case, session),
             )
 
         broad_alibi = self._broad_time_alibi_question(candidates, normalized_message)
         if broad_alibi is not None:
             return DialogueMatch(dialogue_mode="timeline_question", question=broad_alibi, consumed_question=True)
+
+        if evidence_context is not None and suspect_id == "char_yoonjaeho":
+            compact_for_evidence = normalized_message.replace(" ", "")
+            if "순찰기록" in compact_for_evidence or "22:08" in compact_for_evidence or "2208" in compact_for_evidence:
+                return DialogueMatch(
+                    dialogue_mode="evidence_question",
+                    allowed_statement=evidence_context,
+                    fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message, case, session),
+                )
 
         scored = sorted(
             ((self._question_match_score(case, item, normalized_message), item) for item in candidates),
@@ -687,16 +752,29 @@ class DialogueService:
             mode = "evidence_question" if self._looks_like_evidence_question(case, session, normalized_message) else "case_question"
             return DialogueMatch(dialogue_mode=mode, question=scored[0][1], consumed_question=True)
 
+        if self._is_repeat_detail_followup(session, suspect_id, normalized_message):
+            return DialogueMatch(
+                dialogue_mode="pressure_followup",
+                allowed_statement=self._recent_context_statement(case, session, suspect_id, message),
+                fallback_answer=self._fallback_answer_for_intent("pressure_followup", self._suspect(case, suspect_id), message, case, session),
+            )
+
+        if self._mentions_non_active_character_only(case, suspect_id, normalized_message):
+            return DialogueMatch(
+                dialogue_mode="unmatched",
+                fallback_answer=self._fallback_answer_for_intent("unmatched", self._suspect(case, suspect_id), message),
+            )
+
         if evidence_context is not None:
             return DialogueMatch(
                 dialogue_mode="evidence_question",
                 allowed_statement=evidence_context,
-                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message),
+                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message, case, session),
             )
         if self._looks_like_evidence_question(case, session, normalized_message):
             return DialogueMatch(
                 dialogue_mode="evidence_question",
-                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message),
+                fallback_answer=self._fallback_answer_for_intent("evidence_question", self._suspect(case, suspect_id), message, case, session),
             )
 
         return DialogueMatch(
@@ -707,14 +785,36 @@ class DialogueService:
     def _suspect(self, case: Case, suspect_id: str):
         return next(item for item in case.suspects if item.characterId == suspect_id)
 
+    def _is_culprit_accusation_pressure(self, normalized_message: str) -> bool:
+        compact = normalized_message.replace(" ", "")
+        accusation_terms = (
+            "범인이지",
+            "범인아니",
+            "범인맞",
+            "네가범인",
+            "너가범인",
+            "니가범인",
+            "당신이범인",
+            "네가죽였",
+            "너가죽였",
+            "니가죽였",
+            "당신이죽였",
+            "네가살해",
+            "너가살해",
+            "니가살해",
+            "당신이살해",
+        )
+        return any(term in compact for term in accusation_terms)
+
     def _mentions_non_active_character_only(self, case: Case, suspect_id: str, normalized_message: str) -> bool:
         compact = normalized_message.replace(" ", "")
         active = self._suspect(case, suspect_id)
         active_names = {self._normalize_text(active.name).replace(" ", ""), suspect_id.lower()}
         active_mentioned = any(name and name in compact for name in active_names)
-        victim_name = self._normalize_text(case.victimName).replace(" ", "")
-        if victim_name and victim_name in compact:
-            return not active_mentioned
+        # The victim is valid public context for most case questions (relationship,
+        # evidence, medicine, inheritance). Do not treat a victim name mention like
+        # asking the active suspect to speak for another suspect; let scoring/evidence
+        # routing decide whether the turn is answerable.
         for suspect in case.suspects:
             if suspect.characterId == suspect_id:
                 continue
@@ -758,50 +858,6 @@ class DialogueService:
         polished = answer.strip()
         polished = self._strip_dialogue_quotes(polished)
         polished = re.sub(r"\([^)]{1,50}\)|（[^）]{1,50}）|\[[^\]]{1,50}\]", "", polished)
-        role_artifacts = (
-            "조카로서 조심스럽게 말씀드리면",
-            "조카로서 말씀드리자면",
-            f"{suspect_name}로서 말씀드리자면",
-        )
-        for artifact in role_artifacts:
-            polished = polished.replace(f"{artifact} ", "")
-            polished = polished.replace(artifact, "")
-        replacements = {
-            "것이오": "겁니다",
-            "하오": "해요",
-            "하소": "하세요",
-            "했소": "했습니다",
-            "계셨지": "계셨습니다",
-            "걷고 계셨지": "악화되고 있었습니다",
-            "그대": "형사님",
-        }
-        for old, new in replacements.items():
-            polished = polished.replace(old, new)
-        if suspect_name == "한서연":
-            han_replacements = {
-                "문제죠": "문제야",
-                "거죠": "거야",
-                "그렇죠": "그렇지",
-                "아니죠": "아니야",
-                "있었습니다": "있어",
-                "있습니다": "있어",
-                "없습니다": "없어",
-                "했습니다": "했어",
-                "했습니다만": "했지만",
-                "합니다": "해",
-                "됩니다": "돼",
-                "입니다": "이야",
-                "겁니다": "거야",
-                "했어요": "했어",
-                "있어요": "있어",
-                "없어요": "없어",
-                "이에요": "이야",
-                "예요": "야",
-            }
-            for old, new in han_replacements.items():
-                polished = polished.replace(old, new)
-            polished = re.sub(r"습니까([?!.])?", "어?", polished)
-        polished = re.sub(r"(?<![가-힣])소([.?!,]|$)", r"습니다\1", polished)
         polished = self._strip_dialogue_quotes(polished)
         polished = re.sub(r"\s{2,}", " ", polished).strip()
         return polished or answer
@@ -822,9 +878,11 @@ class DialogueService:
     def _differentiate_repeated_reply(
         self,
         session: SessionState,
+        case: Case,
         suspect_id: str,
         dialogue_mode: str,
         question_result: dict[str, Any],
+        allowed_statement: dict[str, Any],
         answer: str,
     ) -> str:
         prior_answers = [
@@ -832,82 +890,138 @@ class DialogueService:
             for entry in session.dialogueLog[-24:]
             if entry.suspectId == suspect_id and entry.speaker != "player"
         ]
+        structured_reply = self._structured_pressure_fallback(suspect_id, allowed_statement)
         if question_result.get("repeated") is True:
-            prefixes_by_suspect = {
+            if structured_reply and structured_reply not in prior_answers:
+                return structured_reply
+            repeat_replies_by_suspect = {
                 "char_hanseoyeon": (
-                    "또 묻는 거야?",
-                    "아까 말했잖아.",
-                    "몇 번을 말해.",
+                    "아니. 내 방에 있었다고 했어. 더 보탤 말 없어.",
+                    "아까 말했잖아. 그걸로 날 몰지는 마.",
+                    "몇 번을 물어도 네가 원하는 답은 안 나와.",
                 ),
                 "char_yoonjaeho": (
-                    "다시 말씀드리겠습니다.",
-                    "앞서 드린 말씀과 같습니다.",
-                    "한 번 더 확인해 드리겠습니다.",
+                    "제가 본 것은 같습니다. 순찰 중 서재 문이 열려 있었습니다.",
+                    "회장님 일이라 조심스럽지만, 발견 시각에 대한 제 답은 같습니다.",
+                    "같은 질문이라도 더 보탤 말은 많지 않습니다.",
                 ),
                 "char_parkmingyu": (
-                    "기록을 다시 짚으면,",
-                    "제 소견은 바뀌지 않았습니다.",
-                    "처방 기록 안에서 말하겠습니다.",
+                    "21:30까지는 통증 완화 진통제와 수면 보조제 복용 확인만 했습니다.",
+                    "제가 확인한 건 모르핀 계열 진통제와 수면 보조제였고, 독약 투여로 단정할 수는 없습니다.",
+                    "약 기록이 불리해 보여도, 약 종류 자체는 통증 완화 진통제와 수면 보조제입니다.",
                 ),
                 "char_choiyuna": (
-                    "다시 확인드리면,",
-                    "앞서 말씀드린 내용과 같습니다.",
-                    "업무 기록상 같은 답입니다.",
+                    "통화와 일정표에 남은 내용은 이미 말씀드렸습니다.",
+                    "제가 말을 줄인 건 맞지만, 그 이상을 한 번에 단정하진 마세요.",
+                    "같은 질문이라도 제 답은 일정 기록 안에 있습니다.",
                 ),
             }
-            prefixes = prefixes_by_suspect.get(
+            replies = repeat_replies_by_suspect.get(
                 suspect_id,
                 (
-                    "다시 확인하면,",
                     "앞서 답한 내용과 같습니다.",
-                    "한 번 더 말하면,",
+                    "같은 질문에는 더 보탤 말이 없습니다.",
                 ),
             )
-            stripped_answer = self._strip_repeated_answer_prefix(answer)
             ask_count = int(question_result.get("askCount") or 2)
-            return f"{prefixes[(ask_count - 2) % len(prefixes)]} {stripped_answer}"
-        evidence_template = "제 말이 흔들린다는 건 알겠습니다"
-        if dialogue_mode == "evidence_question" and evidence_template in answer and any(evidence_template in item for item in prior_answers):
-            return answer.replace(
-                "그래도 그걸 곧바로 인정하라는 건 무리예요. 제가 설명해야 할 부분이 있다는 것까지만 말하겠습니다.",
-                "하지만 그 기록 하나로 제 행동 전체가 단정되는 건 받아들일 수 없어요. 확인할 수 있는 부분부터 다시 짚겠습니다.",
-            )
+            return self._select_non_repeating_reply(replies, prior_answers, start=ask_count - 2)
         if answer not in prior_answers:
             return answer
+        if structured_reply and structured_reply not in prior_answers:
+            return structured_reply
         evidence_variants_by_suspect = {
             "char_hanseoyeon": (
-                "또 그 얘기야?",
-                "그 기록이 걸리는 건 알겠어.",
-                "…그걸로 몰아붙이겠다는 거지.",
+                "전산 오류겠지. 아니면 누가 내 카드키를 주웠거나. 그걸 왜 바로 나라고 해?",
+                "유언장 얘기까지 꺼내면 숨 막혀. 하지만 네가 원하는 식으로 고개 숙이진 않을 거야.",
+                "…그걸로 몰아붙이겠다는 거지. 말 안 한 게 있다고 해서 전부 네 말이 맞는 건 아니야.",
             ),
             "char_yoonjaeho": (
-                "그 부분은 조심스럽게 다시 말하겠습니다.",
-                "장부와 제 기억이 엇갈리는 건 알고 있습니다.",
-                "회장님 일이라 더 말을 고르게 됩니다.",
+                "22:08 표시가 걸리는 건 압니다. 다만 그건 2층 복도 확인이지, 서재 안을 확인했다는 뜻은 아닙니다.",
+                "장부의 22:08 기록과 제 발견 보고가 엇갈리는 건 알고 있습니다. 그래도 제가 한 일과 본 일을 구분해야 합니다.",
+                "회장님 일이라 더 말을 고르게 됩니다. 2층 복도에서 숨긴 시간이 있었다는 말까지는 피하지 않겠습니다.",
             ),
             "char_parkmingyu": (
-                "기록 문제라면 다시 정리하겠습니다.",
-                "그 메모가 불리하게 보이는 건 압니다.",
-                "처방 책임을 피하려는 뜻은 아니었습니다.",
+                "제가 확인한 건 모르핀 계열 진통제와 수면 보조제였습니다. 독약으로 단정할 수는 없습니다.",
+                "말씀드린 약만으로 사인을 단정할 수 없습니다. 통증 때문에 쓰던 처방입니다.",
+                "차트에 손댄 건 제 잘못입니다. 그렇다고 약 종류 자체가 독약은 아닙니다.",
             ),
             "char_choiyuna": (
-                "그 부분은 제가 말을 줄였던 건 맞습니다.",
-                "일정 기록이 남아 있다면 더 숨기긴 어렵겠네요.",
-                "업무상 지시였다는 말만으로는 부족하겠죠.",
+                "그 부분은 제가 말을 줄였던 건 맞습니다. 숨긴 일정이 있었다는 것까진 부정하지 않겠습니다.",
+                "일정 기록이 남아 있다면 더 숨기긴 어렵겠네요. 그래도 그게 제가 한 일을 전부 설명하진 않습니다.",
+                "업무상 지시였다는 말만으로는 부족하겠죠. 하지만 서재 일까지 한 번에 단정하진 말아 주세요.",
             ),
         }
         if dialogue_mode == "evidence_question" and suspect_id in evidence_variants_by_suspect:
             options = evidence_variants_by_suspect[suspect_id]
-            repeat_count = sum(1 for prior_answer in prior_answers if answer in prior_answer)
-            return f"{options[(repeat_count - 1) % len(options)]} {answer}"
-        variants = {
+            return self._select_non_repeating_reply(options, prior_answers)
+        variants_by_suspect = {
+            "char_hanseoyeon": {
+                "pressure_followup": (
+                    "그건 네가 듣고 싶은 결론일 뿐이야. 숨긴 게 있다고 내가 다 인정하는 건 아니고.",
+                    "몰아붙이지 마. 하지만 아직 네가 다 안다고 생각하지도 마.",
+                    "말 못 한 건 있어. 그래도 지금 네 말대로 끌려가진 않아.",
+                ),
+                "unmatched": (
+                    "그건 사건 얘기가 아니잖아. 똑바로 물어.",
+                    "그런 식으로 떠보지 마. 사건 얘기만 해.",
+                ),
+                "small_talk": (
+                    "인사는 됐어. 묻고 싶은 거나 말해.",
+                    "잡담할 기분 아니야. 사건 얘기해.",
+                ),
+            },
+            "char_yoonjaeho": {
+                "pressure_followup": (
+                    "회피하려는 뜻은 아닙니다. 제가 본 것과 숨긴 것을 구분하려는 겁니다.",
+                    "회장님 일이라 말을 고를 수밖에 없습니다.",
+                    "압박하시는 이유는 압니다. 그래도 제가 한 일과 본 일은 다릅니다.",
+                ),
+                "unmatched": (
+                    "그 질문은 사건과 맞닿아 있지 않습니다.",
+                    "제가 답할 일은 회장님 주변에서 본 것뿐입니다.",
+                ),
+                "small_talk": (
+                    "인사는 나중에 하겠습니다. 확인하실 일을 말씀해 주십시오.",
+                    "지금은 예의를 차릴 때보다 사실을 확인할 때입니다.",
+                ),
+            },
+            "char_parkmingyu": {
+                "pressure_followup": (
+                    "회피가 아니라 방어입니다. 기록 수정과 사망 원인은 다른 문제입니다.",
+                    "불리하게 보이는 건 압니다. 그래도 의학적 판단까지 건너뛰진 마세요.",
+                    "책임이 없다는 뜻은 아닙니다. 다만 살해와는 다른 문제입니다.",
+                ),
+                "unmatched": (
+                    "사건과 의료 기록에 관련된 질문만 답하겠습니다.",
+                    "그 질문은 제 소견과 무관합니다.",
+                ),
+                "small_talk": (
+                    "지금은 잡담할 상황이 아닙니다.",
+                    "필요한 질문만 해 주십시오.",
+                ),
+            },
+            "char_choiyuna": {
+                "pressure_followup": (
+                    "피하려는 건 아닙니다. 다만 제가 받은 지시를 전부 말하면 제 책임도 같이 드러납니다.",
+                    "그렇게 묶어 말하면 제가 불리해지는 건 압니다.",
+                    "숨긴 일정이 있었다는 것까진 부정하지 않겠습니다.",
+                ),
+                "unmatched": (
+                    "그 질문은 제 업무 기록과 관계없습니다.",
+                    "사건과 관련된 일정이나 통화만 물어보세요.",
+                ),
+                "small_talk": (
+                    "인사는 괜찮습니다. 필요한 질문을 하세요.",
+                    "지금은 일정 확인부터 하시죠.",
+                ),
+            },
+        }
+        variants = variants_by_suspect.get(suspect_id, {}).get(dialogue_mode) or {
             "pressure_followup": (
-                "그 부분을 다시 밀어붙이셔도 제 말은 여기까지입니다.",
-                "같은 압박이라는 건 압니다. 그래도 제가 바로 고개 숙일 수는 없습니다.",
                 "그 말이 불편한 건 맞습니다. 하지만 아직 전부 말할 수는 없습니다.",
+                "압박하시는 이유는 알겠습니다. 그래도 단정은 받아들일 수 없습니다.",
             ),
             "unmatched": (
-                "그 질문은 지금 제게 확인할 수 있는 범위를 벗어납니다.",
                 "그건 제가 바로 답할 수 있는 질문이 아닙니다.",
                 "그 부분은 제 진술과 직접 연결해서 물어봐 주세요.",
             ),
@@ -916,16 +1030,55 @@ class DialogueService:
                 "짧게 하겠습니다. 사건과 관련된 걸 물어보세요.",
                 "지금은 잡담할 상황이 아닙니다.",
             ),
-        }
-        options = variants.get(dialogue_mode)
+        }.get(dialogue_mode) or ("그 질문에는 지금 더 답할 말이 없습니다.",)
+        return self._select_non_repeating_reply(variants, prior_answers)
+
+    def _select_non_repeating_reply(self, options: tuple[str, ...], prior_answers: list[str], *, start: int = 0) -> str:
         if not options:
-            options = (
-                "표현을 바꾸면 이렇습니다.",
-                "같은 취지로 말하겠습니다.",
-                "다시 말하자면 이렇습니다.",
-            )
-        repeat_count = prior_answers.count(answer)
-        return f"{options[(repeat_count - 1) % len(options)]} {answer}"
+            return ""
+        for offset in range(len(options)):
+            candidate = options[(start + offset) % len(options)]
+            if all(candidate != prior and candidate not in prior and prior not in candidate for prior in prior_answers):
+                return candidate
+        return options[start % len(options)]
+
+    def _structured_pressure_fallback(self, suspect_id: str, allowed_statement: dict[str, Any]) -> str | None:
+        refs = allowed_statement.get("sourceRefs") or {}
+        ref_ids = {
+            str(item)
+            for key in ("statementIds", "evidenceIds", "timelineIds", "contradictionIds")
+            for item in (refs.get(key) or [])
+        }
+        statement_id = str(allowed_statement.get("id") or "")
+        if statement_id:
+            ref_ids.add(statement_id)
+        if suspect_id == "char_hanseoyeon":
+            if ref_ids & {"ev_study_entry_log", "st_hanseoyeon_room_2200", "tl_global_2202_study_entry", "con_room_claim_vs_entry_log"}:
+                return "전산 오류겠지. 아니면 누가 내 카드키를 주웠거나. 그걸 왜 바로 나라고 해?"
+            if ref_ids & {"ev_torn_will", "st_hanseoyeon_inheritance", "con_inheritance_motive"}:
+                return "유언장 얘기까지 꺼내면 숨 막혀. 하지만 그걸로 내가 무너질 거라고 생각하지 마."
+            if ref_ids & {"ev_blackout_log", "ev_broken_watch", "con_watch_time_manipulated"}:
+                return "그건 나도 이상하다고 생각해. 하지만 내가 다 꾸몄다는 식으로 말하지 마."
+        if suspect_id == "char_yoonjaeho":
+            if ref_ids & {"ev_household_expense_memo", "st_yoonjaeho_family_tension", "con_yoon_family_tension"}:
+                return "빚과 유언장 소문을 들은 건 맞습니다. 집안이 무너질까 봐 말을 아꼈습니다."
+            if ref_ids & {"ev_key_cabinet_log", "st_yoonjaeho_key_only_victim", "con_yoon_key_log"}:
+                return "열쇠 기록이 불리한 건 압니다. 그래도 제가 본 일과 한 일은 구분해야 합니다."
+            if ref_ids & {"ev_yoon_route_log", "st_yoonjaeho_found_2210", "con_yoon_route_mismatch"}:
+                return "22:10쯤 서재를 확인했다는 제 말은 같습니다. 다만 순찰 기록과 어긋나는 시간은 숨긴 이유가 있습니다."
+        if suspect_id == "char_parkmingyu":
+            if ref_ids & {"ev_prescription_dispute_note", "st_parkmingyu_argument", "con_park_dispute_note"}:
+                return "처방 문제로 부딪힌 건 맞습니다. 하지만 그게 살해 의도였다는 뜻은 아닙니다."
+            if ref_ids & {"ev_medicine_box", "st_parkmingyu_medicine", "ev_chart_modified", "con_park_chart_modified"}:
+                return "제가 확인한 약은 모르핀 계열 진통제와 수면 보조제였습니다. 처방 책임만으로 살해로 단정하는 건 과합니다."
+        if suspect_id == "char_choiyuna":
+            if ref_ids & {"ev_phone_call", "ev_choiyuna_schedule_memo", "st_choiyuna_last_call", "con_choiyuna_call_record"}:
+                return "일정과 통화를 줄여 말한 건 맞습니다. 가족에게 숨기라는 지시도 있었습니다."
+            if ref_ids & {"ev_ring_near_victim", "ev_choiyuna_ring_receipt", "st_choiyuna_ring_seen", "con_choiyuna_ring_vs_denial"}:
+                return "반지 얘기까지 나오면 더 숨기기 어렵겠네요. 그래도 그게 살해는 아닙니다."
+            if ref_ids & {"ev_wine_glass", "ev_lipstick_tube", "st_choiyuna_no_wine", "con_wine_glass_lipstick"}:
+                return "립스틱 얘기가 불리한 건 압니다. 하지만 서재 일을 한 번에 단정하진 마세요."
+        return None
 
     def _strip_repeated_answer_prefix(self, answer: str) -> str:
         stripped = answer.strip()
@@ -1025,6 +1178,14 @@ class DialogueService:
             for record in case.records
             if record.recordId in question.unlocksRecordIds
         )
+        if question.questionId.endswith("discovery") and any(
+            term in compact for term in ("봤", "보았", "목격", "발견", "확인", "본거", "본것", "뭘봤", "무엇을봤")
+        ):
+            score += 4
+        if any(term in compact for term in ("관계", "사이")) and any(
+            term in self._normalize_text(" ".join(search_texts)).replace(" ", "") for term in ("관계", "사이")
+        ):
+            score += 3
         if any(term in compact for term in ("립스틱", "와인잔", "와인")) and any(
             term in self._normalize_text(" ".join(search_texts)).replace(" ", "")
             for term in ("립스틱", "와인잔", "와인")
@@ -1042,11 +1203,19 @@ class DialogueService:
         case_terms = ("22", "사건", "피해자", "서재", "상속", "유언", "와인", "립스틱", "약", "복용", "증거", "기록", "알리바이", "복도", "정전")
         return any(term in compact for term in greeting_terms) and not any(term in compact for term in case_terms)
 
+    def _victim_relation_question(self, candidates: list, normalized_message: str):
+        compact = normalized_message.replace(" ", "")
+        if not any(term in compact for term in ("관계", "사이")):
+            return None
+        if not any(term in compact for term in ("회장님", "회장", "강도준", "피해자")):
+            return None
+        return next((item for item in candidates if item.questionId.endswith("victim_relation")), None)
+
     def _broad_time_alibi_question(self, candidates: list, normalized_message: str):
         compact = normalized_message.replace(" ", "")
         if not self._mentions_time(normalized_message):
             return None
-        if not any(term in compact for term in ("뭐했", "무엇", "무얼", "어디", "있었", "동선", "행적", "알리바이")):
+        if not any(term in compact for term in ("뭐했", "무엇", "무얼", "어디", "있었", "동선", "행적", "알리바이", "봤", "보았", "목격", "발견", "확인")):
             return None
         if not (
             re.search(r"\d{1,2}시?(부터|에서|~|-)?\d{1,2}시?(까지|사이|전후)?", compact)
@@ -1077,6 +1246,22 @@ class DialogueService:
                 "이상하",
                 "말장난",
                 "그게답",
+                # Free-form pressure after a suspect has already answered should not
+                # fall into generic unmatched deflection. Keep it in the current
+                # interrogation context so persona/pressure can shape the reply.
+                "버티지",
+                "숨긴걸",
+                "숨긴거",
+                "숨긴것",
+                "숨긴부분",
+                "사실대로",
+                "정말숨긴",
+                "숨긴이유",
+                "무슨이유",
+                "어떤이유",
+                "이유가뭐",
+                "이유뭐",
+                "뭐지",
             )
         )
 
@@ -1089,6 +1274,23 @@ class DialogueService:
         return any(term in compact for term in ("22시", "열시", "그시간", "그때", "행적", "동선", "어디", "알리바이"))
 
     def _recent_context_statement(self, case: Case, session: SessionState, suspect_id: str, message: str) -> dict[str, Any]:
+        compact = self._normalize_text(message).replace(" ", "")
+        if suspect_id == "char_yoonjaeho" and any(
+            term in compact for term in ("숨긴이유", "무슨이유", "어떤이유", "이유가뭐", "이유뭐", "순찰기록", "22:08", "2208", "발견시각")
+        ):
+            return {
+                "id": "recent_pressure_char_yoonjaeho_route_gap",
+                "text": (
+                    "윤재호는 22:10 발견 진술을 유지하지만 집사 순찰 기록의 22:08 2층 복도 확인 표시와 어긋나는 이유를 숨기고 있다. "
+                    "붕괴 전에는 한서연 목격을 직접 말하지 말고, 정전 직후 혼선·보고 정리·본 것과 확인한 것의 차이로 방어한다."
+                ),
+                "sourceRefs": {
+                    "statementIds": ["st_yoonjaeho_found_2210"],
+                    "timelineIds": self._timeline_ids_for_source(case, "st_yoonjaeho_found_2210"),
+                    "evidenceIds": ["ev_yoon_route_log"],
+                    "contradictionIds": ["con_yoon_route_gap"],
+                },
+            }
         alibi_statement = next(
             (
                 item
@@ -1120,7 +1322,13 @@ class DialogueService:
 
     def _looks_like_contradiction_challenge(self, normalized_message: str) -> bool:
         compact = normalized_message.replace(" ", "")
+        if "만으로" in compact or compact.endswith("인가요") or compact.endswith("인가요?"):
+            return False
         return any(term in compact for term in ("모순", "충돌", "안맞", "말이안", "거짓", "입증", "증명"))
+
+    def _looks_like_relationship_question(self, normalized_message: str) -> bool:
+        compact = normalized_message.replace(" ", "")
+        return any(term in compact for term in ("관계", "사이", "키웠", "감정", "가깝", "친했", "어떤사이", "무슨사이"))
 
     def _visible_evidence_context(self, case: Case, session: SessionState, normalized_message: str) -> dict[str, Any] | None:
         visible_items = []
@@ -1155,16 +1363,26 @@ class DialogueService:
                 }
         return None
 
-    def _fallback_answer_for_intent(self, dialogue_mode: str, suspect, message: str) -> str:
+    def _fallback_answer_for_intent(
+        self,
+        dialogue_mode: str,
+        suspect,
+        message: str,
+        case: Case | None = None,
+        session: SessionState | None = None,
+    ) -> str:
         if dialogue_mode == "small_talk":
             if suspect.characterId == "char_yoonjaeho":
                 return "인사는 나중에 하겠습니다. 확인하실 일을 분명히 말씀해 주십시오."
             return "인사는 됐어요. 정말 묻고 싶은 게 있잖아요."
         if dialogue_mode == "evidence_question":
+            compact = self._normalize_text(message).replace(" ", "")
             if suspect.characterId == "char_yoonjaeho":
+                if "순찰기록" in compact or "22:08" in compact or "2208" in compact:
+                    return "제가 저택을 돌며 확인한 동선을 적은 기록입니다. 22:08 표시는 2층 복도 확인이지, 서재 안을 확인했다는 뜻은 아닙니다."
                 return "그 기록이 걸리는 건 압니다. 제가 본 일과 장부가 어긋나는 부분은 조심스럽게 확인하겠습니다."
             if suspect.characterId == "char_hanseoyeon":
-                return "아니… 그 기록이 불편한 건 맞아. 그래도 그걸로 전부 단정하지 마."
+                return "아니… 내 카드키가 찍혔다고 내가 들어간 건 아니잖아. 잃어버린 적도 있어."
             if suspect.characterId == "char_parkmingyu":
                 return "그 메모가 불리한 건 압니다. 다만 약이나 기록을 곧장 사망 원인으로 묶지는 마세요."
             if suspect.characterId == "char_choiyuna":
@@ -1178,6 +1396,9 @@ class DialogueService:
                     return "말이 안 된다고 해도… 지금은 그 이상 말 못 해. 내가 흔들린 건 맞아."
                 return "피하는 거 아니야. 그냥 네가 원하는 식으로 다 인정하긴 싫은 거야."
             if suspect.characterId == "char_yoonjaeho":
+                route_gap = any(term in compact for term in ("숨긴이유", "무슨이유", "어떤이유", "이유가뭐", "이유뭐", "순찰기록", "22:08", "2208", "발견시각"))
+                if route_gap:
+                    return "22:08 표시가 걸리는 건 압니다. 다만 제가 본 것과 보고한 것을 바로 같은 말로 묶을 수는 없습니다."
                 if disbelief:
                     return "납득하기 어렵다는 건 압니다. 그래도 회장님 일이라 말을 가릴 수밖에 없습니다."
                 return "회피하려는 뜻은 아닙니다. 제가 본 것과 숨긴 것을 구분하려는 겁니다."
@@ -1198,6 +1419,8 @@ class DialogueService:
             return "그 시간대라면 저는 제 방에 있었어요. 폭풍 때문에 방 밖으로 오래 나갈 상황도 아니었습니다."
         if suspect.characterId == "char_yoonjaeho":
             return "무슨 말씀인지 분명하지 않습니다. 회장님 주변에서 제가 본 일이라면 구체적으로 물어봐 주십시오."
+        if suspect.characterId == "char_hanseoyeon":
+            return "너무 넓게 묻지 마. 뭘 봤다는 건지 똑바로 말해."
         return "그 질문은 너무 넓어요. 그렇게 몰아가듯 묻지 마세요."
 
     def _neutral_allowed_statement(self, case: Case, suspect) -> str:
