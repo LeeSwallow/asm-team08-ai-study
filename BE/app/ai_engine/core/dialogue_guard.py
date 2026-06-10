@@ -41,6 +41,55 @@ CASE_CONTEXT_TOKENS = (
     "알리바이",
 )
 
+_SALIENCE_STOPWORDS = {
+    "한서연",
+    "윤재호",
+    "박민규",
+    "최윤아",
+    "사건",
+    "당일",
+    "무렵",
+    "진술했다",
+    "말했습니다",
+    "있었다고",
+    "했습니다",
+    "제가",
+    "저는",
+    "그날",
+    "것은",
+    "것도",
+}
+
+
+def _salient_fact_terms(text: str) -> set[str]:
+    normalized = normalize_text(text)
+    terms: set[str] = set()
+    for raw in normalized.replace(".", " ").replace(",", " ").split():
+        token = raw.strip("…!?·:;()[]{}\"'")
+        if len(token) < 2 or token in _SALIENCE_STOPWORDS:
+            continue
+        terms.add(token)
+        if len(token) >= 4:
+            terms.add(token[:3])
+    return terms
+
+
+def _generated_preserves_allowed_fact(
+    generated: str,
+    allowed_statement: str,
+    allowed_context_terms: tuple[str, ...],
+) -> bool:
+    allowed_terms = _salient_fact_terms(allowed_statement)
+    if not allowed_terms:
+        return False
+    generated_terms = _salient_fact_terms(generated)
+    overlap = allowed_terms & generated_terms
+    required = min(2, len(allowed_terms))
+    if len(overlap) < required:
+        return False
+    normalized_generated = normalize_text(generated)
+    return not _padding_has_unsupported_case_context(normalized_generated, allowed_statement, allowed_context_terms)
+
 
 def _normalize_padding(text: str) -> str:
     return text.strip(" \t\n\r,.!?。！？")
@@ -107,6 +156,9 @@ def enforce_allowed_statement(
             return generated, False
         return allowed, generated != allowed
 
+    if _generated_preserves_allowed_fact(generated, allowed_statement, allowed_context_terms):
+        return generated, False
+
     safe_parts = [part for part in sentence_parts(generated) if part and part in allowed]
     if safe_parts:
         return " ".join(safe_parts), True
@@ -140,7 +192,10 @@ def guard_dialogue_text(
         allowed_context_terms,
     )
     final_leaks, final_blocked_terms = contains_secret(final_text, reveal_allowed=reveal_allowed)
-    final_violates = normalize_text(allowed_statement) not in normalize_text(final_text)
+    final_violates = not (
+        normalize_text(allowed_statement) in normalize_text(final_text)
+        or _generated_preserves_allowed_fact(final_text, allowed_statement, allowed_context_terms)
+    )
 
     blocked_reason = redaction.blocked_reason
     if repaired_scope or repaired_after_redaction:

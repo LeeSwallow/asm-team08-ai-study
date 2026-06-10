@@ -52,7 +52,10 @@ def select_persona_overlay(payload: DialogueRequest) -> PersonaOverlay | None:
         payload.suspect.tensionScore if payload.suspect.tensionScore is not None else payload.suspect.pressure
     )
     if pack.activePersonaOverlay:
-        overlay = pack.activePersonaOverlay.model_copy()
+        active_overlay = pack.activePersonaOverlay
+        if isinstance(active_overlay, dict):
+            active_overlay = PersonaOverlay.model_validate(active_overlay)
+        overlay = active_overlay.model_copy()
         overlay.selectedFrom = overlay.selectedFrom or "activePersonaOverlay"
         overlay.tensionLevel = overlay.tensionLevel or payload.suspect.tensionLevel
         overlay.pressureState = overlay.pressureState or payload.suspect.pressureState
