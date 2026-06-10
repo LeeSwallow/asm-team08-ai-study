@@ -402,16 +402,19 @@ def _public_relation_detail(case: Case, session: SessionState, relation) -> dict
 
 def _public_relation_edge(case: Case, session: SessionState, relation) -> dict:
     unlocked = relation.relationshipId in session.unlockedRelationIds
-    suspect = next((item for item in case.suspects if item.characterId == relation.characterId), None)
+    source_character_id = relation.relatedCharacterId or case.victimId
+    source_suspect = next((item for item in case.suspects if item.characterId == source_character_id), None)
+    target_suspect = next((item for item in case.suspects if item.characterId == relation.characterId), None)
+    source_name = case.victimName if source_character_id == case.victimId else (source_suspect.name if source_suspect else source_character_id)
     safe_label = relation.description if unlocked else "미확인 관계"
     safe_description = relation.description if unlocked else "아직 공개 단서로 확인되지 않은 관계입니다."
     safe_conflict = relation.conflict if unlocked else ""
     return {
         "relationshipId": relation.relationshipId,
-        "sourceCharacterId": case.victimId,
+        "sourceCharacterId": source_character_id,
         "targetCharacterId": relation.characterId,
-        "sourceName": case.victimName,
-        "targetName": suspect.name if suspect else relation.characterId,
+        "sourceName": source_name,
+        "targetName": target_suspect.name if target_suspect else relation.characterId,
         "label": safe_label,
         "description": safe_description,
         "conflict": safe_conflict,
@@ -715,7 +718,8 @@ def _visible_timeline(case: Case, session: SessionState | None, visible_ids: set
         return []
     return [
         item for item in case.storyline.timeline
-        if not item.hidden and (not item.unlockCondition or item.unlockCondition in visible_ids)
+        if (not item.hidden or (item.unlockCondition and item.unlockCondition in visible_ids))
+        and (not item.unlockCondition or item.unlockCondition in visible_ids)
     ]
 
 
