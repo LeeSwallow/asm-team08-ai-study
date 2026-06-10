@@ -52,6 +52,7 @@ export type BackendCase = {
   incidentTime: string;
   incidentLocation: string;
   questionLimit: number;
+  enabled?: boolean;
 };
 
 export type BackendSession = {
@@ -249,6 +250,7 @@ export function normalizeCase(item: BackendCase | CaseSummary): CaseSummary {
       incidentTime: item.incidentTime,
       location: item.incidentLocation,
       questionLimit: item.questionLimit,
+      enabled: item.enabled ?? true,
     };
   }
   return item;

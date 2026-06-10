@@ -52,7 +52,13 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
               const selected = selectedCase?.id === caseFile.id;
               const coverAsset = caseCoverAsset(caseFile.id, caseFile.sceneId);
               return (
-              <article className={`scenario-card ${selected ? "selected" : ""}`} key={caseFile.id}>
+              <article className={`scenario-card ${selected ? "selected" : ""} ${caseFile.enabled === false ? "locked" : ""}`} key={caseFile.id} aria-disabled={caseFile.enabled === false}>
+                {caseFile.enabled === false && (
+                  <div className="scenario-card-lock" aria-label="준비 중">
+                    <span>🔒</span>
+                    <strong>준비 중</strong>
+                  </div>
+                )}
                 <div className="case-stamp" aria-hidden="true">
                   {coverAsset ? (
                     <img src={coverAsset} alt="" />
@@ -87,14 +93,15 @@ export function ScenarioSelectScreen({ cases, statusMessage, busy, resumableSess
                 </dl>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || caseFile.enabled === false}
                   aria-pressed={selected}
                   onClick={() => {
+                    if (caseFile.enabled === false) return;
                     setSelectedCaseId(caseFile.id);
                     onOpenCase?.(caseFile.id);
                   }}
                 >
-                  {onOpenCase ? "사건 상세" : selected ? "선택됨" : "사건 읽어보기"}
+                  {caseFile.enabled === false ? "업데이트 예정" : onOpenCase ? "사건 상세" : selected ? "선택됨" : "사건 읽어보기"}
                 </button>
               </article>
             );

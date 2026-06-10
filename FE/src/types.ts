@@ -13,6 +13,7 @@ export type CaseSummary = {
   incidentTime: string;
   location: string;
   questionLimit: number;
+  enabled?: boolean;
 };
 
 export type CaseDetail = CaseSummary & {
@@ -298,6 +299,7 @@ export type DialogueLogItem = {
   statementId?: string;
   important?: boolean;
   createdAt?: string;
+  voiceTag?: string;
 };
 
 export type ContradictionRule = {
