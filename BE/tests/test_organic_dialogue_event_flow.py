@@ -4,7 +4,7 @@ import pytest
 
 from app.application.dialogue_service import DialogueService
 from app.domain.event_types import EventType
-from tests.test_api_smoke import _client
+from tests.test_api_smoke import _client, _unlock_study_entry_log
 
 
 SUSPECT_DIALOGUE_MESSAGES = {
@@ -12,7 +12,7 @@ SUSPECT_DIALOGUE_MESSAGES = {
         "22:00에 어디 있었나요?",
         "상속 문제로 다툰 적 있나요?",
         "서재의 와인잔을 알고 있나요?",
-        "22:02 서재 출입 기록을 설명해 주세요.",
+        "회장님과 어떤 관계였나요?",
     ],
     "char_yoonjaeho": [
         "피해자를 언제 발견했나요?",
@@ -48,14 +48,12 @@ def _post_dialogue(client, session_id: str, suspect_id: str, message: str):
     )
 
 
-def test_hanseoyeon_polish_keeps_generated_dialogue_in_banmal():
+def test_dialogue_service_polish_only_strips_format_artifacts_without_rewriting_voice():
     service = DialogueService.__new__(DialogueService)
 
-    polished = service._polish_answer("아니… 제 방에 있었습니다. 그게 왜 문제죠?", "한서연")
+    polished = service._polish_answer('"아니… 제 방에 있었습니다. (시선을 피한다)"', "한서연")
 
-    assert polished == "아니… 제 방에 있어. 그게 왜 문제야?"
-    assert "습니다" not in polished
-    assert "죠" not in polished
+    assert polished == "아니… 제 방에 있었습니다."
 
 
 def test_yoonjaeho_free_text_relationship_and_after_22_questions_are_contextual(tmp_path, monkeypatch):
@@ -71,15 +69,30 @@ def test_yoonjaeho_free_text_relationship_and_after_22_questions_are_contextual(
     assert "사건과 관련된 것만" not in relationship["answer"]
     assert any(item["relationshipId"] == "rel_yoonjaeho_loyalty" for item in relationship["relations"])
 
+    han_bond = _post_dialogue(client, session_id, "char_yoonjaeho", "한서연과의 관계는?").json()
+    print("[YOO-FREETEXT] han_bond:", han_bond["answer"])
+    assert han_bond["dialogueResult"]["consumedQuestion"] is True
+    assert han_bond["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_hanseoyeon_bond"
+    assert "8살" in han_bond["answer"] or "등하교" in han_bond["answer"] or "한서연" in han_bond["answer"]
+    assert "그런 이야기를 나눌 상황" not in han_bond["answer"]
+    assert any(item["relationshipId"] == "rel_yoonjaeho_hanseoyeon" for item in han_bond["relations"])
+
+    seen_followup = _post_dialogue(client, session_id, "char_yoonjaeho", "그래 너가 뭘 봤지?").json()
+    print("[YOO-FREETEXT] seen_followup:", seen_followup["answer"])
+    assert seen_followup["dialogueResult"]["consumedQuestion"] is True
+    assert seen_followup["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_discovery"
+    assert "22:10" in seen_followup["answer"] or "서재" in seen_followup["answer"]
+    assert "무엇을 묻는지" not in seen_followup["answer"]
+
     vague = _post_dialogue(client, session_id, "char_yoonjaeho", "뭐야?").json()
     print("[YOO-FREETEXT] vague:", vague["answer"])
     assert vague["dialogueResult"]["consumedQuestion"] is False
     assert vague["dialogueResult"]["matchedQuestionId"] is None
-    assert vague["remainingQuestions"] == relationship["remainingQuestions"]
+    assert vague["remainingQuestions"] == seen_followup["remainingQuestions"]
     assert "어떤 시간을" not in vague["answer"]
     assert "어떤 증거" not in vague["answer"]
 
-    after_22 = _post_dialogue(client, session_id, "char_yoonjaeho", "너는 22시 이후에 어디있었어?").json()
+    after_22 = _post_dialogue(client, session_id, "char_yoonjaeho", "22시에 뭘 봤지?").json()
     print("[YOO-FREETEXT] after_22:", after_22["answer"])
     assert after_22["dialogueResult"]["consumedQuestion"] is True
     assert after_22["dialogueResult"]["matchedQuestionId"] == "q_yoonjaeho_discovery"
@@ -164,6 +177,8 @@ def test_dialogue_events_progress_organically_from_statement_to_unlock_to_contra
     assert EventType.NOTE_CONTRADICTION_CANDIDATE_ADDED.value not in secretary_types
     assert EventType.TENSION_CHANGED.value not in secretary_types
     assert secretary["contradictionResult"] is None
+
+    _unlock_study_entry_log(client, session_id)
 
     pressure = _post_dialogue(
         client,

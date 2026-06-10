@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from app.ai_engine.graph.dialogue_graph import run_dialogue_graph
 from app.infra.local_ai_client import _public_runtime_diagnostics
 from app.ai_engine.graph.dialogue_generation_nodes import (
+    build_ask_clarification_plan,
     build_deflect_irrelevant_plan,
     build_react_to_valid_pressure_plan,
     select_character_reaction_route,
@@ -75,6 +76,26 @@ def test_route_node_builds_deflect_function_transition() -> None:
     assert plan.strategy == "deflect_irrelevant"
     assert plan.functionCall["name"] == "deflect_irrelevant_turn"
     assert plan.functionCall["transferTo"] == "CharacterAgent"
+
+
+def test_terse_vague_clarification_plan_does_not_invent_time_evidence_statement_axes() -> None:
+    state = {
+        "payload": _request(message="뭐야?", mode="unmatched"),
+        "character_reaction_decision": CharacterReactionDecision(
+            suspectId="char_hanseoyeon",
+            reactionRoute="ask_clarification",
+            playerClaimAssessment="ambiguous",
+            responseIntent="ask_specific_followup",
+        ),
+    }
+
+    plan = build_ask_clarification_plan(state)["dialogue_director_plan"]
+
+    assert plan.functionCall["arguments"]["terseVague"] is True
+    rendered_directives = " ".join(plan.styleDirectives)
+    assert "시간/증거/진술" not in rendered_directives
+    assert "시간/증거" not in rendered_directives
+    assert "무엇을 묻는지" in rendered_directives or "뭘 묻는지" in rendered_directives
 
 
 def test_route_node_builds_valid_pressure_plan_with_advisory_state_intent() -> None:

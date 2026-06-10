@@ -20,7 +20,7 @@ VOICE_MARKERS_BY_SUSPECT = {
     "char_hanseoyeon": ("아니", "…", "웃기", "그게", "됐어", "뭘"),
     "char_yoonjaeho": ("회장님", "제가 본", "조심", "말씀", "집사", "그 시간"),
     "char_parkmingyu": ("기록", "처방", "의학", "소견", "책임", "약"),
-    "char_choiyuna": ("일정", "기록", "확인", "회장님", "업무", "전화"),
+    "char_choiyuna": ("일정", "기록", "확인", "회장님", "업무", "전화", "반지", "유언장"),
 }
 
 BREAKDOWN_QUESTION_BY_SUSPECT = {
@@ -87,6 +87,9 @@ SUSPECT_SCENARIOS = {
         ("char_yoonjaeho", "정전 당시 무엇을 했나요?"),
         ("char_hanseoyeon", "정전 기록과 부자연스러운 회중시계 파편은 현장 조작 가능성을 보여줍니다."),
         ("char_hanseoyeon", "그 시계랑 정전 이야기를 피하지 마. 네 말이 납득 안 돼."),
+        ("char_choiyuna", "반지에 대해 아는 것이 있나요?"),
+        ("char_choiyuna", "처음 보는 반지라는 말은 현장 반지와 모순입니다."),
+        ("char_choiyuna", "반지를 처음 본다는 말은 반지 구매 영수증과 모순입니다."),
         ("char_hanseoyeon", "상속 문제로 다툰 적 있나요?"),
         ("char_hanseoyeon", "죽일 이유가 없다는 말은 찢어진 유언장과 모순입니다."),
         ("char_hanseoyeon", "유언장까지 나왔는데 아직 죽일 이유가 없다는 게 말이 된다고 생각해?"),
@@ -125,10 +128,75 @@ SUSPECT_SCENARIOS = {
         ("char_choiyuna", "가족에게 숨기라는 일정까지 알고 있었는데 단순 지시였다는 건 납득이 안 됩니다."),
         ("char_choiyuna", "서재의 와인잔을 알고 있나요?"),
         ("char_choiyuna", "립스틱 케이스는 와인과 립스틱 색이 제 것이 아니라는 말과 모순입니다."),
-        ("char_choiyuna", "일정, 통화, 립스틱 케이스가 이어지는데 계속 피하지 마세요."),
-        ("char_choiyuna", "이제 일정과 서재 주변에서 숨긴 걸 말해 주세요."),
+        ("char_choiyuna", "반지에 대해 아는 것이 있나요?"),
+        ("char_choiyuna", "처음 보는 반지라는 말은 현장 반지와 모순입니다."),
+        ("char_choiyuna", "반지를 처음 본다는 말은 반지 구매 영수증과 모순입니다."),
+        ("char_choiyuna", "이제 반지와 유언장 뒤에 숨긴 관계를 말해 주세요."),
     ],
 }
+
+
+def test_hanseoyeon_culprit_accusation_stays_in_persona_and_never_unmatched(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    script = (
+        "니가 범인이지?",
+        "서재 출입 기록에 니 이름이 있던데? 피해자가 사망한 시각에 말이야",
+        "너가 범인이지...",
+    )
+    answers = []
+    modes = []
+    for message in script:
+        response = client.post(
+            f"/api/v1/sessions/{session_id}/dialogue",
+            json={"suspectId": "char_hanseoyeon", "message": message},
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        answers.append(payload["answer"])
+        modes.append(payload["dialogueResult"]["dialogueMode"])
+
+    assert "unmatched" not in modes
+    assert modes[0] == "pressure_followup"
+    assert modes[2] == "pressure_followup"
+    for answer in answers:
+        assert any(marker in answer for marker in ("아니", "…", "숨", "몰", "그만", "네가")), answer
+        assert not any(marker in answer for marker in ("하시오", "하셔", "하쇼", "하십시오", "습니다", "씨발", "시발", "ㅅㅂ", "지랄", "개소리", "병신", "확인할 수 있는 범위를 벗어납니다")), answer
+    assert len(answers) == len(set(answers)), answers
+
+
+def test_hanseoyeon_hidden_truth_pressure_followup_keeps_persona_when_breakdown_locked(tmp_path, monkeypatch):
+    client = _client(tmp_path, monkeypatch)
+    session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
+    session_id = session["sessionId"]
+
+    for message in (
+        "정전 기록과 부자연스러운 회중시계 파편은 현장 조작 가능성을 보여줍니다.",
+        "상속 문제로 다툰 적 있나요?",
+    ):
+        response = client.post(
+            f"/api/v1/sessions/{session_id}/dialogue",
+            json={"suspectId": "char_hanseoyeon", "message": message},
+        )
+        assert response.status_code == 200, response.text
+
+    response = client.post(
+        f"/api/v1/sessions/{session_id}/dialogue",
+        json={"suspectId": "char_hanseoyeon", "message": "이제 버티지 말고, 서재에서 정말 숨긴 걸 말해."},
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    dialogue = payload["dialogueResult"]
+    answer = payload["answer"]
+
+    assert dialogue["dialogueMode"] == "pressure_followup"
+    assert dialogue["matchedQuestionId"] is None
+    assert any(marker in answer for marker in ("아니", "…", "숨긴", "버티", "몰아")), answer
+    assert not any(marker in answer for marker in ("말씀", "습니다", "제 주변에서 본 일")), answer
+    assert "방에 있었다는 건 거짓말" not in answer
+    assert "서재엔 들어갔어" not in answer
 
 
 @pytest.mark.parametrize("target_suspect_id", sorted(SUSPECT_SCENARIOS))
@@ -184,7 +252,13 @@ def test_scenario1_user_pressure_script_can_break_each_suspect_to_resigned_stage
     assert final_target_turn["matchedQuestionId"] == BREAKDOWN_QUESTION_BY_SUSPECT[target_suspect_id], transcript
     assert any(marker in final_target_turn["answer"] for marker in BREAKDOWN_MARKERS_BY_SUSPECT[target_suspect_id]), final_target_turn
     assert any(item["evidenceId"] == BREAKDOWN_EVIDENCE_BY_SUSPECT[target_suspect_id] for item in reloaded["evidence"])
-    evaluation = _humanlike_flow_evaluation(transcript)
+    evaluation = _humanlike_flow_evaluation(target_turns)
     print(f"\n[HUMANLIKE-EVAL] target={target_suspect_id} {evaluation}")
     assert evaluation["passed"], evaluation
+    for item in target_turns:
+        answer = item["answer"]
+        sentences = [part.strip() for part in answer.replace("?", ".").replace("!", ".").split(".") if part.strip()]
+        assert len(sentences) == len(set(sentences)), item
+        if item["targetStage"] == "resigned" and item["matchedQuestionId"] != BREAKDOWN_QUESTION_BY_SUSPECT[target_suspect_id]:
+            assert not answer.startswith(("다시 말씀드리겠습니다", "그 부분을 다시 밀어붙이셔도", "기록 문제라면 다시 정리하겠습니다")), item
     assert_no_forbidden_refs(reloaded, surface=f"collapse_probe_{target_suspect_id}")
