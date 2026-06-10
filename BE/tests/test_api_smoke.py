@@ -137,7 +137,7 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
 
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
     session_id = session["sessionId"]
-    assert session["remainingQuestions"] == 12
+    assert session["remainingQuestions"] == 30
     assert session["selectedSuspectId"] is not None
     assert len(session["suspects"]) >= 4
     assert len(session["evidence"]) >= 4
@@ -146,7 +146,7 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
         f"/api/v1/sessions/{session_id}/questions",
         json={"questionId": "q_hanseoyeon_alibi", "suspectId": "char_hanseoyeon"},
     ).json()
-    assert asked["remainingQuestions"] == 11
+    assert asked["remainingQuestions"] == 29
     assert asked["questionResult"]["repeated"] is False
     assert len(asked["dialogueLog"]) == 2
 
@@ -154,7 +154,7 @@ def test_mvp_flow_persists_and_solves_case(tmp_path, monkeypatch):
         f"/api/v1/sessions/{session_id}/questions",
         json={"questionId": "q_hanseoyeon_alibi"},
     ).json()
-    assert repeated["remainingQuestions"] == 10
+    assert repeated["remainingQuestions"] == 28
     assert repeated["questionResult"]["repeated"] is True
     assert repeated["questionResult"]["askCount"] == 2
 
@@ -274,10 +274,10 @@ def test_case_001_revision_contract_matches_four_suspect_red_herring_design(tmp_
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
 
-    assert session["questionLimit"] == 12
-    assert session["remainingQuestions"] == 12
-    assert session["visibleEvidenceCount"] == 7
-    assert session["totalEvidenceCount"] == 26
+    assert session["questionLimit"] == 30
+    assert session["remainingQuestions"] == 30
+    assert session["visibleEvidenceCount"] == 12
+    assert session["totalEvidenceCount"] == 27
     assert {item["characterId"] for item in session["suspects"]} == {
         "char_hanseoyeon",
         "char_yoonjaeho",
@@ -288,18 +288,26 @@ def test_case_001_revision_contract_matches_four_suspect_red_herring_design(tmp_
     assert initial_evidence_ids == {
         "ev_broken_watch",
         "ev_wine_glass",
+        "ev_study_entry_log",
         "ev_servant_log",
+        "ev_phone_call",
         "ev_medicine_box",
         "ev_storm_blackout",
+        "ev_ring_near_victim",
+        "ev_lipstick_tube",
         "ev_window_bolt",
         "ev_yoon_route_log",
+        "ev_childhood_photo",
     }
-    assert "ev_study_entry_log" not in initial_evidence_ids
     assert "ev_torn_will" not in initial_evidence_ids
-    assert "ev_ring_near_victim" not in initial_evidence_ids
+    assert "ev_deleted_cctv" not in initial_evidence_ids
+    assert "ev_prescription_dispute_note" not in initial_evidence_ids
+    assert "ev_admin_schedule_note" not in initial_evidence_ids
+    assert "ev_doctor_guestroom_record" not in initial_evidence_ids
+    assert "ev_key_cabinet_check" not in initial_evidence_ids
+    assert "ev_household_account_note" not in initial_evidence_ids
     assert "ev_pancreatic_diagnosis" not in initial_evidence_ids
     assert "ev_narcotic_supply_record" not in initial_evidence_ids
-    assert "ev_childhood_photo" not in initial_evidence_ids
     assert "ev_choiyuna_ring_receipt" not in initial_evidence_ids
 
     case = json.loads(Path("data/cases/case_001.json").read_text(encoding="utf-8"))
@@ -313,12 +321,11 @@ def test_case_001_revision_contract_matches_four_suspect_red_herring_design(tmp_
     assert "ev_torn_will" not in questions["q_yoonjaeho_will"].get("unlocksEvidenceIds", [])
     assert "ev_choiyuna_ring_receipt" in questions["q_choiyuna_affair"].get("unlocksEvidenceIds", [])
     assert evidence["ev_storm_blackout"]["initiallyVisible"] is True
-    assert evidence["ev_study_entry_log"]["initiallyVisible"] is False
-    assert evidence["ev_study_entry_log"]["unlockCondition"] == "con_yoon_witness_guilt"
-    assert questions["q_hanseoyeon_study_entry"]["initiallyUnlocked"] is False
-    assert questions["q_hanseoyeon_study_entry"]["unlockCondition"] == "ev_study_entry_log"
+    assert evidence["ev_study_entry_log"]["initiallyVisible"] is True
+    assert evidence["ev_study_entry_log"].get("unlockCondition") is None
+    assert questions["q_hanseoyeon_study_entry"]["initiallyUnlocked"] is True
+    assert questions["q_hanseoyeon_study_entry"].get("unlockCondition") is None
     assert "카드키 출입 시스템" in evidence["ev_storm_blackout"]["description"]
-    assert relations["rel_yoonjaeho_choiyuna_mistrust"]["relatedCharacterId"] == "char_yoonjaeho"
     assert relations["rel_yoonjaeho_choiyuna_mistrust"]["initiallyVisible"] is True
     assert relations["rel_hanseoyeon_choiyuna_rivalry"]["unlockCondition"] == "con_choiyuna_ring_vs_denial"
 
@@ -345,7 +352,7 @@ def test_case_001_main_solution_progression_is_budget_safe_after_revision(tmp_pa
 
     # 최윤아 레드 헤링 경유: 반지 → 구매 영수증 → 찢어진 유언장.
     session = ask("q_choiyuna_ring")
-    assert session["remainingQuestions"] == 11
+    assert session["remainingQuestions"] == 29
     assert "ev_ring_near_victim" in {item["evidenceId"] for item in session["evidence"]}
 
     session = challenge(
@@ -812,7 +819,7 @@ def test_dialogue_accepts_suspect_id_and_message_and_records_events(tmp_path, mo
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 11
+    assert payload["remainingQuestions"] == 29
     assert payload["answer"]
     assert payload["dialogueResult"]["suspectId"] == "char_hanseoyeon"
     assert payload["dialogueResult"]["matchedQuestionId"] == "q_hanseoyeon_alibi"
@@ -970,7 +977,7 @@ def test_questions_endpoint_accepts_fe_free_text_compatibility_payload(tmp_path,
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 11
+    assert payload["remainingQuestions"] == 29
     assert payload["dialogueLog"][-2]["speaker"] == "player"
     assert payload["dialogueLog"][-2]["text"] == free_text
     assert payload["dialogueResult"]["matchedQuestionId"] == "q_hanseoyeon_alibi"
@@ -996,7 +1003,7 @@ def test_dialogue_accepts_arbitrary_natural_language_by_mapping_to_allowed_conte
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 11
+    assert payload["remainingQuestions"] == 29
     assert payload["dialogueLog"][-2]["speaker"] == "player"
     assert payload["dialogueLog"][-2]["text"] == message
     assert payload["dialogueResult"]["matchedQuestionId"] in session["unlockedQuestionIds"]
@@ -1068,7 +1075,7 @@ def test_dialogue_small_talk_does_not_consume_case_question_or_return_alibi(tmp_
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 12
+    assert payload["remainingQuestions"] == 30
     assert payload["dialogueResult"]["matchedQuestionId"] is None
     assert payload["dialogueResult"]["dialogueMode"] == "small_talk"
     assert payload["dialogueResult"]["consumedQuestion"] is False
@@ -1356,7 +1363,7 @@ def test_dialogue_unmatched_evidence_question_deflects_without_inheritance_jump(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 12
+    assert payload["remainingQuestions"] == 30
     assert payload["dialogueResult"]["matchedQuestionId"] is None
     assert payload["dialogueResult"]["dialogueMode"] == "unmatched"
     assert payload["dialogueResult"]["consumedQuestion"] is False
@@ -2057,11 +2064,11 @@ class ForbiddenRefDialogueAIClient(ContractTestAIClient):
         return result
 
 
-def test_degraded_dialogue_uses_be_fallback_and_still_consumes_the_12_turn_budget(tmp_path, monkeypatch):
+def test_degraded_dialogue_uses_be_fallback_and_still_consumes_the_30_turn_budget(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     monkeypatch.setattr(deps, "get_ai_client", lambda: DegradedDialogueAIClient())
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
-    assert session["questionLimit"] == 12
+    assert session["questionLimit"] == 30
     session_id = session["sessionId"]
 
     response = client.post(
@@ -2071,9 +2078,9 @@ def test_degraded_dialogue_uses_be_fallback_and_still_consumes_the_12_turn_budge
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 11
-    assert payload["dialogueResult"]["previousRemainingQuestions"] == 12
-    assert payload["dialogueResult"]["remainingQuestions"] == 11
+    assert payload["remainingQuestions"] == 29
+    assert payload["dialogueResult"]["previousRemainingQuestions"] == 30
+    assert payload["dialogueResult"]["remainingQuestions"] == 29
     assert payload["dialogueResult"]["remainingQuestionsDelta"] == -1
     assert payload["dialogueResult"]["safety"]["degraded"] is True
     assert payload["dialogueResult"]["fallbackUsed"] is True
@@ -2081,7 +2088,7 @@ def test_degraded_dialogue_uses_be_fallback_and_still_consumes_the_12_turn_budge
     assert len(payload["dialogueLog"]) == 2
 
     loaded = client.get(f"/api/v1/sessions/{session_id}").json()
-    assert loaded["remainingQuestions"] == 11
+    assert loaded["remainingQuestions"] == 29
     assert len(loaded["dialogueLog"]) == 2
 
 
@@ -2098,7 +2105,7 @@ def test_forbidden_ai_reply_is_replaced_with_be_fallback_without_repeating_api_f
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["remainingQuestions"] == 11
+    assert payload["remainingQuestions"] == 29
     assert payload["dialogueResult"]["fallbackUsed"] is True
     assert payload["dialogueResult"]["safety"]["blocked"] is True
     assert payload["dialogueResult"]["safety"]["status"] == "repaired"

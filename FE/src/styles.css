@@ -1466,7 +1466,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   padding-bottom: 8px;
   overflow: hidden;
   display: grid;
-  grid-template-rows: 38px minmax(304px, 1fr) minmax(138px, .45fr) 44px;
+  grid-template-rows: 38px minmax(0, 1fr) minmax(120px, .38fr) auto;
+  gap: 8px;
 }
 .evidence-grid {
   min-height: 0;
@@ -1474,10 +1475,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   overscroll-behavior: contain;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, auto);
+  grid-auto-rows: minmax(96px, auto);
   align-content: start;
   gap: 9px;
-  padding: 0 12px 8px;
+  padding: 0 12px 4px;
   padding-right: 8px;
 }
 .right-investigation-loop {
@@ -1487,9 +1488,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 .evidence-tile {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1 / .9;
   height: auto;
-  min-height: 0;
+  min-height: 96px;
   display: block;
   border: 2px solid rgba(218, 175, 98, .58);
   border-radius: 12px;
@@ -1538,9 +1539,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   white-space: pre-line;
   color: #f1e7d6;
   text-shadow: 0 2px 7px rgba(0,0,0,.9);
-  font-size: clamp(13px, .95vw, 16px);
+  font-size: clamp(11px, .82vw, 14px);
   font-weight: 840;
-  line-height: 1.22;
+  line-height: 1.18;
 }
 .evidence-tile.selected { border-color: var(--red); box-shadow: inset 0 0 0 1px rgba(228,58,54,.38), 0 0 22px rgba(228,58,54,.12); }
 .evidence-tile.locked { color: #666e77; border-color: rgba(92, 101, 113, .34); background: #06080b; }
@@ -1716,6 +1717,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   display: grid;
   align-content: center;
   gap: 6px;
+  padding: 10px 12px;
 }
 .desk-summary-card header,
 .desk-summary-stats {
@@ -1732,6 +1734,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .desk-summary-card.compact .desk-summary-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   margin: 0;
 }
 .desk-summary-card.compact .desk-summary-stats span {
@@ -1813,8 +1816,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   }
   .case-file-panel { overflow: visible; }
   .interrogation-panel { min-height: 640px; grid-template-rows: auto 39px 32px minmax(420px, 1fr) 112px; }
-  .evidence-panel { grid-column: 1 / -1; min-height: 380px; grid-template-rows: 38px 230px 150px; }
-  .evidence-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: minmax(0, auto); }
+  .evidence-panel { grid-column: 1 / -1; min-height: 440px; grid-template-rows: 38px minmax(220px, 1fr) minmax(130px, auto) auto; }
+  .evidence-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: minmax(86px, auto); }
   .system-flow { min-height: 92px; }
   .system-flow ol { display: flex; overflow-x: auto; gap: 18px; min-height: 62px; }
   .system-flow li { min-width: 210px; }
@@ -1947,16 +1950,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .natural-input p { font-size: 11px; line-height: 1.35; }
   .evidence-present { height: 32px; font-size: 12px; }
   .evidence-panel {
-    min-height: 560px;
-    grid-template-rows: 38px 300px minmax(170px, auto);
+    min-height: 620px;
+    grid-template-rows: 38px minmax(330px, 1fr) minmax(150px, auto) auto;
   }
   .evidence-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-rows: minmax(0, auto);
+    grid-auto-rows: minmax(94px, auto);
     gap: 6px;
-    padding: 0 8px 8px;
+    padding: 0 8px 6px;
   }
-  .evidence-tile strong { font-size: clamp(12px, 3.2vw, 14px); }
+  .evidence-tile strong { font-size: clamp(11px, 3vw, 13px); }
   .contradiction-panel { margin: 0 8px 8px; }
   .system-flow {
     padding: 8px;
@@ -2261,14 +2264,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .proof-summary dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   margin: 0;
+  padding: 2px;
 }
 .proof-summary dl div {
   min-width: 0;
   border: 1px solid rgba(116,132,150,.30);
   border-radius: 10px;
-  padding: 9px 10px;
+  padding: 11px 12px;
   background: rgba(0,0,0,.20);
 }
 .proof-summary dt { color: #ff625b; font-size: 12px; font-weight: 900; }
