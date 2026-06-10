@@ -8,6 +8,7 @@ import type {
   DialogueRuntimeDiagnostics,
   Evidence,
   GameEventFeedItem,
+  HelperSuggestion,
   GameSessionView,
   NoteEntry,
   Opening,
@@ -70,6 +71,7 @@ export type BackendSession = {
     motiveCandidate?: boolean;
     pressure?: number;
     pressureState?: string;
+    pressureStage?: string;
     tensionLevel?: string;
     emotionalState?: string;
     emotion?: string;
@@ -171,7 +173,11 @@ export type BackendSession = {
     lastEventId?: string;
     characterReaction?: CharacterReactionDiagnostic;
     characterReactionRoute?: string;
+    helperSuggestion?: HelperSuggestion;
   };
+  helperSuggestion?: HelperSuggestion;
+  pressureGates?: GameSessionView["pressureGates"];
+  disclosureLadders?: GameSessionView["disclosureLadders"];
   lastEventId?: string;
   opening?: Opening;
   storyline?: Partial<Storyline> & {
@@ -307,6 +313,30 @@ function normalizeCharacterReaction(value?: CharacterReactionDiagnostic): Charac
   };
 }
 
+function normalizeHelperSuggestion(value?: HelperSuggestion): HelperSuggestion | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const helperRoute = sanitizePublicDiagnosticValue(value.helperRoute) ?? "silent";
+  return {
+    helperRoute,
+    confidence: typeof value.confidence === "number" ? value.confidence : 0,
+    tone: sanitizePublicDiagnosticValue(value.tone) ?? "noir_assistant",
+    message: sanitizePublicDiagnosticValue(value.message) ?? "",
+    suggestedActions: Array.isArray(value.suggestedActions)
+      ? value.suggestedActions.map((action) => ({
+          type: sanitizePublicDiagnosticValue(action.type) ?? "open_evidence",
+          targetId: sanitizePublicDiagnosticValue(action.targetId) ?? "",
+          label: sanitizePublicDiagnosticValue(action.label) ?? "확인",
+        })).filter((action) => action.targetId || action.label)
+      : [],
+    publicRefs: {
+      evidenceIds: sanitizePublicIds(value.publicRefs?.evidenceIds),
+      statementIds: sanitizePublicIds(value.publicRefs?.statementIds),
+      relationIds: sanitizePublicIds(value.publicRefs?.relationIds),
+      suspectIds: sanitizePublicIds(value.publicRefs?.suspectIds),
+    },
+  };
+}
+
 function cleanDialogueText(text: string, speaker: string): string {
   if (speaker === "player") return text;
   let cleaned = text.trim();
@@ -334,6 +364,7 @@ function cleanDialogueText(text: string, speaker: string): string {
 function runtimeDiagnostics(session: BackendSession, source: "api"): DialogueRuntimeDiagnostics {
   const result = session.dialogueResult;
   const characterReaction = normalizeCharacterReaction(result?.characterReaction);
+  const helperSuggestion = normalizeHelperSuggestion(result?.helperSuggestion ?? session.helperSuggestion);
   return {
     source,
     dialogueMode: sanitizePublicDiagnosticValue(result?.dialogueMode),
@@ -359,6 +390,7 @@ function runtimeDiagnostics(session: BackendSession, source: "api"): DialogueRun
     tensionLevel: sanitizePublicDiagnosticValue(result?.tensionLevel),
     characterReaction,
     characterReactionRoute: sanitizePublicDiagnosticValue(result?.characterReactionRoute ?? characterReaction?.reactionRoute ?? characterReaction?.route),
+    helperSuggestion,
   };
 }
 
@@ -497,6 +529,7 @@ function enrichSessionView(session: GameSessionView): GameSessionView {
       pressure: suspect.pressure,
       status: suspect.status,
       pressureState: suspect.pressureState,
+      pressureStage: suspect.pressureStage,
       tensionLevel: suspect.tensionLevel,
       emotion: suspect.emotion,
       expression: suspect.expression,
@@ -538,6 +571,7 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
       pressure,
       status: statusFromPublicState(pressure, item.pressureState, tensionLevel),
       pressureState: item.pressureState,
+      pressureStage: sanitizePublicDiagnosticValue(item.pressureStage),
       tensionLevel,
       emotion: emotionalState,
       expression,
@@ -687,6 +721,9 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     visualState,
     latestEvents: (session.dialogueResult?.appliedEvents ?? []).map(eventFeedItem).filter((item): item is GameEventFeedItem => Boolean(item)),
     runtimeDiagnostics: runtimeDiagnostics(session, "api"),
+    helperSuggestion: normalizeHelperSuggestion(session.helperSuggestion ?? session.dialogueResult?.helperSuggestion),
+    pressureGates: session.pressureGates,
+    disclosureLadders: session.disclosureLadders,
     lastVerdict: contradictionResult
       ? {
           verdict: contradictionResult.verdict,

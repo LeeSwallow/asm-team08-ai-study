@@ -61,6 +61,8 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           onDraftQuestionChange={desk.setDraftQuestion}
           onSubmitQuestion={desk.submitQuestion}
           onPresentEvidence={() => desk.setActiveDrawer("evidence")}
+          onOpenRelations={() => desk.setActiveDrawer("relations")}
+          onOpenAccusation={() => desk.setActiveDrawer("accusation")}
           onSelectSuspect={desk.selectSuspect}
         />
         <EvidencePanel

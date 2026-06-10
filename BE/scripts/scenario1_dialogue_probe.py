@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.ai_engine.graph.dialogue_graph import run_dialogue_graph
 from app.ai_engine.schemas.dialogue import DialogueRequest
+from app.domain.case_engine import initial_session_state, public_helper_suggestion
+from app.domain.models import Case, DialogueEntry
 
 BASE_STATEMENT = "한서연은 사건 당일 10시 무렵 갤러리 응접실에 있었다고 진술했다."
 
@@ -108,6 +110,19 @@ def _cases() -> list[tuple[str, DialogueRequest]]:
     ]
 
 
+def _helper_probe() -> dict[str, Any]:
+    import json
+
+    case = Case.model_validate(json.loads(Path("data/cases/case_001.json").read_text(encoding="utf-8")))
+    session = initial_session_state(case, "sess_helper_probe")
+    session.selectedSuspectId = "char_hanseoyeon"
+    session.lastRuntimeDiagnostics = {"characterReactionRoute": "ask_clarification"}
+    for index in range(3):
+        session.dialogueLog.append(DialogueEntry(id=f"probe_p{index}", speaker="player", suspectId="char_hanseoyeon", text="그거 말이야"))
+        session.dialogueLog.append(DialogueEntry(id=f"probe_n{index}", speaker="한서연", suspectId="char_hanseoyeon", text="어떤 단서를 말하는 겁니까?"))
+    return public_helper_suggestion(case, session)
+
+
 def main() -> None:
     logging.getLogger("app.ai").disabled = True
     print("label                    | route                          | conf | answer preview")
@@ -120,6 +135,9 @@ def main() -> None:
         confidence = reaction.get("confidence", "-") if isinstance(reaction, dict) else "-"
         preview = " ".join(response.text.split())[:72]
         print(f"{label:<24} | {route:<30} | {confidence!s:<4} | {preview}")
+    helper = _helper_probe()
+    print("-" * 108)
+    print(f"helper stuck-user probe  | {helper['helperRoute']:<30} | {helper['confidence']:<4} | {helper['message'][:72]}")
 
 
 if __name__ == "__main__":
