@@ -50,6 +50,12 @@
   - 대사 방향: 체념, 분노, 가족 내 버림받음. 최종 고발 직전의 정서적 폭발.
   - unlock: final accusation readiness.
 
+#### 한서연 핵심 조작선 — 정전 공개 단서에서 숨은 조작 추론까지
+- `ev_storm_blackout` / `tl_blackout`은 플레이어가 처음부터 볼 수 있는 공개 기회 단서다. 정전 자체를 숨기지 않는다.
+- 플레이어가 먼저 확인해야 할 것은 “22:05~22:07 정전이 사망 추정 시간 안에 있고, CCTV도 같은 시간대에 끊겼다”는 기회 조건이다.
+- 숨겨야 할 것은 “누가 정전 중 현장을 조작했는가”이며, 이는 `ev_broken_watch`의 파편 방향, `ev_deleted_cctv`의 공백, `st_hanseoyeon_pressure`를 묶어 `con_watch_time_manipulated`로 입증한다.
+- Helper는 정전이 보인 직후 범인을 암시하지 말고 “정전 시간과 멈춘 시계의 물리 흔적을 같은 시간축에 놓아 보라”는 식으로 다음 대조 행동만 제안한다.
+
 ### 윤재호 — 집사 / 충성심과 침묵
 - guarded
   - 표면: “시신 발견자, 오랜 집사.”
@@ -120,6 +126,7 @@
 - 2턴 이상 unmatched/irrelevant/ask_clarification 반복.
 - 같은 캐릭터에게 동일한 route 반복.
 - remainingQuestions가 줄어드는데 새 증거/모순/관계 해금이 없음.
+- remainingQuestions가 0 이하로 소진된 경우 (최종 고발 유도 및 수사 기록 검토 제안).
 - accusation readiness가 낮은데 최종 고발 drawer를 여는 경우.
 - contradiction candidate는 있으나 제출 가능한 evidence/statement pair를 고르지 못하는 경우.
 
@@ -131,7 +138,7 @@
   "tone": "noir_assistant",
   "message": "정답이 아니라 다음 조사 방향을 암시하는 1-2문장",
   "suggestedActions": [
-    {"type": "ask_suspect|open_evidence|open_relations|try_contradiction", "targetId": "public id", "label": "UI label"}
+    {"type": "ask_suspect|open_evidence|open_relations|try_contradiction|try_final_accusation|review_notebook", "targetId": "public id", "label": "UI label"}
   ],
   "publicRefs": {"evidenceIds": [], "statementIds": [], "relationIds": [], "suspectIds": []}
 }
@@ -142,7 +149,10 @@
 - nudge_relation: “관계도에 새 선이 생겼습니다. 유언장보다 먼저, 그 침묵이 누구를 보호했는지 확인해보는 게 좋겠습니다.”
 - nudge_contradiction: “지금은 질문보다 대조가 필요합니다. ‘방에 있었다’는 말과 22:02 출입 기록을 같은 탁자 위에 올려보세요.”
 - nudge_switch_suspect: “약 이야기는 연기가 많지만 불꽃은 아닐 수 있습니다. 다른 인물의 알리바이 균열을 확인하세요.”
-- nudge_accusation_ready: “고발은 빠릅니다. 범인 이름보다 먼저, 왜 거짓말을 해야 했는지와 현장 접촉 근거를 묶어야 합니다.”
+- nudge_accusation_ready:
+  - 고발 준비 단계: “고발은 빠릅니다. 범인 이름보다 먼저, 왜 거짓말을 해야 했는지와 현장 접촉 근거를 묶어야 합니다.”
+  - 질문 기회 소진 시 (모순 후보 존재): “질문 기회는 모두 소진됐습니다. 지금은 새 질문보다 공개된 모순 후보와 기록을 정리해 최종 고발을 준비하세요.” (action: `try_final_accusation`)
+  - 질문 기회 소진 시 (모순 후보 없음): “질문 기회는 모두 소진됐습니다. 수사 기록과 공개 단서를 다시 대조한 뒤 최종 고발 여부를 판단하세요.” (action: `review_notebook`)
 
 ## Helper UI
 - InterrogationStage 하단 또는 우측에 “조수의 메모” 카드로 표시.
@@ -166,3 +176,27 @@
 - 각 캐릭터별로 최소 1개 relation unlock, 1개 evidence/statement unlock 또는 red-herring closure가 있다.
 - HelperAgent는 막힌 상황에서만 표시되고, 정답 대신 다음 행동을 제안한다.
 - 최종 고발 성공/실패 UI는 result persisted session load에서도 표시된다.
+
+## Character-Group 및 Pressure-Band 기반 Deterministic Fallback Seed 설계
+
+LLM의 무분별한 탈선이나 과장된 감정 표현을 방지하고, 자연스러운 한국어 구어체 느낌을 구현하기 위해 캐릭터 그룹(Character Group) 및 압박 상태(Pressure Band)별로 세분화된 Deterministic Fallback Seed 문장들을 활용한다.
+
+### 1. 캐릭터 그룹(Character Group) 분류
+각 캐릭터(용의자)는 대사 톤앤매너와 역할에 따라 다음의 그룹 중 하나에 매칭된다:
+- **niece (조카 - 한서연)**: 날카롭고 감정적이며, 자신을 방어하기 위해 공격적인 뉘앙스를 띰.
+- **butler (집사 - 윤재호)**: 격식 있고 정중하나 집안의 비밀을 외부인에게 노출하기 꺼려함.
+- **doctor (주치의 - 박민규)**: 의학적 전문 용어와 전문직 권위로 자신의 실책을 방어하려 함.
+- **secretary (비서 - 최윤아)**: 사무적이고 차분하지만 립스틱/사적인 관계 등 불편한 영역에는 차갑게 벽을 침.
+
+### 2. 압박 상태(Pressure Band) 분류
+압박 상태는 수치 대역에 따라 세 단계로 나뉜다:
+- **critical (80 - 100)**: 비밀을 털어놓기 직전의 극심한 동요 상태 혹은 체념 상태.
+- **medium/high (20 - 79)**: 혐의를 추궁받고 있으나 기존 진술을 유지하며 방어하는 상태.
+- **low (0 - 19)**: 평온한 상태로 기본 알리바이와 일상적 대화만 유지하는 상태.
+
+### 3. 기능별 Fallback 대사 처리
+- **스몰토크 대응 (handle_small_talk_boundary)**:
+  - `critical` 대역일 때는 수사 협조 외의 질문에 여유가 없음을 강하게 드러내며, 그 외의 평시 대역일 때는 예의상 인사를 짧게 거절하되 자신이 아는 기억만 말하겠다고 정중히 선을 긋는다.
+- **모호하거나 무관한 질문 대응 (deflect_unmatched_turn / deflect_irrelevant_turn)**:
+  - 질문이 너무 모호하거나 관련성이 없을 때 각 캐릭터 그룹과 현재 압박 밴드 수준에 딱 맞는 한국어 자연어 문장 variants(배열)를 구성하여 턴별 다양성을 확보한다.
+  - 이를 통해 LLM 생성 텍스트의 기반(Grounding)이 무너지는 현상을 deterministic seed를 통한 모듈러 선택 방식으로 견고하게 보완한다.

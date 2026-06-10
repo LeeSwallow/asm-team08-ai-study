@@ -2257,7 +2257,16 @@
       {
         "priority": 30,
         "when": {
-          "discoveredContradictionId": "con_inheritance_motive"
+          "discoveredContradictionId": "con_inheritance_motive",
+          "missingContradictionId": "con_watch_time_manipulated"
+        },
+        "objective": "정전 기록, CCTV 공백, 깨진 회중시계의 시간축을 묶어 현장 조작 가능성을 검토하라.",
+        "actId": "scene_manipulation_review"
+      },
+      {
+        "priority": 40,
+        "when": {
+          "discoveredContradictionId": "con_watch_time_manipulated"
         },
         "objective": "범인, 동기, 수단, 알리바이 모순 근거를 모아 최종 지목하라.",
         "actId": "final_accusation"
@@ -2346,6 +2355,41 @@
         ],
         "resolvesContradictionId": "con_inheritance_motive",
         "unlocks": []
+      },
+      {
+        "pathId": "path_blackout_scene_manipulation",
+        "title": "정전과 현장 조작",
+        "objective": "정전 기록에서 시작해 CCTV 공백과 회중시계 파편 방향을 대조해 현장 조작을 입증한다.",
+        "steps": [
+          {
+            "order": 1,
+            "type": "timeline",
+            "id": "tl_blackout",
+            "prompt": "22:05~22:07 정전이 사망 추정 시간 안에 들어오는지 확인한다."
+          },
+          {
+            "order": 2,
+            "type": "evidence",
+            "id": "ev_storm_blackout",
+            "prompt": "관리실 로그와 CCTV 중단이 같은 시간대인지 확인한다."
+          },
+          {
+            "order": 3,
+            "type": "evidence",
+            "id": "ev_broken_watch",
+            "prompt": "회중시계가 멈춘 시각과 파편 방향이 자연스러운지 대조한다."
+          },
+          {
+            "order": 4,
+            "type": "evidence",
+            "id": "ev_deleted_cctv",
+            "prompt": "정전 이후 드러난 CCTV 공백이 현장 조작 시간을 보강하는지 확인한다."
+          }
+        ],
+        "resolvesContradictionId": "con_watch_time_manipulated",
+        "unlocks": [
+          "ev_deleted_cctv"
+        ]
       }
     ]
   }
