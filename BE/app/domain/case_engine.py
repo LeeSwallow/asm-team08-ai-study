@@ -205,6 +205,40 @@ def public_helper_suggestion(case: Case, session: SessionState) -> dict[str, Any
         None,
     )
 
+    if session.remainingQuestions <= 0:
+        if actionable_candidate:
+            return _helper_payload(
+                "nudge_accusation_ready",
+                "질문 기회는 모두 소진됐습니다. 지금은 새 질문보다 공개된 모순 후보와 기록을 정리해 최종 고발을 준비하세요.",
+                [
+                    {
+                        "type": "try_final_accusation",
+                        "targetId": actionable_candidate["contradictionId"],
+                        "label": "최종 고발 준비",
+                    }
+                ],
+                {
+                    "evidenceIds": list(actionable_candidate.get("evidenceIds") or []),
+                    "statementIds": list(actionable_candidate.get("statementIds") or []),
+                    "relationIds": [],
+                    "suspectIds": [str(actionable_candidate.get("suspectId"))],
+                },
+                confidence=0.86,
+            )
+        return _helper_payload(
+            "nudge_accusation_ready",
+            "질문 기회는 모두 소진됐습니다. 수사 기록과 공개 단서를 다시 대조한 뒤 최종 고발 여부를 판단하세요.",
+            [
+                {
+                    "type": "review_notebook",
+                    "targetId": session.sessionId,
+                    "label": "수사 기록 검토",
+                }
+            ],
+            {"evidenceIds": [], "statementIds": [], "relationIds": [], "suspectIds": [selected_suspect_id] if selected_suspect_id else []},
+            confidence=0.68,
+        )
+
     if is_stuck and selected is not None:
         if actionable_candidate:
             return _helper_payload(

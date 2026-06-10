@@ -327,6 +327,7 @@ class DialogueService:
             "stateProposedEventsCount": len(state_proposed_events),
             "totalProposedEventsCount": len(proposed_events),
             "appliedEventsCount": len(applied_events),
+            "appliedEvents": [event.model_dump(mode="json") for event in applied_events],
             "proposedEventsApplied": [event.id for event in applied_events],
             "visualState": build_visual_state(session, case, suspect.characterId),
             "session": session,
