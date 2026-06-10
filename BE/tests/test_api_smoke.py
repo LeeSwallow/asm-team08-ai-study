@@ -237,7 +237,7 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
     assert session["questionLimit"] == 12
     assert session["remainingQuestions"] == 12
     assert session["visibleEvidenceCount"] == 5
-    assert session["totalEvidenceCount"] == 18
+    assert session["totalEvidenceCount"] == 22
     assert {item["characterId"] for item in session["suspects"]} == {
         "char_hanseoyeon",
         "char_yoonjaeho",
@@ -304,7 +304,7 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
     )
     assert session["contradictionResult"]["contradictionId"] == "con_watch_time_manipulated"
 
-    all_evidence_ids = {
+    base_progression_evidence_ids = {
         "ev_broken_watch",
         "ev_wine_glass",
         "ev_study_entry_log",
@@ -323,9 +323,11 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
         "ev_yoon_route_log",
         "ev_key_cabinet_check",
         "ev_household_account_note",
+        "ev_choiyuna_shredded_schedule",
     }
-    assert {item["evidenceId"] for item in session["evidence"]} == all_evidence_ids
-    assert session["visibleEvidenceCount"] == session["totalEvidenceCount"] == len(all_evidence_ids)
+    assert {item["evidenceId"] for item in session["evidence"]} == base_progression_evidence_ids
+    assert session["visibleEvidenceCount"] == len(base_progression_evidence_ids)
+    assert session["totalEvidenceCount"] == 22
     assert all(edge["unlocked"] for edge in session["relationMap"]["edges"])
     assert session["remainingQuestions"] >= 0
 

@@ -23,6 +23,27 @@ VOICE_MARKERS_BY_SUSPECT = {
     "char_choiyuna": ("일정", "기록", "확인", "회장님", "업무", "전화"),
 }
 
+BREAKDOWN_QUESTION_BY_SUSPECT = {
+    "char_hanseoyeon": "q_hanseoyeon_breakdown",
+    "char_yoonjaeho": "q_yoonjaeho_breakdown",
+    "char_parkmingyu": "q_parkmingyu_breakdown",
+    "char_choiyuna": "q_choiyuna_breakdown",
+}
+
+BREAKDOWN_MARKERS_BY_SUSPECT = {
+    "char_hanseoyeon": ("무서웠", "거짓말", "회장님", "내가"),
+    "char_yoonjaeho": ("숨겼", "회장님", "제가", "두려웠"),
+    "char_parkmingyu": ("겁났", "기록", "책임", "제가"),
+    "char_choiyuna": ("숨겼", "일정", "무서웠", "제가"),
+}
+
+BREAKDOWN_EVIDENCE_BY_SUSPECT = {
+    "char_hanseoyeon": "ev_hanseoyeon_tremor_note",
+    "char_yoonjaeho": "ev_yoonjaeho_folded_route_copy",
+    "char_parkmingyu": "ev_parkmingyu_chart_backup",
+    "char_choiyuna": "ev_choiyuna_shredded_schedule",
+}
+
 
 def _humanlike_flow_evaluation(transcript: list[dict]) -> dict:
     suspect_lines = [item for item in transcript if item["askedSuspect"] in VOICE_MARKERS_BY_SUSPECT]
@@ -66,6 +87,7 @@ SUSPECT_SCENARIOS = {
         ("char_hanseoyeon", "정전 기록과 부자연스러운 회중시계 파편은 현장 조작 가능성을 보여줍니다."),
         ("char_hanseoyeon", "상속 문제로 다툰 적 있나요?"),
         ("char_hanseoyeon", "죽일 이유가 없다는 말은 찢어진 유언장과 모순입니다."),
+        ("char_hanseoyeon", "이제 버티지 말고, 서재에서 정말 숨긴 걸 말해."),
     ],
     "char_yoonjaeho": [
         ("char_yoonjaeho", "너는 22시 이후에 어디있었어?"),
@@ -74,6 +96,7 @@ SUSPECT_SCENARIOS = {
         ("char_yoonjaeho", "서재 열쇠 진술은 열쇠 보관함 점검표의 22시 이후 반출 기록과 모순입니다."),
         ("char_yoonjaeho", "가족들 사이 분위기는 어땠나요?"),
         ("char_yoonjaeho", "가족 분위기를 모른 척했지만 가계 지출 메모에는 빚과 유언장 소문을 알고 있었다고 나옵니다."),
+        ("char_yoonjaeho", "이제 회장님 일로 숨긴 걸 말해 주세요."),
     ],
     "char_parkmingyu": [
         ("char_parkmingyu", "22:00에 어디 있었나요?"),
@@ -82,6 +105,7 @@ SUSPECT_SCENARIOS = {
         ("char_parkmingyu", "약 상자는 21:30 복용분 이후 책임을 좁혀 말한 박민규의 진술과 맞지 않습니다."),
         ("char_parkmingyu", "피해자와 다툼은 없었나요?"),
         ("char_parkmingyu", "처방 변경 메모는 다툼이 아니었다는 말과 모순입니다."),
+        ("char_parkmingyu", "이제 기록 뒤에 숨긴 책임을 말해 주세요."),
     ],
     "char_choiyuna": [
         ("char_choiyuna", "피해자와 마지막으로 연락한 때는?"),
@@ -90,6 +114,7 @@ SUSPECT_SCENARIOS = {
         ("char_choiyuna", "비서 일정 메모에는 가족에게 보류하라는 내용이 있는데 단순 지시였다는 말과 맞지 않습니다."),
         ("char_choiyuna", "서재의 와인잔을 알고 있나요?"),
         ("char_choiyuna", "립스틱 케이스는 와인과 립스틱 색이 제 것이 아니라는 말과 모순입니다."),
+        ("char_choiyuna", "이제 일정과 서재 주변에서 숨긴 걸 말해 주세요."),
     ],
 }
 
@@ -141,6 +166,10 @@ def test_scenario1_user_pressure_script_can_break_each_suspect_to_resigned_stage
     assert final_ladder["currentStage"] == "resigned", transcript
     assert reloaded["pressureBySuspect"][target_suspect_id] >= 80
     assert [stage["stage"] for stage in final_ladder["stages"]] == ["guarded", "defensive", "shaken", "resigned"]
+    final_target_turn = next(item for item in reversed(transcript) if item["askedSuspect"] == target_suspect_id)
+    assert final_target_turn["matchedQuestionId"] == BREAKDOWN_QUESTION_BY_SUSPECT[target_suspect_id], transcript
+    assert any(marker in final_target_turn["answer"] for marker in BREAKDOWN_MARKERS_BY_SUSPECT[target_suspect_id]), final_target_turn
+    assert any(item["evidenceId"] == BREAKDOWN_EVIDENCE_BY_SUSPECT[target_suspect_id] for item in reloaded["evidence"])
     evaluation = _humanlike_flow_evaluation(transcript)
     print(f"\n[HUMANLIKE-EVAL] target={target_suspect_id} {evaluation}")
     assert evaluation["passed"], evaluation

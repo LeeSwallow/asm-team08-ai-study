@@ -1039,6 +1039,54 @@
       "reliability": 0.74,
       "initiallyVisible": false,
       "unlockCondition": "q_yoonjaeho_family_tension"
+    },
+    {
+      "id": "ev_hanseoyeon_tremor_note",
+      "evidenceId": "ev_hanseoyeon_tremor_note",
+      "name": "구겨진 유언장 봉투",
+      "type": "physical",
+      "description": "찢어진 유언장 옆에서 발견됐다. 봉투 가장자리에 손톱으로 눌러 잡은 흔적과 한서연의 립스틱 자국이 함께 남아 있다. 내용 자체보다 서재에서 오래 머문 흔적을 보강한다.",
+      "foundAt": "서재 금고 옆",
+      "timeWindow": "22:00 전후",
+      "reliability": 0.78,
+      "initiallyVisible": false,
+      "unlockCondition": "con_inheritance_motive"
+    },
+    {
+      "id": "ev_yoonjaeho_folded_route_copy",
+      "evidenceId": "ev_yoonjaeho_folded_route_copy",
+      "name": "접힌 순찰 동선 인쇄본",
+      "type": "record",
+      "description": "집사실 서랍에서 발견된 순찰 동선 인쇄본. 22:08 표시 부분만 여러 번 접혀 있고, 회장님 호출 메모가 작게 적혀 있다. 윤재호가 발견 시각을 늦춰 말했음을 보강한다.",
+      "foundAt": "집사실 서랍",
+      "timeWindow": "22:08~22:10",
+      "reliability": 0.82,
+      "initiallyVisible": false,
+      "unlockCondition": "con_yoon_loyal_silence"
+    },
+    {
+      "id": "ev_parkmingyu_chart_backup",
+      "evidenceId": "ev_parkmingyu_chart_backup",
+      "name": "수정 전 의료 차트 백업본",
+      "type": "record",
+      "description": "손님방 태블릿 자동 백업에 남아 있던 수정 전 차트. 21:45 이후 삭제된 문장에는 처방 책임을 회장에게 넘기려던 메모가 남아 있다.",
+      "foundAt": "손님방 태블릿 백업",
+      "timeWindow": "21:45 이후",
+      "reliability": 0.86,
+      "initiallyVisible": false,
+      "unlockCondition": "con_park_prescription_dispute"
+    },
+    {
+      "id": "ev_choiyuna_shredded_schedule",
+      "evidenceId": "ev_choiyuna_shredded_schedule",
+      "name": "찢긴 비서 일정 사본",
+      "type": "physical",
+      "description": "비서실 파쇄함에서 일부 복원된 일정 사본. 변호사 미팅, 가족 통보 보류, 서재 정리 지시가 같은 줄에 적혀 있어 최윤아가 단순 전달자보다 더 많은 사실을 알고 있었음을 보강한다.",
+      "foundAt": "비서실 파쇄함",
+      "timeWindow": "사건 당일 밤",
+      "reliability": 0.8,
+      "initiallyVisible": false,
+      "unlockCondition": "con_choi_lipstick_case"
     }
   ],
   "records": [
@@ -1315,6 +1363,50 @@
       "location": "저택",
       "initiallyVisible": false,
       "unlockCondition": "ev_ring_near_victim"
+    },
+    {
+      "id": "st_hanseoyeon_breakdown",
+      "statementId": "st_hanseoyeon_breakdown",
+      "characterId": "char_hanseoyeon",
+      "questionText": "이제 버티지 말고, 서재에서 정말 숨긴 걸 말해.",
+      "text": "무서웠어. 방에 있었다는 건 거짓말이야. 서재에 들어갔고, 회장님이 쓰러진 걸 봤어. 내가 한 일까지는 아직 말 못 하겠지만, 숨긴 건 맞아.",
+      "timeWindow": "22:02 이후",
+      "location": "서재",
+      "initiallyVisible": false,
+      "unlockCondition": "con_inheritance_motive"
+    },
+    {
+      "id": "st_yoonjaeho_breakdown",
+      "statementId": "st_yoonjaeho_breakdown",
+      "characterId": "char_yoonjaeho",
+      "questionText": "이제 회장님 일로 숨긴 걸 말해 주세요.",
+      "text": "제가 숨겼습니다. 회장님 호출을 받고도 곧장 알리지 않았습니다. 집안이 무너질까 두려웠고, 제가 본 걸 늦게 말했습니다.",
+      "timeWindow": "22:08~22:10",
+      "location": "2층 복도와 서재 앞",
+      "initiallyVisible": false,
+      "unlockCondition": "con_yoon_loyal_silence"
+    },
+    {
+      "id": "st_parkmingyu_breakdown",
+      "statementId": "st_parkmingyu_breakdown",
+      "characterId": "char_parkmingyu",
+      "questionText": "이제 기록 뒤에 숨긴 책임을 말해 주세요.",
+      "text": "겁났습니다. 사망 원인이 약이 아니어도, 제 기록이 문제 될까 봐 일부를 고쳤습니다. 책임을 피하려고 했습니다.",
+      "timeWindow": "21:45 이후",
+      "location": "손님방",
+      "initiallyVisible": false,
+      "unlockCondition": "con_park_prescription_dispute"
+    },
+    {
+      "id": "st_choiyuna_breakdown",
+      "statementId": "st_choiyuna_breakdown",
+      "characterId": "char_choiyuna",
+      "questionText": "이제 일정과 서재 주변에서 숨긴 걸 말해 주세요.",
+      "text": "제가 숨겼습니다. 일정은 단순 전달이 아니었습니다. 서재 주변 정리 지시까지 알고 있었고, 그걸 말하면 제가 버려질까 무서웠습니다.",
+      "timeWindow": "사건 당일 밤",
+      "location": "비서실과 서재 주변",
+      "initiallyVisible": false,
+      "unlockCondition": "con_choi_lipstick_case"
     }
   ],
   "questions": [
@@ -1571,6 +1663,86 @@
       ],
       "initiallyUnlocked": false,
       "unlockCondition": "ev_ring_near_victim"
+    },
+    {
+      "id": "q_hanseoyeon_breakdown",
+      "questionId": "q_hanseoyeon_breakdown",
+      "characterId": "char_hanseoyeon",
+      "text": "이제 버티지 말고, 서재에서 정말 숨긴 걸 말해.",
+      "answer": "…무서웠어. 방에 있었다는 건 거짓말이야. 서재엔 들어갔어. 회장님이 쓰러진 걸 봤고, 그 뒤로 내가 뭘 숨겼는지도 알아. 더 몰아붙이지 마.",
+      "playerParaphrases": [
+        "이제 숨긴 걸 말해",
+        "서재에서 정말 있었던 일을 말해",
+        "버티지 말고 사실대로 말해"
+      ],
+      "unlocksStatementIds": [
+        "st_hanseoyeon_breakdown"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_hanseoyeon_tremor_note"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "con_inheritance_motive"
+    },
+    {
+      "id": "q_yoonjaeho_breakdown",
+      "questionId": "q_yoonjaeho_breakdown",
+      "characterId": "char_yoonjaeho",
+      "text": "이제 회장님 일로 숨긴 걸 말해 주세요.",
+      "answer": "…제가 숨겼습니다. 회장님 호출을 보고도 바로 말하지 않았습니다. 이 집이 무너질까 두려웠고, 제가 본 시간을 늦춰 말했습니다.",
+      "playerParaphrases": [
+        "회장님 일로 숨긴 걸 말해",
+        "집사님이 숨긴 사실을 말해 주세요",
+        "22시 8분에 본 걸 말해 주세요"
+      ],
+      "unlocksStatementIds": [
+        "st_yoonjaeho_breakdown"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_yoonjaeho_folded_route_copy"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "con_yoon_loyal_silence"
+    },
+    {
+      "id": "q_parkmingyu_breakdown",
+      "questionId": "q_parkmingyu_breakdown",
+      "characterId": "char_parkmingyu",
+      "text": "이제 기록 뒤에 숨긴 책임을 말해 주세요.",
+      "answer": "겁났습니다. 기록을 고친 건 맞습니다. 사망 원인을 숨기려던 건 아니지만, 제 책임이 드러날까 봐 차트를 손댔습니다.",
+      "playerParaphrases": [
+        "기록 뒤에 숨긴 책임을 말해 주세요",
+        "차트를 왜 고쳤는지 말해 주세요",
+        "박민규가 숨긴 책임을 말해 주세요"
+      ],
+      "unlocksStatementIds": [
+        "st_parkmingyu_breakdown"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_parkmingyu_chart_backup"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "con_park_prescription_dispute"
+    },
+    {
+      "id": "q_choiyuna_breakdown",
+      "questionId": "q_choiyuna_breakdown",
+      "characterId": "char_choiyuna",
+      "text": "이제 일정과 서재 주변에서 숨긴 걸 말해 주세요.",
+      "answer": "제가 숨겼습니다. 일정만 받은 게 아니었습니다. 서재 주변 정리 지시까지 알고 있었고, 그걸 말하면 제 자리도 끝날까 무서웠습니다.",
+      "playerParaphrases": [
+        "일정과 서재 주변에서 숨긴 걸 말해 주세요",
+        "최윤아가 숨긴 일정을 말해 주세요",
+        "비서님이 숨긴 사실을 말해 주세요"
+      ],
+      "unlocksStatementIds": [
+        "st_choiyuna_breakdown"
+      ],
+      "unlocksEvidenceIds": [
+        "ev_choiyuna_shredded_schedule"
+      ],
+      "initiallyUnlocked": false,
+      "unlockCondition": "con_choi_lipstick_case"
     }
   ],
   "contradictions": [
@@ -1633,7 +1805,11 @@
       "pressureDelta": 35,
       "reasonCode": "inheritance_motive_confirmed",
       "message": "죽일 이유가 없다는 진술은 상속 비율 변경 흔적이 있는 찢어진 유언장과 충돌합니다.",
-      "unlockedIds": []
+      "unlockedIds": [
+        "q_hanseoyeon_breakdown",
+        "st_hanseoyeon_breakdown",
+        "ev_hanseoyeon_tremor_note"
+      ]
     },
     {
       "id": "con_call_record",
@@ -1705,7 +1881,11 @@
       "pressureDelta": 12,
       "reasonCode": "innocent_side_conflict",
       "message": "박민규는 다툼을 축소했지만 처방 변경 메모는 책임 문제로 강한 언쟁이 있었음을 보여줍니다. 다만 사망 원인과 직접 연결되지는 않는 보조 모순입니다.",
-      "unlockedIds": []
+      "unlockedIds": [
+        "q_parkmingyu_breakdown",
+        "st_parkmingyu_breakdown",
+        "ev_parkmingyu_chart_backup"
+      ]
     },
     {
       "id": "con_choi_admin_schedule_note",
@@ -1739,7 +1919,11 @@
       "pressureDelta": 12,
       "reasonCode": "assistant_scene_trace_pressure",
       "message": "최윤아는 와인과 립스틱을 부인했지만, 서재 쓰레기통의 립스틱 케이스는 현장 주변 정리를 알고 있었을 가능성을 만듭니다.",
-      "unlockedIds": []
+      "unlockedIds": [
+        "q_choiyuna_breakdown",
+        "st_choiyuna_breakdown",
+        "ev_choiyuna_shredded_schedule"
+      ]
     },
     {
       "id": "con_park_guestroom_record_edit",
@@ -1824,7 +2008,11 @@
       "pressureDelta": 12,
       "reasonCode": "butler_loyal_silence",
       "message": "윤재호는 분위기가 좋지 않았다고만 했지만, 가계 지출 메모는 한서연의 압박과 유언장 소문을 이미 알고 있었음을 보여줍니다.",
-      "unlockedIds": []
+      "unlockedIds": [
+        "q_yoonjaeho_breakdown",
+        "st_yoonjaeho_breakdown",
+        "ev_yoonjaeho_folded_route_copy"
+      ]
     }
   ],
   "solution": {
