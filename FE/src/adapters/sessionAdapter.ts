@@ -26,7 +26,7 @@ import type {
   VisualState,
   PublicContradictionReadModel,
 } from "../types";
-import { defaultBackgroundIdForCase, normalizeExpression } from "../constants/presentation";
+import { defaultBackgroundIdForCase, normalizeExpression, QUESTION_LIMIT } from "../constants/presentation";
 import { sanitizePublicDiagnosticValue, sanitizePublicIds, sanitizeSourceRefs } from "../utils/publicDiagnostics";
 
 const emptyOpening: Opening = {
@@ -702,7 +702,7 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
     caseId: session.caseId,
     phase: accusationResult ? "result" : normalizePhase(session.phase),
     remainingQuestions: session.remainingQuestions,
-    questionLimit: session.questionLimit ?? 12,
+    questionLimit: session.questionLimit ?? QUESTION_LIMIT,
     visibleEvidenceCount: session.visibleEvidenceCount ?? evidence.filter((item) => item.unlocked).length,
     totalEvidenceCount: session.totalEvidenceCount ?? evidence.length,
     selectedSuspectId,

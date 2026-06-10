@@ -768,6 +768,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 .case-file-timeline-row span { color: #fff1d2; font-weight: 780; font-size: 12.5px; line-height: 1.3; }
 .case-file-timeline-row p  { margin: 0; color: #b8c2cc; font-size: 11.5px; line-height: 1.45; word-break: keep-all; }
+.case-file-more {
+  margin: 1px 0 0;
+  border: 1px dashed rgba(230,191,108,.26);
+  border-radius: 9px;
+  padding: 5px 7px;
+  color: #b8a985;
+  font-size: 11px;
+  font-weight: 760;
+  text-align: center;
+}
 
 /* ── Record row ─────────────────────────────────────────────────── */
 .case-file-record-row {
@@ -1460,12 +1470,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 .evidence-grid {
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(3, auto);
+  grid-auto-rows: minmax(0, auto);
   align-content: start;
   gap: 9px;
   padding: 0 12px 8px;
+  padding-right: 8px;
 }
 .right-investigation-loop {
   min-height: 0;
@@ -1801,7 +1814,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .case-file-panel { overflow: visible; }
   .interrogation-panel { min-height: 640px; grid-template-rows: auto 39px 32px minmax(420px, 1fr) 112px; }
   .evidence-panel { grid-column: 1 / -1; min-height: 380px; grid-template-rows: 38px 230px 150px; }
-  .evidence-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(2, auto); }
+  .evidence-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: minmax(0, auto); }
   .system-flow { min-height: 92px; }
   .system-flow ol { display: flex; overflow-x: auto; gap: 18px; min-height: 62px; }
   .system-flow li { min-width: 210px; }
@@ -1939,7 +1952,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   }
   .evidence-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(3, auto);
+    grid-auto-rows: minmax(0, auto);
     gap: 6px;
     padding: 0 8px 8px;
   }

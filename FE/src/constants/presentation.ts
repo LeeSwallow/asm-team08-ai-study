@@ -1,6 +1,6 @@
 import type { Evidence, SuspectStatus } from "../types";
 
-export const QUESTION_LIMIT = 12;
+export const QUESTION_LIMIT = 30;
 
 export const statusLabels: Record<SuspectStatus, string> = {
   normal: "관찰 중",
