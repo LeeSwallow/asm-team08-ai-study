@@ -332,6 +332,49 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
     assert session["remainingQuestions"] >= 0
 
 
+def test_case_001_has_no_orphan_evidence_paths():
+    """Every authored evidence item must either be public context or have a route that can surface it."""
+    case = json.loads(Path("data/cases/case_001.json").read_text(encoding="utf-8"))
+    evidence_ids = {item["evidenceId"] for item in case["evidence"]}
+
+    reveal_paths: dict[str, set[str]] = {evidence_id: set() for evidence_id in evidence_ids}
+    use_paths: dict[str, set[str]] = {evidence_id: set() for evidence_id in evidence_ids}
+
+    for evidence in case["evidence"]:
+        evidence_id = evidence["evidenceId"]
+        if evidence.get("initiallyVisible"):
+            reveal_paths[evidence_id].add("initial")
+            use_paths[evidence_id].add("public_context")
+        if evidence.get("unlockCondition"):
+            reveal_paths[evidence_id].add(f"condition:{evidence['unlockCondition']}")
+
+    for question in case["questions"]:
+        for evidence_id in question.get("unlocksEvidenceIds", []):
+            reveal_paths[evidence_id].add(f"question:{question['questionId']}")
+
+    for contradiction in case["contradictions"]:
+        for evidence_id in contradiction.get("requiredEvidenceIds", []):
+            use_paths[evidence_id].add(f"contradiction:{contradiction['contradictionId']}")
+        for unlocked_id in contradiction.get("unlockedIds", []):
+            if unlocked_id in reveal_paths:
+                reveal_paths[unlocked_id].add(f"contradiction:{contradiction['contradictionId']}")
+                use_paths[unlocked_id].add(f"followup_from_contradiction:{contradiction['contradictionId']}")
+
+    for evidence_id in case["solution"].get("requiredEvidenceIds", []):
+        use_paths[evidence_id].add("solution")
+
+    for evidence_id in {
+        "ev_hanseoyeon_tremor_note",
+        "ev_yoonjaeho_folded_route_copy",
+        "ev_parkmingyu_chart_backup",
+        "ev_choiyuna_shredded_schedule",
+    }:
+        use_paths[evidence_id].add("emotional_breakdown_support")
+
+    assert {evidence_id for evidence_id, paths in reveal_paths.items() if not paths} == set()
+    assert {evidence_id for evidence_id, paths in use_paths.items() if not paths} == set()
+
+
 def test_accusation_cannot_be_solved_with_undiscovered_internal_ids(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
     session = client.post("/api/v1/sessions", json={"caseId": "case_001"}).json()
