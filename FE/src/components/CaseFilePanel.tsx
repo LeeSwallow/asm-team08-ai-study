@@ -21,8 +21,7 @@ export function CaseFilePanel({ session }: CaseFilePanelProps) {
         </div>
 
         <dl className="case-file-facts">
-          <div><dt>현재 목표</dt><dd>{session.currentObjective.objective}</dd></div>
-          <div><dt>승리 조건</dt><dd>{session.opening.victoryCondition}</dd></div>
+          <div><dt>수사 단계</dt><dd>{session.currentObjective.title}</dd></div>
           <div><dt>남은 질문</dt><dd>{session.remainingQuestions}회</dd></div>
           <div><dt>진행 상태</dt><dd>{session.phase}</dd></div>
         </dl>

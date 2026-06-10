@@ -36,18 +36,29 @@ export function EvidencePanel({
               <span>수사 기록</span>
               <h3 id="be-contradiction-title">발견된 모순</h3>
             </div>
-            <small>자연어 심문에서 확인된 모순만 이곳에 기록됩니다.</small>
+            <small>{discoveredContradictions.length > 0 ? `${discoveredContradictions.length}건 확정` : "아직 없음"}</small>
           </header>
           {discoveredContradictions.length > 0 ? (
             discoveredContradictions.slice(0, 3).map((item) => (
-              <article key={item.contradictionId} className="be-state-row">
-                <span>{item.title}</span>
-                <strong>{item.displayText}</strong>
-                <small>{item.evidenceIds.join(", ") || "관련 증거 없음"}</small>
+              <article key={item.contradictionId} className="contradiction-card">
+                <header>
+                  <span className={`contradiction-severity ${item.severity ?? "minor"}`}>
+                    {item.severity === "core" ? "핵심" : item.severity === "major" ? "중요" : "단서"}
+                  </span>
+                  <strong>{item.title}</strong>
+                </header>
+                <p>{item.displayText}</p>
+                {item.evidenceIds.length > 0 && (
+                  <footer>
+                    {item.evidenceIds.slice(0, 3).map((id) => (
+                      <span key={id} className="contradiction-evidence-chip">{id}</span>
+                    ))}
+                  </footer>
+                )}
               </article>
             ))
           ) : (
-            <p className="empty-inline">아직 확정된 모순이 없습니다. 증거 이름을 자연어 질문에 넣어 추궁하세요.</p>
+            <p className="empty-inline">아직 확정된 모순이 없습니다.<br />증거 이름을 자연어로 추궁하세요.</p>
           )}
         </section>
       </div>

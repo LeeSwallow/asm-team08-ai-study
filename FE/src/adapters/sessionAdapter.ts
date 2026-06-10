@@ -175,6 +175,7 @@ export type BackendSession = {
     characterReaction?: CharacterReactionDiagnostic;
     characterReactionRoute?: string;
     helperSuggestion?: HelperSuggestion;
+    runtimeDiagnostics?: Record<string, unknown>;
   };
   helperSuggestion?: HelperSuggestion;
   pressureGates?: GameSessionView["pressureGates"];
@@ -652,16 +653,21 @@ export function normalizeSession(payload: BackendSession | GameSessionView): Gam
       used: session.dialogueLog?.some((log) => log.questionId === item.questionId && log.speaker === "player") ?? false,
     })),
   ];
-  const dialogueLog: DialogueLogItem[] = (session.dialogueLog ?? []).map((item) => ({
-    id: item.id,
-    speaker: item.speaker,
-    text: cleanDialogueText(item.text, item.speaker),
-    suspectId: item.suspectId ?? (item.questionId ? questionSuspectById.get(item.questionId) : undefined),
-    questionId: item.questionId,
-    tag: item.speaker === "player" ? "질문" : item.speaker === "rule_engine" ? "룰 판정" : "답변",
-    createdAt: item.createdAt,
-    important: item.speaker !== "player",
-  }));
+  const latestNpcId = [...(session.dialogueLog ?? [])].reverse().find((item) => item.speaker !== "player" && item.speaker !== "rule_engine" && item.speaker !== "system")?.id;
+  const latestVoiceTone = (session.dialogueResult?.runtimeDiagnostics as Record<string, unknown> | undefined)?.voiceMetadata as Record<string, unknown> | undefined;
+  const dialogueLog: DialogueLogItem[] = (session.dialogueLog ?? [])
+    .filter((item) => item.speaker !== "rule_engine" && item.speaker !== "system")
+    .map((item) => ({
+      id: item.id,
+      speaker: item.speaker,
+      text: cleanDialogueText(item.text, item.speaker),
+      suspectId: item.suspectId ?? (item.questionId ? questionSuspectById.get(item.questionId) : undefined),
+      questionId: item.questionId,
+      tag: item.speaker === "player" ? "질문" : "답변",
+      createdAt: item.createdAt,
+      important: item.speaker !== "player",
+      voiceTag: item.id === latestNpcId && latestVoiceTone?.tone ? String(latestVoiceTone.tone) : undefined,
+    }));
   const contradictionResult = session.contradictionResult;
   const accusationResult = session.accusationResult ?? (
     session.accusation?.verdict || typeof session.accusation?.correct === "boolean" || session.accusation?.message

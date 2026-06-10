@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { AppHeader } from "../components/AppHeader";
 import { CaseFilePanel } from "../components/CaseFilePanel";
 import { EvidencePanel } from "../components/EvidencePanel";
@@ -6,6 +7,7 @@ import { GameEndingOverlay } from "../components/GameEndingOverlay";
 import { InvestigationDrawer } from "../components/InvestigationDrawer";
 import { useInvestigationSession } from "../hooks/useInvestigationSession";
 import { caseListPath } from "../routing";
+import type { HelperSuggestion } from "../types";
 
 type SessionDeskPageProps = {
   sessionId: string;
@@ -18,6 +20,19 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
     onSessionCreated: (createdSessionId) => onNavigate(`/sessions/${encodeURIComponent(createdSessionId)}`),
     onSessionCleared: () => onNavigate(caseListPath()),
   });
+
+  const [toastHelper, setToastHelper] = useState<HelperSuggestion | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const helperSuggestion = desk.session?.runtimeDiagnostics?.helperSuggestion;
+
+  useEffect(() => {
+    if (!helperSuggestion || helperSuggestion.helperRoute === "silent" || !helperSuggestion.message) return;
+    setToastHelper(helperSuggestion);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastHelper(null), 5000);
+    return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [helperSuggestion?.message]);
 
   if (!desk.session) {
     return (
@@ -50,6 +65,7 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           selectedSuspectId={desk.session.selectedSuspectId}
           latestAnswer={desk.latestAnswer}
           dialogueLog={desk.session.dialogueLog}
+          pendingUserMessage={desk.pendingUserMessage}
           eventFeed={desk.eventFeed}
           draftQuestion={desk.draftQuestion}
           questionHint={desk.questionHint}
@@ -87,7 +103,6 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           onClose={() => desk.setActiveDrawer(null)}
           onOpenMode={(mode) => desk.setActiveDrawer(mode)}
           onInspectEvidence={desk.setInspectedEvidenceId}
-          onToggleEvidence={desk.toggleEvidence}
           onDraftNoteChange={desk.setDraftNote}
           onEditingNoteTextChange={desk.setEditingNoteText}
           onAddNote={desk.addNote}
@@ -112,6 +127,21 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           onOpenDossier={() => desk.setActiveDrawer("accusation")}
           onReturnToCases={() => onNavigate(caseListPath())}
         />
+      ) : null}
+
+      {toastHelper ? (
+        <aside className="helper-toast" aria-live="polite" aria-label="조수의 조언">
+          <div className="helper-toast-body">
+            <span className="helper-toast-label">조수의 조언</span>
+            <p>{toastHelper.message}</p>
+          </div>
+          <button
+            type="button"
+            className="helper-toast-close"
+            aria-label="닫기"
+            onClick={() => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); setToastHelper(null); }}
+          >✕</button>
+        </aside>
       ) : null}
 
     </main>
