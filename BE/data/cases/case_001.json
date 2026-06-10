@@ -979,6 +979,66 @@
       "reliability": 0.82,
       "initiallyVisible": false,
       "unlockCondition": "q_parkmingyu_medicine"
+    },
+    {
+      "id": "ev_admin_schedule_note",
+      "evidenceId": "ev_admin_schedule_note",
+      "name": "비서 일정 메모",
+      "type": "record",
+      "description": "최윤아의 일정표 여백에 “변호사 10:00, 가족에게는 보류”라고 적혀 있다.",
+      "foundAt": "비서 업무 수첩",
+      "timeWindow": "사건 전날~사건 당일",
+      "reliability": 0.82,
+      "initiallyVisible": false,
+      "unlockCondition": "q_choiyuna_schedule"
+    },
+    {
+      "id": "ev_doctor_guestroom_record",
+      "evidenceId": "ev_doctor_guestroom_record",
+      "name": "손님방 의료 기록",
+      "type": "record",
+      "description": "박민규가 손님방에서 정리했다는 의료 기록 일부가 21:45 이후에도 수정된 흔적을 남겼다.",
+      "foundAt": "손님방 책상",
+      "timeWindow": "21:45 이후",
+      "reliability": 0.78,
+      "initiallyVisible": false,
+      "unlockCondition": "q_parkmingyu_alibi"
+    },
+    {
+      "id": "ev_yoon_route_log",
+      "evidenceId": "ev_yoon_route_log",
+      "name": "집사 순찰 기록",
+      "type": "record",
+      "description": "윤재호의 순찰 기록에는 22:08에 2층 복도 확인 표시가 남아 있다.",
+      "foundAt": "집사실 업무 장부",
+      "timeWindow": "22:08",
+      "reliability": 0.8,
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_discovery"
+    },
+    {
+      "id": "ev_key_cabinet_check",
+      "evidenceId": "ev_key_cabinet_check",
+      "name": "열쇠 보관함 점검표",
+      "type": "record",
+      "description": "서재 구형 열쇠 두 개 중 집사용 열쇠가 22:00 이후 한 차례 반출된 것으로 표시되어 있다.",
+      "foundAt": "집사실 열쇠 보관함",
+      "timeWindow": "22:00 이후",
+      "reliability": 0.76,
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_key"
+    },
+    {
+      "id": "ev_household_account_note",
+      "evidenceId": "ev_household_account_note",
+      "name": "가계 지출 메모",
+      "type": "record",
+      "description": "저택 운영비 메모에 한서연의 빚 독촉과 유언장 변경 소문을 윤재호가 이미 알고 있었다는 표시가 있다.",
+      "foundAt": "집사실 서랍",
+      "timeWindow": "사건 전",
+      "reliability": 0.74,
+      "initiallyVisible": false,
+      "unlockCondition": "q_yoonjaeho_family_tension"
     }
   ],
   "records": [
@@ -1339,7 +1399,10 @@
       "unlocksStatementIds": [
         "st_yoonjaeho_found_2210"
       ],
-      "initiallyUnlocked": true
+      "initiallyUnlocked": true,
+      "unlocksEvidenceIds": [
+        "ev_yoon_route_log"
+      ]
     },
     {
       "id": "q_yoonjaeho_blackout",
@@ -1393,7 +1456,10 @@
       "unlocksStatementIds": [
         "st_yoonjaeho_key_only_victim"
       ],
-      "initiallyUnlocked": true
+      "initiallyUnlocked": true,
+      "unlocksEvidenceIds": [
+        "ev_key_cabinet_check"
+      ]
     },
     {
       "id": "q_parkmingyu_alibi",
@@ -1404,7 +1470,10 @@
       "unlocksStatementIds": [
         "st_parkmingyu_guestroom_2200"
       ],
-      "initiallyUnlocked": true
+      "initiallyUnlocked": true,
+      "unlocksEvidenceIds": [
+        "ev_doctor_guestroom_record"
+      ]
     },
     {
       "id": "q_parkmingyu_medicine",
@@ -1444,7 +1513,10 @@
       "unlocksRelationIds": [
         "rel_choiyuna_schedule"
       ],
-      "initiallyUnlocked": true
+      "initiallyUnlocked": true,
+      "unlocksEvidenceIds": [
+        "ev_admin_schedule_note"
+      ]
     },
     {
       "id": "q_choiyuna_wine",
@@ -1483,7 +1555,10 @@
       "unlocksRelationIds": [
         "rel_yoonjaeho_loyalty"
       ],
-      "initiallyUnlocked": true
+      "initiallyUnlocked": true,
+      "unlocksEvidenceIds": [
+        "ev_household_account_note"
+      ]
     },
     {
       "id": "q_choiyuna_ring",
@@ -1630,6 +1705,125 @@
       "pressureDelta": 12,
       "reasonCode": "innocent_side_conflict",
       "message": "박민규는 다툼을 축소했지만 처방 변경 메모는 책임 문제로 강한 언쟁이 있었음을 보여줍니다. 다만 사망 원인과 직접 연결되지는 않는 보조 모순입니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_choi_admin_schedule_note",
+      "contradictionId": "con_choi_admin_schedule_note",
+      "title": "비밀 일정 축소와 일정 메모",
+      "relatedCharacterId": "char_choiyuna",
+      "requiredStatementIds": [
+        "st_choiyuna_call_record"
+      ],
+      "requiredEvidenceIds": [
+        "ev_admin_schedule_note"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "withheld_schedule_detail",
+      "message": "최윤아는 지시만 받았다고 했지만, 비서 일정 메모는 가족에게 숨기라는 일정 관리까지 알고 있었음을 보여줍니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_choi_lipstick_case",
+      "contradictionId": "con_choi_lipstick_case",
+      "title": "와인 부인과 립스틱 케이스",
+      "relatedCharacterId": "char_choiyuna",
+      "requiredStatementIds": [
+        "st_choiyuna_no_wine"
+      ],
+      "requiredEvidenceIds": [
+        "ev_lipstick_tube"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "assistant_scene_trace_pressure",
+      "message": "최윤아는 와인과 립스틱을 부인했지만, 서재 쓰레기통의 립스틱 케이스는 현장 주변 정리를 알고 있었을 가능성을 만듭니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_park_guestroom_record_edit",
+      "contradictionId": "con_park_guestroom_record_edit",
+      "title": "손님방 알리바이와 의료 기록 수정 흔적",
+      "relatedCharacterId": "char_parkmingyu",
+      "requiredStatementIds": [
+        "st_parkmingyu_guestroom_2200"
+      ],
+      "requiredEvidenceIds": [
+        "ev_doctor_guestroom_record"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "doctor_record_cleanup",
+      "message": "박민규는 손님방에서 기록을 정리했다고 했지만, 의료 기록 수정 흔적은 사후 책임 회피를 의식했음을 보여줍니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_park_medicine_box_after_claim",
+      "contradictionId": "con_park_medicine_box_after_claim",
+      "title": "약 확인 진술과 약 상자 기록",
+      "relatedCharacterId": "char_parkmingyu",
+      "requiredStatementIds": [
+        "st_parkmingyu_medicine"
+      ],
+      "requiredEvidenceIds": [
+        "ev_medicine_box"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "doctor_medicine_responsibility_pressure",
+      "message": "약 상자는 치명적 살해 수단을 가리키지는 않지만, 박민규가 약 확인 책임을 과하게 좁혀 말했음을 보여줍니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_yoon_route_gap",
+      "contradictionId": "con_yoon_route_gap",
+      "title": "발견 시각과 집사 순찰 기록의 간극",
+      "relatedCharacterId": "char_yoonjaeho",
+      "requiredStatementIds": [
+        "st_yoonjaeho_found_2210"
+      ],
+      "requiredEvidenceIds": [
+        "ev_yoon_route_log"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "butler_route_gap",
+      "message": "윤재호는 22:10 발견을 말했지만, 집사 순찰 기록은 그보다 앞서 2층 복도를 확인했음을 보여줍니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_yoon_key_cabinet",
+      "contradictionId": "con_yoon_key_cabinet",
+      "title": "서재 열쇠 진술과 반출 기록",
+      "relatedCharacterId": "char_yoonjaeho",
+      "requiredStatementIds": [
+        "st_yoonjaeho_key_only_victim"
+      ],
+      "requiredEvidenceIds": [
+        "ev_key_cabinet_check"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "butler_key_access_pressure",
+      "message": "윤재호는 열쇠 두 개의 존재를 인정했지만, 보관함 점검표는 사건 시간대 집사용 열쇠 반출을 보여줍니다.",
+      "unlockedIds": []
+    },
+    {
+      "id": "con_yoon_loyal_silence",
+      "contradictionId": "con_yoon_loyal_silence",
+      "title": "가족 분위기 진술과 가계 지출 메모",
+      "relatedCharacterId": "char_yoonjaeho",
+      "requiredStatementIds": [
+        "st_yoonjaeho_family_tension"
+      ],
+      "requiredEvidenceIds": [
+        "ev_household_account_note"
+      ],
+      "severity": "minor",
+      "pressureDelta": 12,
+      "reasonCode": "butler_loyal_silence",
+      "message": "윤재호는 분위기가 좋지 않았다고만 했지만, 가계 지출 메모는 한서연의 압박과 유언장 소문을 이미 알고 있었음을 보여줍니다.",
       "unlockedIds": []
     }
   ],

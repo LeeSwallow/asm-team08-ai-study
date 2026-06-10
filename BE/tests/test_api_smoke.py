@@ -237,7 +237,7 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
     assert session["questionLimit"] == 12
     assert session["remainingQuestions"] == 12
     assert session["visibleEvidenceCount"] == 5
-    assert session["totalEvidenceCount"] == 13
+    assert session["totalEvidenceCount"] == 18
     assert {item["characterId"] for item in session["suspects"]} == {
         "char_hanseoyeon",
         "char_yoonjaeho",
@@ -267,7 +267,10 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
 
     # Question-selected side routes should open every non-core suspect's useful evidence/relation leads.
     session = ask("q_yoonjaeho_blackout")
+    session = ask("q_yoonjaeho_discovery")
+    session = ask("q_yoonjaeho_key")
     session = ask("q_yoonjaeho_family_tension")
+    session = ask("q_parkmingyu_alibi")
     session = ask("q_parkmingyu_medicine")
     session = ask("q_parkmingyu_argument")
     session = ask("q_choiyuna_last_call")
@@ -315,6 +318,11 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
         "ev_window_bolt",
         "ev_deleted_cctv",
         "ev_prescription_dispute_note",
+        "ev_admin_schedule_note",
+        "ev_doctor_guestroom_record",
+        "ev_yoon_route_log",
+        "ev_key_cabinet_check",
+        "ev_household_account_note",
     }
     assert {item["evidenceId"] for item in session["evidence"]} == all_evidence_ids
     assert session["visibleEvidenceCount"] == session["totalEvidenceCount"] == len(all_evidence_ids)
