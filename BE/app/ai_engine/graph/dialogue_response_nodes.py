@@ -19,6 +19,17 @@ def _sanitize_function_transition(function_call: Any) -> Any:
     return sanitized
 
 
+def _public_voice_metadata(reply: Any) -> dict[str, Any]:
+    if reply is None:
+        return {}
+    vm = getattr(reply, "voiceMetadata", None) or {}
+    return {
+        "tone": vm.get("tone"),
+        "tensionLevel": vm.get("tensionLevel"),
+        "tonePolished": bool(vm.get("tonePolished", False)),
+    }
+
+
 def _public_director_dump(plan: Any) -> dict[str, Any] | None:
     if plan is None:
         return None
@@ -94,6 +105,7 @@ def format_response(state: dict[str, Any]) -> dict[str, Any]:
             "characterReactionRoute": getattr(reaction_decision, "reactionRoute", None),
             "conditionalRouteOwner": getattr(reaction_decision, "owner", None),
             "characterReactionRouteNode": state.get("character_reaction_route_node"),
+            "voiceMetadata": _public_voice_metadata(state.get("checked_reply") or state.get("draft_reply")),
             "dialogueDirector": _public_director_dump(state.get("dialogue_director_plan")),
             "functionTransition": _sanitize_function_transition(
                 getattr(state.get("dialogue_director_plan"), "functionCall", None)

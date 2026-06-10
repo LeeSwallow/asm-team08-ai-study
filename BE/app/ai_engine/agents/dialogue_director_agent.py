@@ -203,7 +203,7 @@ class DialogueDirectorAgent:
                 reason="decisive_evidence_pressure",
             )
 
-        if transition.get("move") == "repeat_pressure":
+        if transition.get("move") == "repeat_pressure" or intent == "pressure":
             return DialogueDirectorPlan(
                 strategy="controlled_deflection",
                 seedText=None,
@@ -220,6 +220,33 @@ class DialogueDirectorAgent:
                     admissionLevel="public_fact_only",
                 ),
                 reason="repeat_pressure",
+            )
+
+        if str(payload.question.id).endswith("victim_relation"):
+            return DialogueDirectorPlan(
+                strategy="answer_requested_relationship_only",
+                seedText=payload.allowedStatement.text,
+                allowedAdmissionLevel="public_fact_only",
+                styleDirectives=[
+                    "플레이어가 물은 관계 대상은 피해자/회장님이다. 피해자와 해당 용의자의 관계만 답한다.",
+                    "다른 인물과의 유대, 보호, 목격, 서재 출입 기록, 숨긴 비밀은 언급하지 않는다.",
+                    "FACT ANCHOR 문장을 캐릭터 말투로만 자연화하고 의미를 확장하지 않는다.",
+                ],
+                forbiddenClaims=[
+                    "다른 용의자 이름 언급",
+                    "한서연 또는 그 아이 언급",
+                    "서재 출입 기록, 목격, 범인 단정",
+                ],
+                focusTerms=["피해자와의 관계", payload.allowedStatement.text],
+                functionCall=_dialogue_function(
+                    "answer_requested_relationship_only",
+                    reason="victim_relation_question",
+                    focusTerms=["피해자와의 관계"],
+                    suspectName=payload.suspect.name,
+                    playerMessage=payload.question.text,
+                    admissionLevel="public_fact_only",
+                ),
+                reason="victim_relation_question",
             )
 
         return DialogueDirectorPlan(
