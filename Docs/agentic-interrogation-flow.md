@@ -15,7 +15,9 @@ flowchart LR
     TurnInterpreter["TurnInterpreter<br/>intent/evidence/statement/timeline match"]
     StateEngine["InterrogationState<br/>deterministic transition"]
     Knowledge["KnowledgeRetriever<br/>Character / GameMaster context split"]
-    Character["CharacterAgent<br/>suspect reply"]
+    Judge["CharacterReactionJudgeAgent<br/>utterance route owner"]
+    Route["LangGraph conditional edge<br/>7 reaction routes"]
+    Character["CharacterAgent<br/>route-shaped suspect reply"]
     Tone["DialogueTonePolisher<br/>spoken Korean polish"]
     Guard["LightRuleCheck<br/>safety + quality regen"]
     GM["GameMasterAgent<br/>public event proposal"]
@@ -28,7 +30,7 @@ flowchart LR
     Player --> FE --> API --> DialogueService
     DialogueService --> TurnInterpreter --> StateEngine
     DialogueService --> Knowledge
-    Knowledge --> Character --> Tone --> Guard --> GM
+    Knowledge --> Judge --> Route --> Character --> Tone --> Guard --> GM
     StateEngine --> DialogueService
     GM --> Events
     StateEngine -->|"newlyDiscoveredContradictionIds"| Events
@@ -46,7 +48,7 @@ flowchart LR
 
     class Player,FE client;
     class API,DialogueService,TurnInterpreter,Events,Accuse be;
-    class Knowledge,Character,Tone,Guard,GM ai;
+    class Knowledge,Judge,Route,Character,Tone,Guard,GM ai;
     class StateEngine state;
     class Store,SSE,Notebook store;
 ```
@@ -54,6 +56,8 @@ flowchart LR
 설계 포인트:
 
 - 생성은 LLM이 자율적으로 하되, 전이는 `InterrogationState`가 결정적으로 수행한다.
+- `CharacterReactionJudgeAgent`는 provider configured 상태에서 LLM JSON 계약으로 현재 선택된 용의자 관점의 route를 고른다. provider 미설정/장애 시 deterministic public-context classifier로 명시적으로 fallback한다.
+- LangGraph `add_conditional_edges`가 7개 reaction route 중 하나로 실제 분기한다.
 - `KnowledgeRetriever`는 캐릭터 응답 컨텍스트와 GameMaster 이벤트 컨텍스트를 분리한다.
 - `EventProcessor`는 AI/BE 제안 이벤트를 세션 공개 정책에 맞춰 검증한 뒤에만 수첩과 SSE에 반영한다.
 - 최종 고발은 사용자가 선택한 근거뿐 아니라 사건 수첩에 쌓인 모순 note 링크를 자동 포함한다.
@@ -72,6 +76,8 @@ sequenceDiagram
     participant TI as TurnInterpreter
     participant IS as InterrogationState
     participant KR as KnowledgeRetriever
+    participant RJ as CharacterReactionJudge
+    participant RT as ConditionalRoute
     participant CA as CharacterAgent
     participant TP as TonePolisher
     participant LC as LightRuleCheck
@@ -89,7 +95,10 @@ sequenceDiagram
     IS-->>DS: move, disclosureStage, tension, newlyDiscoveredContradictionIds
     DS->>KR: retrieve_dialogue_context()
     KR-->>DS: Character context + GameMaster event context
-    DS->>CA: generate suspect reply
+    DS->>RJ: judge_player_utterance(public context)
+    RJ-->>RT: reactionRoute + confidence + public refs
+    RT-->>CA: route-specific DialogueDirectorPlan
+    DS->>CA: generate suspect reply with reaction plan
     CA->>TP: spoken tone correction
     TP->>LC: safety + quality check
     LC-->>DS: checked character reply

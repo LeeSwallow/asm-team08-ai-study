@@ -34,6 +34,7 @@ export type Suspect = {
   pressure: number;
   status: SuspectStatus;
   pressureState?: string;
+  pressureStage?: string;
   tensionLevel?: VisualState["tensionLevel"];
   emotion?: string;
   expression?: string;
@@ -46,6 +47,54 @@ export type VisualState = {
   emotionalState?: string;
   expression?: string;
   tensionLevel?: "low" | "medium" | "high" | "critical" | string;
+};
+
+export type CharacterReactionDiagnostic = {
+  owner?: string;
+  suspectId?: string;
+  route?: string;
+  reactionRoute?: string;
+  label?: string;
+  effect?: string;
+  confidence?: number;
+  playerClaimAssessment?: string;
+  characterStance?: string;
+  responseIntent?: string;
+  playerFacingReason?: string;
+  publicOnly?: boolean;
+  appliedStateChange?: boolean;
+};
+
+export type HelperSuggestion = {
+  helperRoute: "nudge_evidence" | "nudge_relation" | "nudge_contradiction" | "nudge_switch_suspect" | "nudge_accusation_ready" | "silent" | string;
+  confidence: number;
+  tone: "noir_assistant" | string;
+  message: string;
+  suggestedActions: Array<{ type: string; targetId: string; label: string }>;
+  publicRefs: {
+    evidenceIds: string[];
+    statementIds: string[];
+    relationIds: string[];
+    suspectIds: string[];
+  };
+};
+
+export type PressureGates = {
+  stages: string[];
+  guidance: string;
+};
+
+export type DisclosureLadderStage = {
+  stage: string;
+  state: string;
+  dialogueGoal: string;
+};
+
+export type DisclosureLadder = {
+  suspectId: string;
+  suspectName: string;
+  currentStage: string;
+  stages: DisclosureLadderStage[];
 };
 
 export type DialogueRuntimeDiagnostics = {
@@ -72,6 +121,9 @@ export type DialogueRuntimeDiagnostics = {
   remainingQuestionsDelta?: number;
   emotionalState?: string;
   tensionLevel?: string;
+  characterReaction?: CharacterReactionDiagnostic;
+  characterReactionRoute?: string;
+  helperSuggestion?: HelperSuggestion;
 };
 
 export type GameEventFeedItem = {
@@ -347,6 +399,9 @@ export type GameSessionView = {
   visualState?: VisualState;
   latestEvents?: GameEventFeedItem[];
   runtimeDiagnostics?: DialogueRuntimeDiagnostics;
+  helperSuggestion?: HelperSuggestion;
+  pressureGates?: PressureGates;
+  disclosureLadders?: DisclosureLadder[];
   lastVerdict?: {
     verdict: Verdict;
     message: string;

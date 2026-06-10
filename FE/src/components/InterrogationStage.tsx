@@ -19,6 +19,8 @@ type InterrogationStageProps = {
   onDraftQuestionChange: (value: string) => void;
   onSubmitQuestion: () => void;
   onPresentEvidence: () => void;
+  onOpenRelations: () => void;
+  onOpenAccusation: () => void;
   onSelectSuspect: (suspectId: string) => void;
 };
 
@@ -39,6 +41,8 @@ export function InterrogationStage({
   onDraftQuestionChange,
   onSubmitQuestion,
   onPresentEvidence,
+  onOpenRelations,
+  onOpenAccusation,
   onSelectSuspect,
 }: InterrogationStageProps) {
   const visualAppliesToSelected = Boolean(
@@ -55,6 +59,31 @@ export function InterrogationStage({
   const stageAsset = suspectAsset(selectedSuspect?.id, expression);
   const stageMood = `${emotion}-${expression}-${tensionLevel}`;
   const diagnosticTone = runtimeDiagnostics?.fallbackUsed || runtimeDiagnostics?.degraded ? "fallback" : "api";
+  const reaction = runtimeDiagnostics?.characterReaction;
+  const helperSuggestion = runtimeDiagnostics?.helperSuggestion;
+  const showHelperSuggestion = Boolean(helperSuggestion && helperSuggestion.helperRoute !== "silent" && helperSuggestion.message);
+  const handleHelperAction = (actionType: string, targetId: string) => {
+    if (actionType === "ask_suspect" && targetId) {
+      onSelectSuspect(targetId);
+      return;
+    }
+    if (actionType === "open_relation" || actionType === "open_relations" || actionType === "nudge_relation") {
+      onOpenRelations();
+      return;
+    }
+    if (actionType === "open_accusation" || actionType === "prepare_accusation") {
+      onOpenAccusation();
+      return;
+    }
+    if (actionType === "try_contradiction" || actionType === "open_evidence") {
+      onPresentEvidence();
+      return;
+    }
+    onPresentEvidence();
+  };
+  const reactionRoute = runtimeDiagnostics?.characterReactionRoute ?? reaction?.reactionRoute ?? reaction?.route;
+  const reactionLabel = reaction?.label ?? reactionRoute;
+  const reactionSummary = reactionLabel ? `${reactionLabel}${reaction?.effect ? ` → ${reaction.effect}` : ""}` : undefined;
   const visibleProgressCount = runtimeDiagnostics?.appliedEventsCount ?? 0;
   const suspectById = new Map(suspects.map((suspect) => [suspect.id, suspect]));
   const suspectByName = new Map(suspects.map((suspect) => [suspect.name, suspect]));
@@ -110,6 +139,7 @@ export function InterrogationStage({
       <details className="interrogation-meta" aria-label="수사 상태">
         <summary>
           <span className={`runtime-badge ${diagnosticTone}`}>수사 기록</span>
+          {reactionSummary ? <span className="reaction-route-badge">AI 판단: {reactionSummary}</span> : null}
           <span>{runtimeDiagnostics?.fallbackUsed || runtimeDiagnostics?.degraded ? "기록 확인 중" : "진행 정상"}</span>
           <span>남은 질문 {remainingQuestions}/{questionLimit}</span>
         </summary>
@@ -117,9 +147,29 @@ export function InterrogationStage({
           <span>최근 진행: {visibleProgressCount > 0 ? `${visibleProgressCount}건 기록됨` : "새 기록 없음"}</span>
           <span>질문 사용: {runtimeDiagnostics?.previousRemainingQuestions ?? remainingQuestions}→{runtimeDiagnostics?.remainingQuestions ?? remainingQuestions}/{questionLimit}</span>
           <span>분위기: {emotion}/{tensionLevel}</span>
+          {reactionRoute ? <span>분기: {reactionRoute}{typeof reaction?.confidence === "number" ? ` · ${Math.round(reaction.confidence * 100)}%` : ""}</span> : null}
+          {reaction?.playerFacingReason ? <span>판단 근거: {reaction.playerFacingReason}</span> : null}
           {runtimeDiagnostics?.blockedReason ? <span className="diagnostic-alert">응답 보류: 공개 가능한 답변으로 조정 중</span> : null}
         </div>
       </details>
+      {showHelperSuggestion && helperSuggestion ? (
+        <aside className="helper-agent-card" aria-label="조수의 메모">
+          <header>
+            <span>조수의 메모</span>
+            <strong>{Math.round(helperSuggestion.confidence * 100)}%</strong>
+          </header>
+          <p>{helperSuggestion.message}</p>
+          {helperSuggestion.suggestedActions.length > 0 ? (
+            <div className="helper-actions">
+              {helperSuggestion.suggestedActions.slice(0, 2).map((action) => (
+                <button key={`${action.type}-${action.targetId}-${action.label}`} type="button" onClick={() => handleHelperAction(action.type, action.targetId)}>
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </aside>
+      ) : null}
 
       <div
         className={`cinematic-stage reactive-stage tension-${tensionLevel} expression-${expression} ${visibleDialogue.length > 0 ? "has-dialogue" : "is-awaiting-first-turn"}`}

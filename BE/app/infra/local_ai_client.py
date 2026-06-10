@@ -17,19 +17,37 @@ logger = logging.getLogger(__name__)
 
 
 def _public_runtime_diagnostics(diagnostics: Dict[str, Any]) -> Dict[str, Any]:
+    public: Dict[str, Any] = {}
     director = (diagnostics or {}).get("dialogueDirector")
     if isinstance(director, dict):
-        return {
-            "dialogueDirector": {
-                "strategy": director.get("strategy"),
-                "seedText": director.get("seedText"),
-                "allowedAdmissionLevel": director.get("allowedAdmissionLevel"),
-                "focusTerms": list(director.get("focusTerms") or []),
-                "functionCall": director.get("functionCall"),
-                "reason": director.get("reason"),
-            }
+        public["dialogueDirector"] = {
+            "strategy": director.get("strategy"),
+            "seedText": director.get("seedText"),
+            "allowedAdmissionLevel": director.get("allowedAdmissionLevel"),
+            "focusTerms": list(director.get("focusTerms") or []),
+            "functionCall": director.get("functionCall"),
+            "reason": director.get("reason"),
         }
-    return {}
+    reaction = (diagnostics or {}).get("characterReaction")
+    if isinstance(reaction, dict):
+        public["characterReaction"] = {
+            "owner": reaction.get("owner"),
+            "suspectId": reaction.get("suspectId"),
+            "reactionRoute": reaction.get("reactionRoute"),
+            "confidence": reaction.get("confidence"),
+            "playerClaimAssessment": reaction.get("playerClaimAssessment"),
+            "characterStance": reaction.get("characterStance"),
+            "responseIntent": reaction.get("responseIntent"),
+            "playerFacingReason": reaction.get("playerFacingReason"),
+            "referencedEvidenceIds": list(reaction.get("referencedEvidenceIds") or []),
+            "referencedStatementIds": list(reaction.get("referencedStatementIds") or []),
+            "referencedTimelineIds": list(reaction.get("referencedTimelineIds") or []),
+            "referencedContradictionIds": list(reaction.get("referencedContradictionIds") or []),
+            "stateIntent": reaction.get("stateIntent"),
+        }
+        public["characterReactionRoute"] = reaction.get("reactionRoute")
+        public["conditionalRouteOwner"] = reaction.get("owner")
+    return public
 
 
 class LocalAIClient:

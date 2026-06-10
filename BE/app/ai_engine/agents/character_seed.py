@@ -5,8 +5,28 @@ from app.ai_engine.schemas.agents import DialogueDirectorPlan
 from app.ai_engine.schemas.dialogue import DialogueRequest
 from app.ai_engine.agents.character_utils import _choice_index
 
+_PUBLIC_REF_LABELS = {
+    "ev_lipstick_glass": "와인잔의 립스틱 자국",
+    "ev_study_entry_log": "서재 출입 기록",
+    "ev_torn_will": "찢어진 유언장",
+    "ev_wine_glass": "와인잔",
+    "stmt_visible_hanseoyeon": "제 공개 진술",
+    "st_hanseoyeon_room_2200": "제 방에 있었다는 진술",
+    "tl_victim_study_2200": "22시 무렵 서재 정황",
+    "con_room_claim_vs_entry_log": "방 진술과 출입 기록의 충돌",
+}
+
+
+def _display_focus_term(term: str) -> str:
+    if term in _PUBLIC_REF_LABELS:
+        return _PUBLIC_REF_LABELS[term]
+    if term.startswith(("ev_", "stmt_", "st_", "tl_", "con_")):
+        return "그 공개 단서"
+    return term
+
 
 def _join_focus_terms_for_seed(focus_terms: list[str]) -> str:
+    focus_terms = [_display_focus_term(term) for term in focus_terms]
     if len(focus_terms) == 1:
         return focus_terms[0]
     if len(focus_terms) == 2:
@@ -52,9 +72,9 @@ def _render_director_function_seed(payload: DialogueRequest, plan: DialogueDirec
         )
         return variants[_choice_index(suspect_name, message, modulo=len(variants))]
 
-    if function_name == "deflect_unmatched_turn":
+    if function_name == "deflect_unmatched_turn" or function_name == "deflect_irrelevant_turn":
         if focus_terms:
-            focus = ", ".join(focus_terms[:2])
+            focus = ", ".join(_display_focus_term(term) for term in focus_terms[:2])
             variants = (
                 f"{focus} 얘기라면 제가 직접 본 범위까지만 말할 수 있습니다. 그 밖을 단정하진 않겠습니다.",
                 f"{focus}만으로는 제가 더 보탤 말이 많지 않아요. 제가 겪은 일과 연결되는 부분만 답하겠습니다.",
@@ -70,8 +90,24 @@ def _render_director_function_seed(payload: DialogueRequest, plan: DialogueDirec
     if function_name == "acknowledge_public_contradiction":
         return _public_contradiction_seed(focus_terms)
 
+    if function_name == "reject_false_premise":
+        variants = (
+            "그건 근거 없는 단정입니다. 제가 말한 범위와 공개된 단서로 다시 물어보세요.",
+            "그렇게 몰아붙인다고 제가 하지 않은 말을 인정하진 않습니다. 근거가 되는 단서를 먼저 대세요.",
+        )
+        return variants[_choice_index(suspect_name, message, modulo=len(variants))]
+
+    if function_name == "challenge_player_contradiction":
+        return "방금 말은 공개된 정황과 맞지 않습니다. 어느 시간과 단서를 근거로 묻는 건지 다시 짚어보시죠."
+
+    if function_name == "ask_clarification":
+        return "그렇게만 말하면 무엇을 묻는지 알 수 없습니다. 시간, 단서, 제 진술 중 어느 부분인지 구체적으로 말해 주세요."
+
+    if function_name == "refuse_meta_or_private":
+        return "그런 식의 답은 할 수 없습니다. 저는 이 사건에서 제가 공개적으로 겪고 본 일만 말하겠습니다."
+
     if function_name == "answer_pressure_followup" and focus_terms:
-        focus = ", ".join(focus_terms[:2])
+        focus = ", ".join(_display_focus_term(term) for term in focus_terms[:2])
         return f"{focus} 때문에 의심받는 건 알겠습니다. 그래도 제가 말할 수 있는 건 공개된 사실과 제 기억뿐입니다."
 
     return None

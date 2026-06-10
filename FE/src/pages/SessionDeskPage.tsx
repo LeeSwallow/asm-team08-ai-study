@@ -2,6 +2,7 @@ import { AppHeader } from "../components/AppHeader";
 import { CaseFilePanel } from "../components/CaseFilePanel";
 import { EvidencePanel } from "../components/EvidencePanel";
 import { InterrogationStage } from "../components/InterrogationStage";
+import { GameEndingOverlay } from "../components/GameEndingOverlay";
 import { InvestigationDrawer } from "../components/InvestigationDrawer";
 import { useInvestigationSession } from "../hooks/useInvestigationSession";
 import { caseListPath } from "../routing";
@@ -60,6 +61,8 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           onDraftQuestionChange={desk.setDraftQuestion}
           onSubmitQuestion={desk.submitQuestion}
           onPresentEvidence={() => desk.setActiveDrawer("evidence")}
+          onOpenRelations={() => desk.setActiveDrawer("relations")}
+          onOpenAccusation={() => desk.setActiveDrawer("accusation")}
           onSelectSuspect={desk.selectSuspect}
         />
         <EvidencePanel
@@ -99,6 +102,15 @@ export function SessionDeskPage({ sessionId, onNavigate }: SessionDeskPageProps)
           onAccusationMotiveChange={desk.setAccusationMotive}
           onAccusationMethodChange={desk.setAccusationMethod}
           onSubmitAccusation={desk.submitFinalAccusation}
+        />
+      ) : null}
+
+      {desk.session.result ? (
+        <GameEndingOverlay
+          result={desk.session.result}
+          session={desk.session}
+          onOpenDossier={() => desk.setActiveDrawer("accusation")}
+          onReturnToCases={() => onNavigate(caseListPath())}
         />
       ) : null}
 

@@ -1,4 +1,4 @@
-from typing import Iterable, List, Set
+from typing import Any, Iterable, List, Set
 
 from app.domain.interrogation_state import emotional_state, pressure_state, tension_level
 from app.domain.models import Case, SessionState
@@ -81,6 +81,9 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
         "opening": public_opening(case),
         "storyline": public_storyline(case, session),
         "visibleTimeline": visible_timeline(case, session),
+        "pressureGates": public_pressure_gates(),
+        "disclosureLadders": public_disclosure_ladders(case, session),
+        "helperSuggestion": public_helper_suggestion(case, session),
         **current_story_progress(session, case),
         "caseFile": public_case_file(case, session),
         "suspects": [
@@ -92,6 +95,7 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
                 "motiveCandidate": item.motiveCandidate,
                 "pressure": session.pressureBySuspect.get(item.characterId, 0),
                 "pressureState": pressure_state(session.pressureBySuspect.get(item.characterId, 0)),
+                "pressureStage": public_pressure_stage(session.pressureBySuspect.get(item.characterId, 0)),
                 "tensionLevel": tension_level(session.pressureBySuspect.get(item.characterId, 0)),
                 "emotionalState": emotional_state(session.pressureBySuspect.get(item.characterId, 0)),
                 "speechStyle": public_speech_style(item.characterId) | (item.speechStyle or {}),
@@ -124,6 +128,135 @@ def visible_session_payload(session: SessionState, case: Case) -> dict:
         "accusation": session.accusation,
         "notebook": public_notebook(case, session),
         "contradictions": public_contradiction_read_model(case, session),
+    }
+
+
+_PRESSURE_STAGE_ORDER = ("guarded", "defensive", "shaken", "resigned")
+
+_DISCLOSURE_STAGE_STATES: dict[str, str] = {
+    "guarded": "경계",
+    "defensive": "방어",
+    "shaken": "동요",
+    "resigned": "체념",
+}
+
+
+def public_pressure_stage(pressure: int | float | None) -> str:
+    score = max(0, min(100, int(pressure or 0)))
+    if score >= 80:
+        return "resigned"
+    if score >= 50:
+        return "shaken"
+    if score >= 20:
+        return "defensive"
+    return "guarded"
+
+
+def public_pressure_gates() -> dict[str, Any]:
+    return {
+        "stages": list(_PRESSURE_STAGE_ORDER),
+        "guidance": "압박 단계는 공개된 질문 진행에 따라 달라지는 현재 반응 상태입니다.",
+    }
+
+
+def public_disclosure_ladders(case: Case, session: SessionState) -> list[dict[str, Any]]:
+    ladders: list[dict[str, Any]] = []
+    for suspect in case.suspects:
+        pressure = session.pressureBySuspect.get(suspect.characterId, 0)
+        current_stage = public_pressure_stage(pressure)
+        current_index = _PRESSURE_STAGE_ORDER.index(current_stage)
+        stages = []
+        for stage in _PRESSURE_STAGE_ORDER[: current_index + 1]:
+            stages.append(
+                {
+                    "stage": stage,
+                    "state": _DISCLOSURE_STAGE_STATES.get(stage, stage),
+                    "dialogueGoal": "공개 단서와 현재 압박 단계 안에서만 응답합니다.",
+                }
+            )
+        ladders.append(
+            {
+                "suspectId": suspect.characterId,
+                "suspectName": suspect.name,
+                "currentStage": current_stage,
+                "stages": stages,
+            }
+        )
+    return ladders
+
+
+def public_helper_suggestion(case: Case, session: SessionState) -> dict[str, Any]:
+    selected_suspect_id = session.selectedSuspectId or (case.suspects[0].characterId if case.suspects else None)
+    selected = next((item for item in case.suspects if item.characterId == selected_suspect_id), None)
+    diagnostics = session.lastRuntimeDiagnostics or {}
+    route = str(diagnostics.get("characterReactionRoute") or "")
+    recent_player_turns = [
+        item for item in session.dialogueLog[-8:] if item.speaker == "player" and (not selected_suspect_id or item.suspectId == selected_suspect_id)
+    ]
+    stuck_routes = {"deflect_irrelevant", "ask_clarification"}
+    is_stuck = route in stuck_routes and len(recent_player_turns) >= 2
+    candidates = public_contradiction_read_model(case, session)["candidates"]
+    actionable_candidate = next(
+        (
+            item
+            for item in candidates
+            if item.get("submitEligible") and (not selected_suspect_id or item.get("suspectId") == selected_suspect_id)
+        ),
+        None,
+    )
+
+    if is_stuck and selected is not None:
+        if actionable_candidate:
+            return _helper_payload(
+                "nudge_contradiction",
+                "지금은 질문보다 대조가 필요합니다. 공개된 진술과 증거를 같은 탁자 위에 올려보세요.",
+                [
+                    {
+                        "type": "try_contradiction",
+                        "targetId": actionable_candidate["contradictionId"],
+                        "label": "모순 후보 확인",
+                    }
+                ],
+                {
+                    "evidenceIds": list(actionable_candidate.get("evidenceIds") or []),
+                    "statementIds": list(actionable_candidate.get("statementIds") or []),
+                    "relationIds": [],
+                    "suspectIds": [str(actionable_candidate.get("suspectId"))],
+                },
+                confidence=0.82,
+            )
+        visible_evidence = [item.evidenceId for item in case.evidence if item.evidenceId in session.unlockedEvidenceIds][:2]
+        return _helper_payload(
+            "nudge_evidence",
+            f"{selected.name}의 말이 안개 속을 맴돕니다. 먼저 공개된 증거 하나를 집어 시간대와 맞춰 물어보세요.",
+            [
+                {
+                    "type": "open_evidence" if visible_evidence else "ask_suspect",
+                    "targetId": visible_evidence[0] if visible_evidence else selected.characterId,
+                    "label": "관련 단서 확인",
+                }
+            ],
+            {"evidenceIds": visible_evidence, "statementIds": [], "relationIds": [], "suspectIds": [selected.characterId]},
+            confidence=0.74,
+        )
+    return _helper_payload("silent", "", [], {"evidenceIds": [], "statementIds": [], "relationIds": [], "suspectIds": []}, confidence=0.0)
+
+
+def _helper_payload(
+    helper_route: str,
+    message: str,
+    suggested_actions: list[dict[str, str]],
+    public_refs: dict[str, list[str]],
+    *,
+    confidence: float,
+) -> dict[str, Any]:
+    return {
+        "helperRoute": helper_route,
+        "confidence": confidence,
+        "tone": "noir_assistant",
+        "message": message,
+        "suggestedActions": suggested_actions,
+        "publicRefs": public_refs,
     }
 
 

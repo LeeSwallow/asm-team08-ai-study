@@ -9,7 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "smoke:contracts": "node scripts/contractSmoke.mjs",
     "smoke:public-diagnostics": "node scripts/publicDiagnosticsSmoke.mjs",
-    "smoke:dialogue-repetition": "node scripts/dialogueRepetitionSmoke.mjs"
+    "smoke:dialogue-repetition": "node scripts/dialogueRepetitionSmoke.mjs",
+    "smoke:ending-ui": "node scripts/endingUiSmoke.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",

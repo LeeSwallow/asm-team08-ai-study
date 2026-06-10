@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.ai_engine.core.llm import ChainedLLM, deterministic_clip, get_llm, llm_status
+from app.ai_engine.core.text_normalization import normalize_text
 from app.ai_engine.domain.dialogue_intent import classify_dialogue_intent
 from app.ai_engine.prompts.character_dialogue_builder import build_character_dialogue_prompt
 from app.ai_engine.schemas.agents import CharacterAgentInput, DialogueDirectorPlan, DraftCharacterReply
@@ -39,6 +40,51 @@ def build_character_agent_input(
         dialogueDirectorPlan=dialogue_director_plan,
         recentDialogue=pack.recentDialogue if pack else [],
     )
+
+
+_DRIFT_STOPWORDS = {
+    "그날",
+    "사건",
+    "제가",
+    "저는",
+    "것이",
+    "것은",
+    "그건",
+    "네",
+    "아니",
+    "정말",
+}
+
+
+def _salient_terms(text: str) -> set[str]:
+    normalized = normalize_text(text)
+    terms: set[str] = set()
+    for raw in normalized.replace(".", " ").replace(",", " ").split():
+        token = raw.strip("…!?·:;()[]{}\"'")
+        if len(token) < 2 or token in _DRIFT_STOPWORDS:
+            continue
+        terms.add(token)
+        if len(token) >= 4:
+            terms.add(token[:3])
+    return terms
+
+
+def _llm_answer_drifted_from_allowed_statement(payload: DialogueRequest, text: str) -> bool:
+    if not payload.allowedStatement.id.startswith("st_"):
+        return False
+    intent = classify_dialogue_intent(payload.question.text, payload.dialogueMode)
+    if intent in {"greeting", "unmatched", "small_talk"}:
+        return False
+    route = None
+    if payload.interrogationTransition:
+        route = payload.interrogationTransition.get("functionTransition", {}).get("arguments", {}).get("reactionRoute")
+    if route and route != "answer_relevant":
+        return False
+    allowed_terms = _salient_terms(payload.allowedStatement.text)
+    if not allowed_terms:
+        return False
+    generated_terms = _salient_terms(text)
+    return not bool(allowed_terms & generated_terms)
 
 
 class CharacterAgent:
@@ -135,18 +181,6 @@ class CharacterAgent:
                 error_type="provider_unavailable",
             )
 
-        if agent_input.dialogueDirectorPlan and (
-            agent_input.dialogueDirectorPlan.seedText or agent_input.dialogueDirectorPlan.functionCall
-        ):
-            strategy = agent_input.dialogueDirectorPlan.strategy
-            if strategy in {"defensive_pressure", "deflect_unmatched", "small_talk_boundary"}:
-                return draft(
-                    deterministic_clip(seed, max_length=payload.style.maxLength),
-                    fallback_used=False,
-                    degraded=False,
-                    provider_name="dialogue-director",
-                )
-
         try:
             prompt = build_character_dialogue_prompt(
                 payload,
@@ -155,6 +189,14 @@ class CharacterAgent:
             )
             llm = get_llm()
             text = llm.complete(prompt, seed_text=seed, max_length=payload.style.maxLength)
+            if _llm_answer_drifted_from_allowed_statement(payload, text):
+                return draft(
+                    deterministic_clip(seed, max_length=payload.style.maxLength),
+                    fallback_used=True,
+                    degraded=False,
+                    blocked_reason="provider_drift_repaired",
+                    provider_name=provider,
+                )
             if isinstance(llm, ChainedLLM) and llm.used_fallback_on_last_call:
                 actual_provider = getattr(llm.fallback, "provider_name", "chain-fallback")
                 return draft(
