@@ -918,8 +918,8 @@
       "foundAt": "관리실 로그",
       "timeWindow": "22:05~22:07",
       "reliability": 0.88,
-      "initiallyVisible": false,
-      "unlockCondition": "q_yoonjaeho_blackout"
+      "initiallyVisible": true,
+      "unlockCondition": null
     },
     {
       "id": "ev_ring_near_victim",
@@ -2197,13 +2197,14 @@
       },
       {
         "id": "tl_blackout",
+        "timelineId": "tl_blackout",
         "time": "22:05~22:07",
         "title": "저택 2층 정전",
         "description": "관리실 로그에 짧은 정전이 기록됐다. CCTV도 이 시간대에 꺼졌다.",
         "sourceType": "evidence",
         "sourceId": "ev_storm_blackout",
-        "hidden": true,
-        "unlockCondition": "q_yoonjaeho_blackout"
+        "hidden": false,
+        "unlockCondition": null
       },
       {
         "id": "tl_scene_manipulation",

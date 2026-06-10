@@ -236,7 +236,7 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
 
     assert session["questionLimit"] == 12
     assert session["remainingQuestions"] == 12
-    assert session["visibleEvidenceCount"] == 5
+    assert session["visibleEvidenceCount"] == 6
     assert session["totalEvidenceCount"] == 22
     assert {item["characterId"] for item in session["suspects"]} == {
         "char_hanseoyeon",
@@ -250,6 +250,7 @@ def test_case_001_progression_can_unlock_all_suspects_relations_and_evidence_wit
         "ev_wine_glass",
         "ev_study_entry_log",
         "ev_servant_log",
+        "ev_storm_blackout",
         "ev_window_bolt",
     }
     assert "ev_torn_will" not in initial_evidence_ids

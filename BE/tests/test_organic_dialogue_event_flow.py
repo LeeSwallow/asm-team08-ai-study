@@ -155,7 +155,7 @@ def test_dialogue_events_progress_organically_from_statement_to_unlock_to_contra
     yoon = _post_dialogue(client, session_id, "char_yoonjaeho", "정전 당시 무엇을 했나요?").json()
     yoon_types = {event["type"] for event in yoon["appliedEvents"]}
     assert EventType.NOTE_FACT_ADDED.value in yoon_types
-    assert EventType.EVIDENCE_UNLOCKED.value in yoon_types
+    assert EventType.EVIDENCE_UNLOCKED.value not in yoon_types
     assert any(item["evidenceId"] == "ev_storm_blackout" for item in yoon["evidence"])
 
     secretary = _post_dialogue(client, session_id, "char_choiyuna", "피해자와 마지막으로 연락한 때는?").json()
