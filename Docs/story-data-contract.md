@@ -127,6 +127,16 @@ Hidden fields: none.
       "hidden": false
     },
     {
+      "timelineId": "tl_blackout",
+      "time": "22:05~22:07",
+      "title": "저택 2층 정전",
+      "description": "관리실 로그에 짧은 정전이 기록됐다. CCTV도 이 시간대에 꺼졌다.",
+      "sourceType": "evidence",
+      "sourceId": "ev_storm_blackout",
+      "unlockCondition": null,
+      "hidden": false
+    },
+    {
       "timelineId": "tl_global_2206_scene_manipulation",
       "time": "22:06",
       "title": "숨겨진 현장 조작",
@@ -149,6 +159,19 @@ Hidden fields: none.
       "resolvesContradictionId": "con_room_claim_vs_entry_log",
       "unlocks": ["q_hanseoyeon_after_pressure", "ev_torn_will"],
       "secretNote": "비공개: 범인의 첫 거짓말을 드러낸다. public payload에서 제거"
+    },
+    {
+      "pathId": "path_blackout_scene_manipulation",
+      "title": "정전과 현장 조작",
+      "objective": "정전 기록에서 시작해 CCTV 공백과 회중시계 파편 방향을 대조해 현장 조작을 입증한다.",
+      "steps": [
+        { "order": 1, "type": "timeline", "id": "tl_blackout", "prompt": "정전이 사망 추정 시간 안에 들어오는지 확인한다." },
+        { "order": 2, "type": "evidence", "id": "ev_storm_blackout", "prompt": "관리실 로그와 CCTV 중단이 같은 시간대인지 확인한다." },
+        { "order": 3, "type": "evidence", "id": "ev_broken_watch", "prompt": "회중시계가 멈춘 시각과 파편 방향이 자연스러운지 대조한다." },
+        { "order": 4, "type": "evidence", "id": "ev_deleted_cctv", "prompt": "정전 이후 드러난 CCTV 공백이 현장 조작 시간을 보강하는지 확인한다." }
+      ],
+      "resolvesContradictionId": "con_watch_time_manipulated",
+      "unlocks": ["ev_deleted_cctv"]
     }
   ],
   "currentObjectiveRules": [
@@ -165,6 +188,8 @@ Hidden fields: none.
 Public projection rules:
 - `publicPremise`, `acts`, visible `timeline`, public clue paths are public.
 - `timeline[].hidden=true` entries are removed.
+- Core opportunity evidence such as `ev_storm_blackout` and its visible timeline `tl_blackout` must be public from session start; the hidden conclusion is the scene manipulation inference, not the blackout itself.
+- `cluePaths` may reference hidden later evidence such as `ev_deleted_cctv`, but UI/helper copy must phrase it as a future verification step until the referenced evidence is unlocked.
 - `cluePaths[].secretNote` is removed.
 - `currentObjectiveRules` may remain BE-private and be projected as `currentObjective/currentActId` only.
 
@@ -739,6 +764,44 @@ Public contradiction read model:
 
 FE contradiction submission must send player-selected statement/testimony IDs plus evidence IDs. `discoveredContradictionIds` alone is insufficient for FE detail rendering.
 
+### Question Data Shape
+
+용의자 심문에 필요한 `Question` 데이터는 개별 용의자 질문 매칭과 해금 규칙을 담는다. 자연어 변형 질문 처리를 위해 `playerParaphrases` 목록을 포함한다.
+
+```json
+{
+  "questionId": "q_hanseoyeon_alibi",
+  "characterId": "char_hanseoyeon",
+  "text": "사건 당시 어디 있었나요?",
+  "answer": "제 방에 혼자 있었습니다. 조용히 책을 읽고 있었어요.",
+  "playerParaphrases": [
+    "22시에 어디 있었어?",
+    "사건 당시 알리바이가 어떻게 되죠?",
+    "그 시각에 어디에 있었나요?"
+  ],
+  "unlocksStatementIds": ["st_hanseoyeon_room_2200"],
+  "unlocksEvidenceIds": [],
+  "unlocksRecordIds": [],
+  "unlocksRelationIds": [],
+  "initiallyUnlocked": true,
+  "unlockCondition": null
+}
+```
+
+### HelperSuggestion & Question Exhaustion Policy
+
+수사 도중 사용자의 질문 횟수가 모두 소진되었을 때(`remainingQuestions <= 0`), BE는 추가 질문을 차단하고 최종 고발 단계로 전환하도록 돕는 헬퍼(조수) 힌트를 강제 반환해야 한다.
+
+- **모순 후보(Actionable Contradiction Candidate)가 존재하는 경우**:
+  - `helperRoute`: `nudge_accusation_ready`
+  - `message`: "질문 기회는 모두 소진됐습니다. 지금은 새 질문보다 공개된 모순 후보와 기록을 정리해 최종 고발을 준비하세요."
+  - `suggestedActions`: `[ { "type": "try_final_accusation", "targetId": "<contradictionId>", "label": "최종 고발 준비" } ]`
+- **모순 후보가 없는 경우**:
+  - `helperRoute`: `nudge_accusation_ready`
+  - `message`: "질문 기회는 모두 소진됐습니다. 수사 기록과 공개 단서를 다시 대조한 뒤 최종 고발 여부를 판단하세요."
+  - `suggestedActions`: `[ { "type": "review_notebook", "targetId": "<sessionId>", "label": "수사 기록 검토" } ]`
+
+
 ## 15. BE case data vs DOCS story source vs AI prompt-only contract
 
 BE case data:
@@ -770,3 +833,4 @@ AI prompt-only contract:
 8. Keep BE public `caseFile`, `relationMap`, `notebook`, evidence detail, notes, and contradiction detail read models stable for FE panels.
 9. Replace FE local-only investigation controls with BE-backed panels and SSE/session refresh.
 10. Replace placeholder character/evidence assets with generated noir comic assets mapped to canonical expressions and evidence IDs.
+11. Add `playerParaphrases` field to Question model and support deterministic question-exhaustion helper routing in BE/FE.

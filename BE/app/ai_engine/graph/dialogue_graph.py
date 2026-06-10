@@ -118,7 +118,8 @@ def _run_langgraph(initial_state: dict[str, Any]) -> dict[str, Any]:
         graph_fallback_reason: str
 
     graph = StateGraph(WorkflowState)
-    for name, node in [*_PREFIX_NODES, *_ROUTE_NODES.values(), *_SUFFIX_NODES]:
+    route_node_entries = list(_ROUTE_NODES.values())
+    for name, node in [*_PREFIX_NODES, *route_node_entries, *_SUFFIX_NODES]:
         graph.add_node(name, lambda state, _node=node: patch_to_raw_dict(_node(state)))
 
     graph.set_entry_point("load_context")

@@ -33,12 +33,19 @@ Required execution order:
 
 ## 2. Responsibility Boundaries
 
+`DialogueDirectorAgent`:
+- 플레이어 발화의 인텐트와 컨텍스트를 해석하여 답변 전략(`DialogueDirectorPlan`)을 수립한다.
+- 플레이어 발화가 너무 짧고 모호할 때("뭐야", "무슨말" 등 - `terse_vague`) 억측이나 탈선을 방지하기 위해, 임의의 선택지(시간/증거/진술 등)를 제안하지 않고 플레이어에게 무엇을 묻는지 한 문장으로 특정해줄 것을 재요청하도록 지침(`styleDirectives` 및 `forbiddenClaims`)을 구성한다.
+- 캐릭터별 반응 경로(reaction route)에 부합하는 function call 파라미터를 BE 전이용으로 패키징한다.
+- state mutation이나 직접적인 대사 생성은 하지 않는다.
+
 `CharacterAgent`:
 - uses only BE-visible `CharacterKnowledgePack`, `activePersonaOverlay`, `allowedStatement`, `allowedEventPolicy`, and recent dialogue
 - produces draft character text, source refs, voice metadata, and provider/fallback metadata
 - must not propose events
 - must not mutate session state
 - must not decide visibility, unlocks, contradictions, tension, final verdicts, or notes persistence
+- **LLM Answer Drift Protection**: LLM의 답변 생성이 허용된 진술(Allowed Statement) 범위를 벗어나 새로운 사실(New Fact)을 창작(drift)하지 않도록 매칭 검증을 수행한다. 특히 `greeting`, `unmatched`, `small_talk`와 같이 비핵심 턴일 때, 답변 내 단어들이 허용된 범위의 핵심 키워드군(예: `_REF_TERM_LABELS`로 정의된 와인잔, 립스틱, 출입 기록 등)을 침범하여 말을 지어내거나 정보를 노출하지 않도록 `_llm_answer_drifted_from_allowed_statement` 필터를 적용한다. 검증에 실패하면 안전한 결정론적 Fallback 문장으로 강제 클리핑(deterministic clip)한다.
 
 `LightRuleCheck`:
 - validates draft/final text against public facts, allowed refs, private-leak rules, and style constraints
@@ -63,6 +70,7 @@ Required execution order:
 BE authority:
 - BE owns public/private filtering, visibility gates, unlocks, EventProcessor validation, dedupe, persistence, final contradiction discovery, final verdicts, `TensionPolicy`, SSE, and session state.
 - BE may reject, rewrite, or ignore any AI proposed event.
+- For case_001, `ev_storm_blackout` and `tl_blackout` are public opportunity context. Agents may mention that the blackout/CCTV gap exists only when BE-visible, but must not infer or state "현장 조작", culprit identity, or method until BE has surfaced the relevant contradiction/evidence through public refs such as `con_watch_time_manipulated` and `ev_deleted_cctv`.
 
 ## 3. CharacterKnowledgePack
 

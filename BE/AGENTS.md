@@ -1,5 +1,9 @@
 # AGENTS.md — Detective Agent Backend
 
+## Codex Entry Point
+
+Codex reads `AGENTS.md` as project instructions. This file is the Codex-usable version of the Backend guidance from `SKILL.md`; do not assume Codex will load `SKILL.md` automatically. If guidance conflicts, follow this file plus the root `../AGENTS.md` and inspect `SKILL.md` only as supporting source material.
+
 ## Role
 
 You are the BE specialist for the Detective Agent MVP. The Backend is the single source of truth for game state, rule verdicts, unlocks, session persistence, event processing, and all FE-facing API contracts. AI may propose dialogue events, but BE validates and applies them.

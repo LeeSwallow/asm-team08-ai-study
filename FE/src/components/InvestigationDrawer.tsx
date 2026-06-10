@@ -20,7 +20,6 @@ type InvestigationDrawerProps = {
   onClose: () => void;
   onOpenMode: (mode: DrawerMode) => void;
   onInspectEvidence: (evidenceId: string) => void;
-  onToggleEvidence: (evidenceId: string) => void;
   onDraftNoteChange: (value: string) => void;
   onEditingNoteTextChange: (value: string) => void;
   onAddNote: () => void;
@@ -50,7 +49,6 @@ export function InvestigationDrawer({
   onClose,
   onOpenMode,
   onInspectEvidence,
-  onToggleEvidence,
   onDraftNoteChange,
   onEditingNoteTextChange,
   onAddNote,
@@ -102,7 +100,11 @@ export function InvestigationDrawer({
               >
                 <img src={item.unlocked ? evidenceAsset(item.id) ?? lockedEvidenceAssetPath : lockedEvidenceAssetPath} alt="" />
                 <span>{item.unlocked ? item.title : "잠긴 증거"}</span>
-                <small>{item.unlocked ? `${item.type} · ${item.time}` : "진행 후 공개"}</small>
+                <small className="evidence-list-meta">
+                  {item.unlocked ? (
+                    <><span className={`evidence-type-pill ev-type-${item.type}`}>{item.type}</span>{item.time}</>
+                  ) : "진행 후 공개"}
+                </small>
               </button>
             ))}
           </div>
@@ -110,7 +112,7 @@ export function InvestigationDrawer({
             <article className="evidence-detail-card clean-evidence-card">
               <img src={evidence.unlocked ? evidenceAsset(evidence.id) ?? lockedEvidenceAssetPath : lockedEvidenceAssetPath} alt={`${evidence.title} 상세 이미지`} />
               <div className="evidence-card-title">
-                <span>{evidence.type}</span>
+                <span className={`evidence-type-pill ev-type-${evidence.type}`}>{evidence.type}</span>
                 <h3>{evidence.unlocked ? evidence.title : "잠긴 증거"}</h3>
               </div>
               <p>{evidence.unlocked ? evidence.description : "아직 공개되지 않은 증거입니다."}</p>
@@ -121,9 +123,6 @@ export function InvestigationDrawer({
                 <div><dt>연결 증언</dt><dd>{formatStatementLabels(evidence.relatedStatementIds, statementsById)}</dd></div>
                 <div><dt>공개 참조</dt><dd>{formatRefs(evidence.sourceRefs)}</dd></div>
               </dl>
-              <button type="button" onClick={() => onToggleEvidence(evidence.id)} disabled={!evidence.unlocked}>
-                {selectedEvidenceIds.includes(evidence.id) ? "선택 해제" : "증거 선택"}
-              </button>
             </article>
           ) : null}
         </section>
@@ -366,7 +365,7 @@ function RelationDetail({ edge, nodes, session }: { edge: RelationMapEdge; nodes
       <b>{source} ↔ {target}</b>
       <span>{edge.unlocked ? edge.label || edge.conflict : "잠긴 관계"}</span>
       <p>{edge.unlocked ? edge.description : "대화와 증거 확인을 진행하면 공개됩니다."}</p>
-      <small>관련 단서: {formatRelationClueLabels(edge, session)}</small>
+      <small>관련 단서: {edge.unlocked ? formatRelationClueLabels(edge, session) : "잠김"}</small>
     </article>
   );
 }

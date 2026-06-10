@@ -20,6 +20,7 @@ def list_cases(case_repo: CaseRepositoryPort = Depends(get_case_repository)):
             "incidentTime": case.incidentTime,
             "incidentLocation": case.incidentLocation,
             "questionLimit": case.questionLimit,
+            "enabled": getattr(case, "enabled", True),
             "opening": public_opening(case),
         }
         for case in case_repo.list_cases()

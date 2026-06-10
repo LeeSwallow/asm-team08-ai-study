@@ -99,4 +99,5 @@ def evidence_is_mentioned(player_message: str, evidence: object) -> bool:
     overlap = text_tokens(message) & meaningful_tokens(
         f"{getattr(evidence, 'name', '')} {getattr(evidence, 'description', '')}"
     )
-    return len(overlap) >= 2 and evidence_mention_score(player_message, evidence) >= 5
+    score = evidence_mention_score(player_message, evidence)
+    return score >= 5

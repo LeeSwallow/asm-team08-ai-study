@@ -1,6 +1,6 @@
 import type { Evidence, SuspectStatus } from "../types";
 
-export const QUESTION_LIMIT = 12;
+export const QUESTION_LIMIT = 30;
 
 export const statusLabels: Record<SuspectStatus, string> = {
   normal: "관찰 중",
@@ -78,6 +78,20 @@ export const evidenceAssetPaths: Record<string, string> = {
   ev_lipstick_tube: "/assets/evidence_lipstick_tube.png",
   ev_window_bolt: "/assets/evidence_window_bolt.png",
   ev_deleted_cctv: "/assets/evidence_deleted_cctv.png",
+  ev_prescription_dispute_note: "/assets/evidence_prescription_dispute_note.png",
+  ev_admin_schedule_note: "/assets/evidence_admin_schedule_note.png",
+  ev_doctor_guestroom_record: "/assets/evidence_doctor_guestroom_record.png",
+  ev_yoon_route_log: "/assets/evidence_yoon_route_log.png",
+  ev_key_cabinet_check: "/assets/evidence_key_cabinet_check.png",
+  ev_household_account_note: "/assets/evidence_household_account_note.png",
+  ev_hanseoyeon_tremor_note: "/assets/evidence_hanseoyeon_tremor_note.png",
+  ev_yoonjaeho_folded_route_copy: "/assets/evidence_yoonjaeho_folded_route_copy.png",
+  ev_parkmingyu_chart_backup: "/assets/evidence_parkmingyu_chart_backup.png",
+  ev_choiyuna_shredded_schedule: "/assets/evidence_choiyuna_shredded_schedule.png",
+  ev_pancreatic_diagnosis: "/assets/evidence_pancreatic_diagnosis.png",
+  ev_narcotic_supply_record: "/assets/evidence_narcotic_supply_record.png",
+  ev_childhood_photo: "/assets/evidence_childhood_photo.png",
+  ev_choiyuna_ring_receipt: "/assets/evidence_choiyuna_ring_receipt.png",
   ev_coroner_report: "/assets/cases/case_speckled_band/evidence/ev_coroner_report.png",
   ev_gypsy_scarves: "/assets/cases/case_speckled_band/evidence/ev_gypsy_scarves.png",
   ev_fireplace_poker: "/assets/cases/case_speckled_band/evidence/ev_fireplace_poker.png",

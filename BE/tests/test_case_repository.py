@@ -9,5 +9,6 @@ def test_case_repository_reads_case_from_database(seed_case_database):
 
     assert case is not None
     assert case.caseId == "case_001"
-    assert case.suspects[0].speechStyle["tone"] == "defensive"
+    assert case.suspects[0].speechStyle["tone"] == "sharp_defensive"
+    assert case.suspects[0].speechStyle["register"] == "informal_banmal"
     assert case.suspects[0].personaVariants

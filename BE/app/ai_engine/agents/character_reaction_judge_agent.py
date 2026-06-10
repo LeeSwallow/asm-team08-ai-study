@@ -226,6 +226,13 @@ def _build_reaction_judge_prompt(agent_input: CharacterReactionJudgeInput) -> LL
                     "suspect": {
                         "id": payload.suspect.id,
                         "name": payload.suspect.name,
+                        "publicPersona": payload.suspect.publicPersona,
+                        "speechStyle": {
+                            "register": payload.suspect.speechStyle.get("register") if isinstance(payload.suspect.speechStyle, dict) else None,
+                            "addressStyle": payload.suspect.speechStyle.get("addressStyle") if isinstance(payload.suspect.speechStyle, dict) else None,
+                            "avoid": payload.suspect.speechStyle.get("avoid") if isinstance(payload.suspect.speechStyle, dict) else None,
+                            "sampleLines": payload.suspect.speechStyle.get("sampleLines") if isinstance(payload.suspect.speechStyle, dict) else None,
+                        },
                         "emotionalState": payload.suspect.emotionalState,
                         "tensionLevel": payload.suspect.tensionLevel,
                         "pressureState": payload.suspect.pressureState,

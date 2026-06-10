@@ -112,6 +112,7 @@ class Record(BaseModel):
 class Relationship(BaseModel):
     relationshipId: str
     characterId: str
+    relatedCharacterId: Optional[str] = None
     description: str
     conflict: str
     initiallyVisible: bool = False
@@ -134,10 +135,12 @@ class Question(BaseModel):
     characterId: str
     text: str
     answer: str
+    playerParaphrases: List[str] = Field(default_factory=list)
     unlocksStatementIds: List[str] = Field(default_factory=list)
     unlocksEvidenceIds: List[str] = Field(default_factory=list)
     unlocksRecordIds: List[str] = Field(default_factory=list)
     unlocksRelationIds: List[str] = Field(default_factory=list)
+    unlocksQuestionIds: List[str] = Field(default_factory=list)
     initiallyUnlocked: bool = False
     unlockCondition: Optional[str] = None
 
@@ -175,6 +178,7 @@ class Case(BaseModel):
     incidentTime: str
     incidentLocation: str
     questionLimit: int
+    enabled: bool = True
     opening: Optional[Opening] = None
     storyline: Optional[Storyline] = None
     suspects: List[Character]

@@ -1,0 +1,16 @@
+{
+  "name": "detective-agent-pitch-deck",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev --port 8080 --remote 0.0.0.0 --bind 0.0.0.0",
+    "build": "slidev build --base ./",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@slidev/cli": "latest",
+    "@slidev/theme-default": "latest",
+    "vue": "latest"
+  },
+  "devDependencies": {}
+}

@@ -33,6 +33,7 @@ export function sessionEventsUrl(sessionId: string, lastEventId?: string) {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(options?.headers ?? {}),

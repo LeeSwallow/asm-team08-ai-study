@@ -20,15 +20,29 @@ _ATMOSPHERE_BREAK_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 _SCRIPT_DIRECTION_PATTERNS = re.compile(r"\([^)]{1,50}\)|（[^）]{1,50}）|\[[^\]]{1,50}\]")
-_HARD_QUALITY_ISSUES = {"self_third_person", "script_direction", "atmosphere_break"}
+_VULGAR_STYLE_PATTERNS = re.compile(r"처먹|쳐먹|꺼져|닥쳐|새끼|년놈")
+_HARD_QUALITY_ISSUES = {
+    "self_third_person",
+    "script_direction",
+    "atmosphere_break",
+    "forbidden_style_token",
+    "forbidden_answer_plan_phrase",
+    "near_duplicate_recent_reply",
+    "vulgar_style_token",
+}
 
 def _quality_issues(
     text: str,
     seed_text: str,
     agent_input: LightRuleCheckInput,
+    *,
+    safety_findings: dict | None = None,
 ) -> list[str]:
     """텍스트 품질을 평가하여 문제 코드 목록을 반환한다. 빈 목록 = 품질 양호."""
     issues: list[str] = []
+    safety_findings = safety_findings or {}
+    if safety_findings.get("repaired") and safety_findings.get("blockedReason") == "case_fact_scope_repaired":
+        issues.append("case_fact_scope_repaired")
 
     # 텍스트가 너무 짧음 (seed 이하)
     if len(text.strip()) < max(20, len(seed_text.strip()) // 2):
@@ -41,6 +55,11 @@ def _quality_issues(
     # 캐릭터 말투 습관(tic/prefix)이 있는데 응답에 전혀 없음
     voice = getattr(agent_input.draft, "voice", {}) or {}
     speech_style = voice.get("speechStyle") or {}
+    avoid = speech_style.get("avoid") or speech_style.get("avoidPhrases") or []
+    if isinstance(avoid, list):
+        hard_avoid_terms = [str(item).strip() for item in avoid if str(item or "").strip()]
+        if any(term and term in text for term in hard_avoid_terms):
+            issues.append("forbidden_style_token")
     tic = str(speech_style.get("tic") or speech_style.get("prefix") or "").strip()
     if tic and len(tic) <= 24 and tic not in text:
         # intent가 greeting/unmatched가 아닌 경우에만
@@ -53,6 +72,43 @@ def _quality_issues(
         issues.append("atmosphere_break")
     if _SCRIPT_DIRECTION_PATTERNS.search(text):
         issues.append("script_direction")
+    if _VULGAR_STYLE_PATTERNS.search(text):
+        issues.append("vulgar_style_token")
+
+    plan = agent_input.dialogueDirectorPlan
+    answer_plan = dict(plan.answerPlan) if plan and plan.answerPlan else {}
+    forbidden_surface_phrases = [
+        str(item).strip()
+        for item in (answer_plan.get("forbiddenSurfacePhrases") or [])
+        if str(item or "").strip()
+    ]
+    if any(phrase in text for phrase in forbidden_surface_phrases):
+        issues.append("forbidden_answer_plan_phrase")
+    recent_dialogue = answer_plan.get("recentDialogue") or []
+    if isinstance(recent_dialogue, list):
+        normalized_text = normalize_text(text)
+        for item in recent_dialogue[-6:]:
+            prior = item.get("text") if isinstance(item, dict) else None
+            if not isinstance(prior, str) or not prior.strip():
+                continue
+            normalized_prior = normalize_text(prior)
+            if normalized_prior == normalized_text:
+                issues.append("near_duplicate_recent_reply")
+                break
+            if len(normalized_text) >= 18 and (
+                normalized_text in normalized_prior or normalized_prior in normalized_text
+            ):
+                issues.append("near_duplicate_recent_reply")
+                break
+
+    if plan and plan.strategy == "answer_requested_relationship_only":
+        normalized_text = normalize_text(text)
+        normalized_seed = normalize_text(seed_text)
+        unsupported_relation_terms = ("사업", "눌러앉", "그날 밤", "따로 만난", "동선", "범행", "갈등")
+        required_relation_terms = [term for term in ("삼촌", "부모", "도움") if term in normalized_seed]
+        missing_required = required_relation_terms and not all(term in normalized_text for term in required_relation_terms[:2])
+        if missing_required or any(term in normalized_text and term not in normalized_seed for term in unsupported_relation_terms):
+            issues.append("relationship_scope_drift")
 
     suspect_name = str(getattr(agent_input, "suspectName", "") or "").strip()
     if suspect_name:
@@ -93,6 +149,25 @@ class LightRuleCheck:
         if agent_input.draft.degraded or (checked.blocked and not checked.repaired):
             return checked
 
+        seed_approx = (
+            agent_input.generatedSeed.strip()
+            if agent_input.generatedSeed
+            else agent_input.dialogueDirectorPlan.seedText.strip()
+            if agent_input.dialogueDirectorPlan and agent_input.dialogueDirectorPlan.seedText
+            else agent_input.allowedStatement.text.strip()
+        )
+        voice = getattr(agent_input.draft, "voice", {}) or {}
+        speech_style = voice.get("speechStyle") or {}
+        tic = str(speech_style.get("tic") or speech_style.get("prefix") or "").strip()
+        if tic and not seed_approx.startswith(tic):
+            seed_approx = f"{tic} {seed_approx}".strip()
+
+        preflight_issues = _quality_issues(
+            checked.finalText,
+            seed_approx,
+            agent_input,
+            safety_findings=checked.safetyFindings,
+        )
         if (
             agent_input.dialogueDirectorPlan
             and agent_input.dialogueDirectorPlan.strategy
@@ -106,23 +181,13 @@ class LightRuleCheck:
                 "ask_clarification",
                 "refuse_meta_or_private",
             }
+            and "seed_verbatim" not in preflight_issues
+            and not (_HARD_QUALITY_ISSUES & set(preflight_issues))
         ):
             return checked
 
         # ── Phase 2: 품질 평가 ───────────────────────────────────────────────
-        # seed_text를 재구성하기 위해 voice metadata 활용
-        voice = getattr(agent_input.draft, "voice", {}) or {}
-        speech_style = voice.get("speechStyle") or {}
-        tic = str(speech_style.get("tic") or speech_style.get("prefix") or "").strip()
-        seed_approx = (
-            agent_input.dialogueDirectorPlan.seedText.strip()
-            if agent_input.dialogueDirectorPlan and agent_input.dialogueDirectorPlan.seedText
-            else agent_input.allowedStatement.text.strip()
-        )
-        if tic and not seed_approx.startswith(tic):
-            seed_approx = f"{tic} {seed_approx}".strip()
-
-        issues = _quality_issues(checked.finalText, seed_approx, agent_input)
+        issues = preflight_issues or _quality_issues(checked.finalText, seed_approx, agent_input)
         if not issues:
             return checked
 
@@ -259,6 +324,16 @@ class LightRuleCheck:
 
 
 def _quality_fallback_text(agent_input: LightRuleCheckInput, seed_text: str) -> str:
+    voice = getattr(agent_input.draft, "voice", {}) or {}
+    speech_style = voice.get("speechStyle") or {}
+    sample_lines = speech_style.get("sampleLines") or speech_style.get("samples") or []
+    avoid = speech_style.get("avoid") or speech_style.get("avoidPhrases") or []
+    avoid_terms = [str(item).strip() for item in avoid if str(item or "").strip()] if isinstance(avoid, list) else []
+    if isinstance(sample_lines, list):
+        for sample in sample_lines:
+            text = str(sample or "").strip()
+            if text and not any(term and term in text for term in avoid_terms):
+                return text
     seed = _SCRIPT_DIRECTION_PATTERNS.sub("", seed_text).strip()
     seed = re.sub(r"\s{2,}", " ", seed)
     tone_meta = getattr(agent_input.draft, "tone", {}) or {}

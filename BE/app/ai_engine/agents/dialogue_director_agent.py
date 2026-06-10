@@ -36,6 +36,11 @@ def _join_two_korean_terms(left: str, right: str) -> str:
     return f"{left}{particle} {right}"
 
 
+def _is_terse_vague_turn(text: str) -> bool:
+    compact = " ".join(str(text or "").strip().split()).replace(" ", "")
+    return compact in {"뭐야", "뭐죠", "뭔데", "무슨말"}
+
+
 def _mentioned_evidence_terms(payload: DialogueRequest, retrieved_context: object | None) -> list[str]:
     terms: list[str] = []
     matched_ids = set(payload.turnInterpretation.get("mentionedEvidenceIds") or [])
@@ -123,12 +128,23 @@ class DialogueDirectorAgent:
 
         if intent == "unmatched":
             focus = focus_terms[:2]
+            terse_vague = _is_terse_vague_turn(payload.question.text)
             return DialogueDirectorPlan(
                 strategy="deflect_unmatched",
                 seedText=None,
                 allowedAdmissionLevel="no_new_fact",
-                styleDirectives=["질문을 되묻지 말고 짧게 방어하되, 같은 문장을 반복하지 않는다."],
-                forbiddenClaims=["새 증거, 범행 방식, 범인 단정을 만들지 않는다."],
+                styleDirectives=(
+                    [
+                        "플레이어 발화가 너무 짧아 의미가 비어 있다. 시간/증거/진술 같은 축을 새로 제안하지 말고, 무엇을 묻는지 한 문장으로 특정 요청만 한다.",
+                        "FACT ANCHOR의 모호 질문 대응 문장을 가깝게 따른다.",
+                    ]
+                    if terse_vague
+                    else ["질문을 되묻지 말고 짧게 방어하되, 같은 문장을 반복하지 않는다."]
+                ),
+                forbiddenClaims=[
+                    "새 증거, 범행 방식, 범인 단정을 만들지 않는다.",
+                    *(["'시간, 증거, 진술 중 무엇인지'처럼 선택지를 임의 생성하지 않는다."] if terse_vague else []),
+                ],
                 focusTerms=focus,
                 functionCall=_dialogue_function(
                     "deflect_unmatched_turn",
@@ -136,6 +152,7 @@ class DialogueDirectorAgent:
                     suspectName=payload.suspect.name,
                     focusTerms=focus,
                     playerMessage=payload.question.text,
+                    terseVague=terse_vague,
                     admissionLevel="no_new_fact",
                 ),
                 reason="intent_unmatched",
@@ -152,6 +169,7 @@ class DialogueDirectorAgent:
                     "handle_small_talk_boundary",
                     reason="intent_greeting",
                     suspectName=payload.suspect.name,
+                    playerMessage=payload.question.text,
                     pressureState=payload.suspect.pressureState,
                     emotionalState=payload.suspect.emotionalState,
                 ),
@@ -179,12 +197,13 @@ class DialogueDirectorAgent:
                     reason="decisive_evidence_pressure",
                     focusTerms=focus_terms,
                     suspectName=payload.suspect.name,
+                    playerMessage=payload.question.text,
                     admissionLevel="acknowledge_conflict_only",
                 ),
                 reason="decisive_evidence_pressure",
             )
 
-        if transition.get("move") == "repeat_pressure":
+        if transition.get("move") == "repeat_pressure" or intent == "pressure":
             return DialogueDirectorPlan(
                 strategy="controlled_deflection",
                 seedText=None,
@@ -197,9 +216,37 @@ class DialogueDirectorAgent:
                     reason="repeat_pressure",
                     focusTerms=focus_terms,
                     suspectName=payload.suspect.name,
+                    playerMessage=payload.question.text,
                     admissionLevel="public_fact_only",
                 ),
                 reason="repeat_pressure",
+            )
+
+        if str(payload.question.id).endswith("victim_relation"):
+            return DialogueDirectorPlan(
+                strategy="answer_requested_relationship_only",
+                seedText=payload.allowedStatement.text,
+                allowedAdmissionLevel="public_fact_only",
+                styleDirectives=[
+                    "플레이어가 물은 관계 대상은 피해자/회장님이다. 피해자와 해당 용의자의 관계만 답한다.",
+                    "다른 인물과의 유대, 보호, 목격, 서재 출입 기록, 숨긴 비밀은 언급하지 않는다.",
+                    "FACT ANCHOR 문장을 캐릭터 말투로만 자연화하고 의미를 확장하지 않는다.",
+                ],
+                forbiddenClaims=[
+                    "다른 용의자 이름 언급",
+                    "한서연 또는 그 아이 언급",
+                    "서재 출입 기록, 목격, 범인 단정",
+                ],
+                focusTerms=["피해자와의 관계", payload.allowedStatement.text],
+                functionCall=_dialogue_function(
+                    "answer_requested_relationship_only",
+                    reason="victim_relation_question",
+                    focusTerms=["피해자와의 관계"],
+                    suspectName=payload.suspect.name,
+                    playerMessage=payload.question.text,
+                    admissionLevel="public_fact_only",
+                ),
+                reason="victim_relation_question",
             )
 
         return DialogueDirectorPlan(
@@ -214,6 +261,7 @@ class DialogueDirectorAgent:
                 reason="default",
                 focusTerms=focus_terms,
                 suspectName=payload.suspect.name,
+                playerMessage=payload.question.text,
                 admissionLevel="public_fact_only",
             ),
             reason="default",

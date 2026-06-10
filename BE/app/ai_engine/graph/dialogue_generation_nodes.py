@@ -75,7 +75,7 @@ _ROUTE_PLAN_CONFIG = {
     "ask_clarification": {
         "strategy": "ask_clarification",
         "admission": "no_new_fact",
-        "style": ["어떤 시간/증거/진술을 말하는지 구체적으로 되묻는다."],
+        "style": ["무엇을 묻는지 한 문장으로만 되묻고, 질문에 없는 단서 축을 만들지 않는다."],
         "forbidden": ["새 사건 사실", "질문에 없는 단서 추측"],
     },
     "refuse_meta_or_private": {
@@ -100,19 +100,132 @@ def _focus_terms_from_decision(decision: CharacterReactionDecision) -> list[str]
     ][:3]
 
 
+def _answer_plan_for_route(payload: DialogueRequest, decision: CharacterReactionDecision, route: str, focus_terms: list[str]) -> dict[str, Any]:
+    pack = payload.characterKnowledgePack
+    recent_dialogue = []
+    if pack is not None:
+        recent_dialogue = [
+            {
+                "speaker": getattr(item, "speaker", None),
+                "text": getattr(item, "text", ""),
+                "suspectId": getattr(item, "suspectId", None),
+            }
+            for item in pack.recentDialogue[-6:]
+            if getattr(item, "text", "")
+        ]
+    base = {
+        "directAnswer": "플레이어의 마지막 발화에 먼저 반응한다.",
+        "factAnchor": payload.allowedStatement.text,
+        "playerQuestion": payload.question.text,
+        "recentDialogue": recent_dialogue,
+        "reactionRoute": route,
+        "responseIntent": decision.responseIntent,
+        "characterStance": decision.characterStance,
+        "focusTerms": focus_terms,
+        "admissionBoundary": _ROUTE_PLAN_CONFIG[route]["admission"],
+        "forbiddenSurfacePhrases": [
+            "표현을 바꾸면",
+            "같은 취지로",
+            "다시 말씀드리",
+            "다시 확인드리",
+            "기록 기준으로",
+            "이미 답한 질문",
+            "같은 질문에 다시",
+            "확인된 범위",
+            "확인 가능한 범위",
+            "rule",
+            "same",
+        ],
+        "repeatPolicy": "직전 답변과 같은 문장 구조를 쓰지 말고, 압박이면 감정 반응을 한 단계 올린다.",
+        "outputShape": "용의자가 직접 말하는 말풍선 대사 한 줄. 해설/규칙/메타 문장 금지.",
+    }
+    if route == "react_to_valid_pressure":
+        base["directAnswer"] = "증거 압박을 받은 감정 반응을 먼저 보인 뒤, 공개 충돌만 인정한다."
+        base["admissionBoundary"] = "conflict_only_no_confession"
+    elif route == "reject_false_premise":
+        base["directAnswer"] = "근거 없는 단정에 바로 반박한다."
+    elif route == "ask_clarification":
+        base["directAnswer"] = "질문이 모호하다고 짧게 되묻는다. 새 단서 범주를 제안하지 않는다."
+    elif route == "deflect_irrelevant":
+        base["directAnswer"] = "사건 밖 요구를 캐릭터 말투로 짧게 밀어낸다."
+    refs = payload.allowedStatement.sourceRefs
+    visible_ref_ids = {
+        *refs.statementIds,
+        *refs.evidenceIds,
+        *refs.timelineIds,
+        *refs.contradictionIds,
+        *decision.referencedEvidenceIds,
+        *decision.referencedStatementIds,
+        *decision.referencedTimelineIds,
+        *decision.referencedContradictionIds,
+    }
+    if payload.suspect.id == "char_hanseoyeon" and route in {"react_to_valid_pressure", "reject_false_premise"}:
+        if visible_ref_ids & {"ev_study_entry_log", "st_hanseoyeon_room_2200", "tl_global_2202_study_entry", "con_room_claim_vs_entry_log"}:
+            base.update(
+                {
+                    "lieRoute": {
+                        "currentLie": "나는 22:00 전후 내 방에 있었다.",
+                        "pressurePoint": "서재 출입 기록에 내 카드키가 찍힌 점",
+                        "defenseTactic": "기록 자체를 바로 인정하지 말고 전산 오류, 카드키 분실, 누군가 주워 썼을 가능성으로 잡아뗀다.",
+                        "stageBoundary": "최종 붕괴 질문 전에는 '내가 서재에 들어갔다'를 인정하지 않는다.",
+                    },
+                    "directAnswer": "카드키/출입 기록 압박을 받으면 당황하되, 먼저 전산 오류나 카드키 분실 가능성으로 부인한다.",
+                    "admissionBoundary": "deny_entry_preserve_false_alibi",
+                    "forbiddenClaims": [
+                        "잠깐 들어갔다고 인정",
+                        "서재에 있었다고 인정",
+                        "카드키 기록이 맞다고 인정",
+                    ],
+                }
+            )
+    if str(payload.question.id).endswith("victim_relation"):
+        base.update(
+            {
+                "directAnswer": "피해자/회장님과의 관계만 답한다.",
+                "factAnchor": payload.allowedStatement.text,
+                "admissionBoundary": "requested_relationship_only",
+                "forbiddenClaims": ["다른 인물과의 관계", "그날 밤 동선", "범행 암시", "새 갈등"],
+            }
+        )
+    return base
+
+
 def _build_reaction_plan(state: dict[str, Any], route: str) -> dict[str, Any]:
     payload: DialogueRequest = state["payload"]
     decision: CharacterReactionDecision = state["character_reaction_decision"]
     config = _ROUTE_PLAN_CONFIG[route]
     focus_terms = _focus_terms_from_decision(decision)
     function_name = _ROUTE_FUNCTION_NAMES[route]
+    compact_player_text = "".join(payload.question.text.split())
+    terse_vague = compact_player_text in {"뭐야", "뭐야?", "뭐죠", "뭐죠?", "뭔데", "뭔데?", "무슨말", "무슨말?"}
+    style_directives = list(config["style"])
+    if route == "ask_clarification" and terse_vague:
+        style_directives = [
+            "플레이어 발화가 너무 짧다. 새 사건 사실이나 단서 범주를 제안하지 않는다.",
+            "선택된 용의자 말투로 '뭘 묻는지 분명히 말하라'는 정도만 짧게 반응한다.",
+        ]
+    if str(payload.question.id).endswith("victim_relation"):
+        style_directives = [
+            "플레이어가 물은 대상은 피해자/회장님이다. 피해자와 해당 용의자의 관계만 답한다.",
+            "그날 밤 동선, 다른 인물, 숨긴 비밀, 새 갈등, 자백, 범행 암시는 언급하지 않는다.",
+            "FACT ANCHOR의 의미를 확장하지 말고 캐릭터 말투로만 자연화한다.",
+        ]
+        focus_terms = ["피해자와의 관계", payload.allowedStatement.text]
+    answer_plan = _answer_plan_for_route(payload, decision, route, focus_terms)
     plan = DialogueDirectorPlan(
-        strategy=str(config["strategy"]),
+        strategy="answer_requested_relationship_only"
+        if str(payload.question.id).endswith("victim_relation")
+        else str(config["strategy"]),
         seedText=None,
         allowedAdmissionLevel=str(config["admission"]),
-        styleDirectives=list(config["style"]),
-        forbiddenClaims=list(config["forbidden"]),
+        styleDirectives=style_directives,
+        forbiddenClaims=[
+            *list(config["forbidden"]),
+            *answer_plan.get("forbiddenSurfacePhrases", []),
+            *( ["다른 인물 이름 언급", "그날 밤 동선 창작", "피해자와의 관계를 넘어선 새 사건 사실"] if str(payload.question.id).endswith("victim_relation") else [] ),
+        ],
         focusTerms=focus_terms,
+        answerPlan=answer_plan,
         functionCall=_reaction_function(
             function_name,
             reason=route,
@@ -121,8 +234,10 @@ def _build_reaction_plan(state: dict[str, Any], route: str) -> dict[str, Any]:
             characterStance=decision.characterStance,
             focusTerms=focus_terms,
             suspectName=payload.suspect.name,
+            playerMessage=payload.question.text,
             admissionLevel=str(config["admission"]),
             stateIntent=decision.stateIntent,
+            terseVague=terse_vague,
         ),
         reason=route,
     )
@@ -269,8 +384,9 @@ def guard_response(state: dict[str, Any]) -> dict[str, Any]:
         allowedContextTerms=allowed_context_terms(payload),
         intent=intent,
         suspectName=payload.suspect.name,
-        retrieved_context=state.get("character_context"),
         dialogueDirectorPlan=state.get("dialogue_director_plan"),
+        generatedSeed=render_dialogue_seed(payload, state.get("dialogue_director_plan")),
+        retrieved_context=state.get("character_context"),
     )
     checked = LightRuleCheck().run(check_input)
     safety = checked.safetyFindings
@@ -347,6 +463,22 @@ def polish_tone(state: dict[str, Any]) -> dict[str, Any]:
     payload: DialogueRequest = state["payload"]
     draft_reply = state["draft_reply"]
     director_plan = state.get("dialogue_director_plan")
+    if draft_reply.fallbackUsed:
+        emit_ai_node_log(
+            dialogue_log_context(payload),
+            node="DialogueTonePolisher",
+            started_at=started_at,
+            provider=state.get("provider"),
+            model=state.get("model"),
+            fallback_used=True,
+            repaired=False,
+            blocked_reason="skip_tone_polish_for_fallback_draft",
+        )
+        return {
+            "draft_reply": draft_reply,
+            "text": draft_reply.draftText,
+            "tone_polished": False,
+        }
     if director_plan and director_plan.strategy in {
         "defensive_pressure",
         "deflect_unmatched",
@@ -419,4 +551,3 @@ def propose_events(state: dict[str, Any]) -> dict[str, Any]:
         level=logging.WARNING if provider_degraded else logging.INFO,
     )
     return {"gm_input": gm_input, "game_master_proposal": proposal, "proposed_events": proposal.proposedEvents}
-

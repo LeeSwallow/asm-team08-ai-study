@@ -42,7 +42,7 @@ def test_unmatched_turn_uses_function_transition_instead_of_static_fallback() ->
     assert plan.functionCall["name"] == "deflect_unmatched_turn"
     assert plan.functionCall["transferTo"] == "CharacterAgent"
     assert seed != "그 질문에는 바로 답하기 어렵습니다."
-    assert "단정" in seed or "진술" in seed or "확인" in seed
+    assert "장난" in seed or "이상한 소리" in seed or "똑바로" in seed
 
 
 def test_small_talk_turn_has_persona_boundary_function_transition() -> None:

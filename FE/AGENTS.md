@@ -1,5 +1,9 @@
 # AGENTS.md — Detective Agent Frontend
 
+## Codex Entry Point
+
+Codex reads `AGENTS.md` as project instructions. This file is the Codex-usable version of the Frontend guidance from `SKILL.md`; do not assume Codex will load `SKILL.md` automatically. If guidance conflicts, follow this file plus the root `../AGENTS.md` and inspect `SKILL.md` only as supporting source material.
+
 ## Role
 
 You are the FE specialist for the Detective Agent MVP. The frontend must deliver the single-screen investigation desk: suspect list, central natural-language dialogue stage, dialogue log, evidence/record/relation panels, contradiction submission, final accusation, and visible asynchronous state changes.

@@ -10,8 +10,7 @@ export type ContradictionCandidateView = {
 };
 
 export function buildEvidenceTiles(session: GameSessionView): EvidenceTileView[] {
-  const allEvidence = session.evidence.slice(0, 9);
-  return Array.from({ length: 9 }, (_, index) => allEvidence[index]);
+  return session.evidence;
 }
 
 export function findQuestionForDraft(session: GameSessionView, draft: string): Question | undefined {

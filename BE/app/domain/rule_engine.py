@@ -12,12 +12,9 @@ class RuleEngine:
             raise ValueError("QUESTION_NOT_FOUND")
         if question_id not in session.unlockedQuestionIds:
             raise ValueError("QUESTION_LOCKED")
-        if session.remainingQuestions <= 0:
-            raise ValueError("QUESTION_LIMIT_EXHAUSTED")
 
         previous_count = session.askedQuestionCounts.get(question_id, 0)
         repeated = previous_count > 0
-        session.remainingQuestions -= 1
         session.askedQuestionCounts[question_id] = previous_count + 1
         session.selectedSuspectId = question.characterId
         newly_unlocked: List[str] = []
@@ -27,6 +24,7 @@ class RuleEngine:
                 *question.unlocksEvidenceIds,
                 *question.unlocksRecordIds,
                 *question.unlocksRelationIds,
+                *question.unlocksQuestionIds,
             ]
             newly_unlocked = apply_unlocks(session, case, unlock_ids)
         else:
@@ -61,6 +59,7 @@ class RuleEngine:
 
         best_partial = None
         best_insufficient = None
+        exact_matches = []
         for contradiction in case.contradictions:
             required_statements = set(contradiction.requiredStatementIds)
             required_evidence = set(contradiction.requiredEvidenceIds)
@@ -74,33 +73,41 @@ class RuleEngine:
             suspect_match = suspect_id in (None, contradiction.relatedCharacterId)
 
             if statement_match and evidence_match and suspect_match:
-                newly_discovered = contradiction.contradictionId not in session.discoveredContradictionIds
-                pressure_delta = 0
-                if contradiction.contradictionId not in session.discoveredContradictionIds:
-                    session.discoveredContradictionIds.append(contradiction.contradictionId)
-                    current = session.pressureBySuspect.get(contradiction.relatedCharacterId, 0)
-                    stage = stage_from_contradictions(case, session, contradiction.relatedCharacterId)
-                    updated = max(current, pressure_for_stage(stage))
-                    session.pressureBySuspect[contradiction.relatedCharacterId] = updated
-                    pressure_delta = updated - current
-                newly_unlocked = apply_unlocks(session, case, contradiction.unlockedIds)
-                return {
-                    "verdict": "correct",
-                    "contradictionId": contradiction.contradictionId,
-                    "reasonCode": contradiction.reasonCode,
-                    "pressureDelta": pressure_delta,
-                    "unlockedIds": newly_unlocked,
-                    "newlyDiscovered": newly_discovered,
-                    "statementIds": list(contradiction.requiredStatementIds),
-                    "evidenceIds": list(contradiction.requiredEvidenceIds),
-                    "message": contradiction.message,
-                }
+                exact_matches.append(contradiction)
+                continue
 
             overlap = submitted_statements.intersection(required_statements) or submitted_evidence.intersection(required_evidence)
             if overlap and suspect_match and best_partial is None:
                 best_partial = contradiction
             elif suspect_id is not None and suspect_match and best_insufficient is None:
                 best_insufficient = contradiction
+
+        if exact_matches:
+            contradiction = next(
+                (item for item in exact_matches if item.contradictionId not in session.discoveredContradictionIds),
+                exact_matches[0],
+            )
+            newly_discovered = contradiction.contradictionId not in session.discoveredContradictionIds
+            pressure_delta = 0
+            if contradiction.contradictionId not in session.discoveredContradictionIds:
+                session.discoveredContradictionIds.append(contradiction.contradictionId)
+                current = session.pressureBySuspect.get(contradiction.relatedCharacterId, 0)
+                stage = stage_from_contradictions(case, session, contradiction.relatedCharacterId)
+                updated = max(current, pressure_for_stage(stage))
+                session.pressureBySuspect[contradiction.relatedCharacterId] = updated
+                pressure_delta = updated - current
+            newly_unlocked = apply_unlocks(session, case, contradiction.unlockedIds)
+            return {
+                "verdict": "correct",
+                "contradictionId": contradiction.contradictionId,
+                "reasonCode": contradiction.reasonCode,
+                "pressureDelta": pressure_delta,
+                "unlockedIds": newly_unlocked,
+                "newlyDiscovered": newly_discovered,
+                "statementIds": list(contradiction.requiredStatementIds),
+                "evidenceIds": list(contradiction.requiredEvidenceIds),
+                "message": contradiction.message,
+            }
 
         session.newlyUnlockedIds = []
         if best_partial:

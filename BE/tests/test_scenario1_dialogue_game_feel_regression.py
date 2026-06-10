@@ -192,6 +192,125 @@ class _DriftingLLM:
         return "네, 그날 일정상 회의만 있었고 회장님 지시사항 확인했습니다."
 
 
+class _OffTopicEvidenceDriftLLM:
+    provider_name = "fake-provider"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        return "그 와인잔과 립스틱 얘기라면 제가 본 범위에서는 답하기 어렵습니다."
+
+
+class _PersonaRetryLLM:
+    provider_name = "fake-provider"
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.prompts = []
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        self.calls += 1
+        self.prompts.append(prompt.render_user_message(seed_text) if hasattr(prompt, "render_user_message") else str(prompt))
+        if self.calls == 1:
+            return '{"speakerIntent":"answer_visible_fact","emotionalBeat":"정중함","continuityMove":"new_answer","finalLine":"저는 그 시간에 갤러리 응접실에 있었습니다."}'
+        return '{"speakerIntent":"answer_visible_fact","emotionalBeat":"방어","continuityMove":"new_answer","finalLine":"나? 그 시간엔 갤러리 응접실에 있었어. 더 캐묻지 마."}'
+
+
+class _CreativeContextLLM:
+    provider_name = "fake-provider"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        return '{"speakerIntent":"resist_pressure","emotionalBeat":"불쾌함","continuityMove":"escalates_previous","finalLine":"그런 식으로 몰아세운다고 내가 겁먹고 없는 말까지 할 줄 알았어?"}'
+
+
+class _NeutralContextDriftLLM:
+    provider_name = "fake-provider"
+
+    def complete(self, prompt, *, seed_text: str, max_length: int = 220) -> str:
+        return "그 시간엔 1층 식당에 있었습니다. 회장님 일과는 직접 관여하지 않아요."
+
+
+def test_unmatched_neutral_context_drift_repairs_to_light_deflection(monkeypatch) -> None:
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: _NeutralContextDriftLLM())
+
+    payload = _request(
+        message="갑자기 춤춰봐요.",
+        mode="unmatched",
+        refs={"statementIds": ["neutral_unmatched"], "evidenceIds": [], "timelineIds": []},
+    )
+    response = run_dialogue_graph(payload, _Retriever())
+
+    assert response.runtimeDiagnostics["characterReactionRoute"] == "deflect_irrelevant"
+    assert "1층" not in response.text
+    assert "식당" not in response.text
+    assert "회장님" not in response.text
+    assert response.fallbackUsed is True
+
+
+def test_unmatched_provider_drift_repairs_back_to_light_deflection(monkeypatch) -> None:
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: _OffTopicEvidenceDriftLLM())
+
+    payload = _request(
+        message="갑자기 춤춰봐요.",
+        mode="unmatched",
+        refs={"statementIds": ["st_choiyuna_no_wine"], "evidenceIds": ["ev_wine_glass"], "timelineIds": []},
+    )
+    response = run_dialogue_graph(payload, _Retriever())
+
+    assert response.runtimeDiagnostics["characterReactionRoute"] == "deflect_irrelevant"
+    assert "와인" not in response.text
+    assert "립스틱" not in response.text
+    assert response.fallbackUsed is True
+    assert response.safety.blockedReason == "provider_storyline_drift_repaired"
+
+
+def test_answerable_turn_allows_creative_context_without_anchor_overlap(monkeypatch) -> None:
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: _CreativeContextLLM())
+
+    payload = _request(
+        message="당신이 피해자를 죽였잖아.",
+        refs={"statementIds": ["stmt_visible_hanseoyeon"], "evidenceIds": [], "timelineIds": []},
+    )
+    response = run_dialogue_graph(payload, _Retriever())
+
+    assert response.runtimeDiagnostics["characterReactionRoute"] == "reject_false_premise"
+    assert "몰아세운다고" in response.text
+    assert "없는 말" in response.text
+    assert response.safety.blockedReason != "provider_storyline_drift_repaired"
+
+
+def test_persona_feedback_retries_generation_before_seed_fallback(monkeypatch) -> None:
+    retry_llm = _PersonaRetryLLM()
+    monkeypatch.setattr(
+        character_agent_module,
+        "llm_status",
+        lambda: {"provider": "upstage", "model": "solar-pro", "configured": True, "timeoutMs": 3000},
+    )
+    monkeypatch.setattr(character_agent_module, "get_llm", lambda: retry_llm)
+
+    payload = _request(message="사건 당일 10시쯤 어디에 있었죠?")
+    response = run_dialogue_graph(payload, _Retriever())
+
+    assert retry_llm.calls == 2
+    assert "CharacterAgent Regeneration Feedback #1" in retry_llm.prompts[1]
+    assert "갤러리 응접실" in response.text
+    assert "있었습니다" not in response.text
+    assert response.fallbackUsed is False
+
+
 def test_matched_case_question_repairs_provider_drift_to_character_evidence_context(monkeypatch) -> None:
     monkeypatch.setattr(
         character_agent_module,
@@ -232,5 +351,5 @@ def test_matched_case_question_repairs_provider_drift_to_character_evidence_cont
     assert "와인을 마시지 않았습니다" in response.text
     assert "립스틱 색도 제 것이 아닙니다" in response.text
     assert "회의만" not in response.text
-    assert response.fallbackUsed is True
-    assert response.safety.blockedReason == "provider_drift_repaired"
+    assert response.fallbackUsed is False
+    assert response.safety.blockedReason is None

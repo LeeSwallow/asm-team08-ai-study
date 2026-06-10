@@ -21,6 +21,7 @@ export function useInvestigationSession(options: InvestigationSessionOptions = {
   const [selectedStatementIds, setSelectedStatementIds] = useState<string[]>([]);
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [pendingUserMessage, setPendingUserMessage] = useState<{ text: string; suspectId: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState("사건 파일을 불러오는 중입니다.");
   const [eventFeed, setEventFeed] = useState<GameEventFeedItem[]>([]);
   const [activeDrawer, setActiveDrawer] = useState<"evidence" | "notes" | "relations" | "accusation" | null>(null);
@@ -179,6 +180,8 @@ export function useInvestigationSession(options: InvestigationSessionOptions = {
     }
     const typedQuestion = draftQuestion.trim();
     if (!typedQuestion) return;
+    setPendingUserMessage({ text: typedQuestion, suspectId: session.selectedSuspectId });
+    setDraftQuestion("");
     setBusy(true);
     const done = createActionTimer({
       component: "InterrogationStage",
@@ -191,7 +194,7 @@ export function useInvestigationSession(options: InvestigationSessionOptions = {
       const next = await askQuestion(session, session.selectedSuspectId, typedQuestion);
       setSession(next);
       appendFeedEvents(next.latestEvents ?? []);
-      setDraftQuestion("");
+      setPendingUserMessage(null);
       const diagnostic = next.runtimeDiagnostics;
       const matchedRefs = [
         diagnostic?.matchedQuestionId,
@@ -218,6 +221,7 @@ export function useInvestigationSession(options: InvestigationSessionOptions = {
         eventId: diagnostic?.lastEventId,
       });
     } finally {
+      setPendingUserMessage(null);
       setBusy(false);
     }
   }
@@ -393,6 +397,7 @@ export function useInvestigationSession(options: InvestigationSessionOptions = {
     accusationMotive,
     accusationMethod,
     busy,
+    pendingUserMessage,
     resumableSessionId,
     statusMessage,
     eventFeed,

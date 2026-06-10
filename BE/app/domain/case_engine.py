@@ -205,6 +205,40 @@ def public_helper_suggestion(case: Case, session: SessionState) -> dict[str, Any
         None,
     )
 
+    if session.remainingQuestions <= 0:
+        if actionable_candidate:
+            return _helper_payload(
+                "nudge_accusation_ready",
+                "질문 기회는 모두 소진됐습니다. 지금은 새 질문보다 공개된 모순 후보와 기록을 정리해 최종 고발을 준비하세요.",
+                [
+                    {
+                        "type": "try_final_accusation",
+                        "targetId": actionable_candidate["contradictionId"],
+                        "label": "최종 고발 준비",
+                    }
+                ],
+                {
+                    "evidenceIds": list(actionable_candidate.get("evidenceIds") or []),
+                    "statementIds": list(actionable_candidate.get("statementIds") or []),
+                    "relationIds": [],
+                    "suspectIds": [str(actionable_candidate.get("suspectId"))],
+                },
+                confidence=0.86,
+            )
+        return _helper_payload(
+            "nudge_accusation_ready",
+            "질문 기회는 모두 소진됐습니다. 수사 기록과 공개 단서를 다시 대조한 뒤 최종 고발 여부를 판단하세요.",
+            [
+                {
+                    "type": "review_notebook",
+                    "targetId": session.sessionId,
+                    "label": "수사 기록 검토",
+                }
+            ],
+            {"evidenceIds": [], "statementIds": [], "relationIds": [], "suspectIds": [selected_suspect_id] if selected_suspect_id else []},
+            confidence=0.68,
+        )
+
     if is_stuck and selected is not None:
         if actionable_candidate:
             return _helper_payload(
@@ -368,16 +402,19 @@ def _public_relation_detail(case: Case, session: SessionState, relation) -> dict
 
 def _public_relation_edge(case: Case, session: SessionState, relation) -> dict:
     unlocked = relation.relationshipId in session.unlockedRelationIds
-    suspect = next((item for item in case.suspects if item.characterId == relation.characterId), None)
+    source_character_id = relation.relatedCharacterId or case.victimId
+    source_suspect = next((item for item in case.suspects if item.characterId == source_character_id), None)
+    target_suspect = next((item for item in case.suspects if item.characterId == relation.characterId), None)
+    source_name = case.victimName if source_character_id == case.victimId else (source_suspect.name if source_suspect else source_character_id)
     safe_label = relation.description if unlocked else "미확인 관계"
     safe_description = relation.description if unlocked else "아직 공개 단서로 확인되지 않은 관계입니다."
     safe_conflict = relation.conflict if unlocked else ""
     return {
         "relationshipId": relation.relationshipId,
-        "sourceCharacterId": case.victimId,
+        "sourceCharacterId": source_character_id,
         "targetCharacterId": relation.characterId,
-        "sourceName": case.victimName,
-        "targetName": suspect.name if suspect else relation.characterId,
+        "sourceName": source_name,
+        "targetName": target_suspect.name if target_suspect else relation.characterId,
         "label": safe_label,
         "description": safe_description,
         "conflict": safe_conflict,
@@ -681,7 +718,8 @@ def _visible_timeline(case: Case, session: SessionState | None, visible_ids: set
         return []
     return [
         item for item in case.storyline.timeline
-        if not item.hidden and (not item.unlockCondition or item.unlockCondition in visible_ids)
+        if (not item.hidden or (item.unlockCondition and item.unlockCondition in visible_ids))
+        and (not item.unlockCondition or item.unlockCondition in visible_ids)
     ]
 
 
