@@ -845,9 +845,9 @@ class DialogueService:
                     "한 번 더 확인해 드리겠습니다.",
                 ),
                 "char_parkmingyu": (
-                    "의학적으로 다시 말씀드리면,",
-                    "기록 기준으로는 같습니다.",
-                    "같은 소견입니다.",
+                    "기록을 다시 짚으면,",
+                    "제 소견은 바뀌지 않았습니다.",
+                    "처방 기록 안에서 말하겠습니다.",
                 ),
                 "char_choiyuna": (
                     "다시 확인드리면,",
@@ -874,6 +874,32 @@ class DialogueService:
             )
         if answer not in prior_answers:
             return answer
+        evidence_variants_by_suspect = {
+            "char_hanseoyeon": (
+                "또 그 얘기야?",
+                "그 기록이 걸리는 건 알겠어.",
+                "…그걸로 몰아붙이겠다는 거지.",
+            ),
+            "char_yoonjaeho": (
+                "그 부분은 조심스럽게 다시 말하겠습니다.",
+                "장부와 제 기억이 엇갈리는 건 알고 있습니다.",
+                "회장님 일이라 더 말을 고르게 됩니다.",
+            ),
+            "char_parkmingyu": (
+                "기록 문제라면 다시 정리하겠습니다.",
+                "그 메모가 불리하게 보이는 건 압니다.",
+                "처방 책임을 피하려는 뜻은 아니었습니다.",
+            ),
+            "char_choiyuna": (
+                "그 부분은 제가 말을 줄였던 건 맞습니다.",
+                "일정 기록이 남아 있다면 더 숨기긴 어렵겠네요.",
+                "업무상 지시였다는 말만으로는 부족하겠죠.",
+            ),
+        }
+        if dialogue_mode == "evidence_question" and suspect_id in evidence_variants_by_suspect:
+            options = evidence_variants_by_suspect[suspect_id]
+            repeat_count = sum(1 for prior_answer in prior_answers if answer in prior_answer)
+            return f"{options[(repeat_count - 1) % len(options)]} {answer}"
         variants = {
             "unmatched": (
                 "그 질문은 지금 제게 확인할 수 있는 범위를 벗어납니다.",
@@ -1131,8 +1157,14 @@ class DialogueService:
             return "인사는 됐어요. 정말 묻고 싶은 게 있잖아요."
         if dialogue_mode == "evidence_question":
             if suspect.characterId == "char_yoonjaeho":
-                return "그 단서와 제 진술을 어떻게 연결하시는지 분명히 말씀해 주십시오. 제가 본 범위에서 답하겠습니다."
-            return "그 얘기를 제게 돌리시려는 건가요. 쉽게 인정할 수는 없습니다."
+                return "그 기록이 걸리는 건 압니다. 제가 본 일과 장부가 어긋나는 부분은 조심스럽게 확인하겠습니다."
+            if suspect.characterId == "char_hanseoyeon":
+                return "아니… 그 기록이 불편한 건 맞아. 그래도 그걸로 전부 단정하지 마."
+            if suspect.characterId == "char_parkmingyu":
+                return "그 메모가 불리한 건 압니다. 다만 약이나 기록을 곧장 사망 원인으로 묶지는 마세요."
+            if suspect.characterId == "char_choiyuna":
+                return "그 기록이 남아 있다면 제가 말을 줄인 건 맞습니다. 그래도 현장 얘기까지 단정하진 말아 주세요."
+            return "그 단서가 불편한 건 압니다. 그래도 확인된 범위를 넘겨 말하진 않겠습니다."
         if dialogue_mode == "pressure_followup":
             compact = self._normalize_text(message).replace(" ", "")
             if any(term in compact for term in ("말이돼", "말이된다고", "납득", "이상하")):

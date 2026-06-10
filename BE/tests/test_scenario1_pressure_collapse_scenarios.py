@@ -6,6 +6,57 @@ from app.core.leak_guard import assert_no_forbidden_refs
 from tests.test_api_smoke import _client
 
 
+ROBOTIC_DIALOGUE_MARKERS = (
+    "표현을 바꾸면 이렇습니다",
+    "그 얘기를 제게 돌리시려는 건가요",
+    "쉽게 인정할 수는 없습니다",
+    "그 단서와 제 진술을 어떻게 연결하시는지",
+    "기록 기준으로는 같습니다",
+    "의학적으로 다시 말씀드리면",
+    "다시 확인드리면, 이미 답한 질문입니다",
+)
+
+VOICE_MARKERS_BY_SUSPECT = {
+    "char_hanseoyeon": ("아니", "…", "웃기", "그게", "됐어", "뭘"),
+    "char_yoonjaeho": ("회장님", "제가 본", "조심", "말씀", "집사", "그 시간"),
+    "char_parkmingyu": ("기록", "처방", "의학", "소견", "책임", "약"),
+    "char_choiyuna": ("일정", "기록", "확인", "회장님", "업무", "전화"),
+}
+
+
+def _humanlike_flow_evaluation(transcript: list[dict]) -> dict:
+    suspect_lines = [item for item in transcript if item["askedSuspect"] in VOICE_MARKERS_BY_SUSPECT]
+    robotic_hits = [
+        {"turn": item["turn"], "marker": marker, "answer": item["answer"]}
+        for item in suspect_lines
+        for marker in ROBOTIC_DIALOGUE_MARKERS
+        if marker in item["answer"]
+    ]
+    exact_repeat_count = len(suspect_lines) - len({item["answer"] for item in suspect_lines})
+    voice_hits = [
+        item
+        for item in suspect_lines
+        if any(marker in item["answer"] for marker in VOICE_MARKERS_BY_SUSPECT[item["askedSuspect"]])
+    ]
+    pressure_reactions = [
+        item
+        for item in suspect_lines
+        if item["targetStage"] in {"shaken", "resigned"}
+        and any(token in item["answer"] for token in ("…", "잠깐", "그건", "하지만", "다만", "조심", "기록", "말"))
+    ]
+    return {
+        "roboticHits": robotic_hits,
+        "exactRepeatCount": exact_repeat_count,
+        "voiceHitCount": len(voice_hits),
+        "pressureReactionCount": len(pressure_reactions),
+        "lineCount": len(suspect_lines),
+        "passed": not robotic_hits
+        and exact_repeat_count == 0
+        and len(voice_hits) >= max(2, len(suspect_lines) // 2)
+        and len(pressure_reactions) >= 2,
+    }
+
+
 SUSPECT_SCENARIOS = {
     "char_hanseoyeon": [
         ("char_hanseoyeon", "22:00에 어디 있었나요?"),
@@ -90,4 +141,7 @@ def test_scenario1_user_pressure_script_can_break_each_suspect_to_resigned_stage
     assert final_ladder["currentStage"] == "resigned", transcript
     assert reloaded["pressureBySuspect"][target_suspect_id] >= 80
     assert [stage["stage"] for stage in final_ladder["stages"]] == ["guarded", "defensive", "shaken", "resigned"]
+    evaluation = _humanlike_flow_evaluation(transcript)
+    print(f"\n[HUMANLIKE-EVAL] target={target_suspect_id} {evaluation}")
+    assert evaluation["passed"], evaluation
     assert_no_forbidden_refs(reloaded, surface=f"collapse_probe_{target_suspect_id}")
